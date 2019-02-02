@@ -324,7 +324,7 @@ median(column_sums.df$value)
 
 # Generate a rarefied OTU count matrix
 # In the paper from 2018, a rarefaction maximum of 20,000 was used
-# Here we are going to use 15,000 based on the rarefaction curve and mean / median counts
+# IGNORE -> Here we are going to use 15,000 based on the rarefaction curve and mean / median counts
 otu_rare_count.m <- t(rrarefy(x = t(otu.m), sample=20000))
 
 # Compare before and after
@@ -376,8 +376,8 @@ rownames(otu_rare.df) <- c()
 # Write the final otu counts and abundances to file
 write.table(otu.df, file = "Result_tables/count_tables/OTU_counts.csv", sep = ",", quote = F, col.names = T, row.names = F)
 write.table(otu_rel.df, file = "Result_tables/relative_abundance_tables/OTU_relative_abundances.csv", sep = ",", quote = F, col.names = T, row.names = F)
-write.table(otu.df, file = "Result_tables/count_tables/OTU_counts_rarified.csv", sep = ",", quote = F, col.names = T, row.names = F)
-write.table(otu_rel.df, file = "Result_tables/relative_abundance_tables/OTU_relative_abundances_rarified.csv", sep = ",", quote = F, col.names = T, row.names = F)
+write.table(otu_rare.df, file = "Result_tables/count_tables/OTU_counts_rarified.csv", sep = ",", quote = F, col.names = T, row.names = F)
+write.table(otu_rel_rare.df, file = "Result_tables/relative_abundance_tables/OTU_relative_abundances_rarified.csv", sep = ",", quote = F, col.names = T, row.names = F)
 
 # NOTE - otu.df, otu.m, otu_rel.df and otu_rel.m are the final, filtered OTU count / relative abundance dataframes and matrices. These can be used
 # elsewhere for a variety of analyses at the OTU level, or, as is shown below, used to calculate abundances at different taxa levels
@@ -434,6 +434,8 @@ write.table(otu_abundance_metadata.df, file = "Result_tables/other/OTU_abundance
 # For example, we may want to know the abundance of a particular Family.
 # Now we will generate the abundance tables at each taxonomy level from Phylum, Class, Order, Family and Genus
 
+############
+#     OLD
 # First we are going to take project_otu_table, which is the original input data after some basic filtering has been applied and additional taxonomy columns, 
 # and filter it to only the OTUs and samples that were in our otu.df created above.
 
@@ -441,14 +443,16 @@ write.table(otu_abundance_metadata.df, file = "Result_tables/other/OTU_abundance
 # Now filter to samples
 # non_sample_column_names <- names(filtered_project_otu_table)[!names(filtered_project_otu_table) %in% sample_ids_original]
 # filtered_project_otu_table <- filtered_project_otu_table[c(non_sample_column_names, colnames(otu_rel.m))]
+############
 
-filtered_project_otu_table <- merge(otu.df, otu_taxonomy_map, by.x = "OTU.ID", by.y = "OTU.ID")
+# otu_metadata_merged.df
+otu_metadata_merged.df <- merge(otu.df, otu_taxonomy_map, by.x = "OTU.ID", by.y = "OTU.ID")
 
 # Do the same for the rarified data
-filtered_project_otu_table_rare <- merge(otu_rare.df, otu_taxonomy_map, by.x = "OTU.ID", by.y = "OTU.ID")
+otu_metadata_merged_rare.df <- merge(otu_rare.df, otu_taxonomy_map, by.x = "OTU.ID", by.y = "OTU.ID")
 
-dim(filtered_project_otu_table)
-dim(filtered_project_otu_table_rare)
+dim(otu_metadata_merged.df)
+dim(otu_metadata_merged_rare.df)
 
 # We are then going to create and store the matrices for each taxonomy level containing the relative abundances. 
 otu_phylum_rel.m <- NULL
@@ -483,14 +487,14 @@ otu_species_rare.df <- NULL
 # We use the 'full' taxonomy strings, e.g. taxonomy_genus, so that "Unassigned" or "Uncultured" from different lineages are kept separate!
 for (tax_string_level in c("taxonomy_species", "taxonomy_genus", "taxonomy_family", "taxonomy_class", "taxonomy_order", "taxonomy_phylum")){
   # Collapse the dataframe by summing the counts for each unique taxonomy string within each sample
-  otu_taxa_level.df <- filtered_project_otu_table[c(tax_string_level, sample_ids)] %>% 
+  otu_taxa_level.df <- otu_metadata_merged.df[c(tax_string_level, sample_ids)] %>% 
     group_by_(tax_string_level) %>% # Group the dataframe by the taxonomy string 
     # Summarise each group by applying the the 'sum' function to the counts of each member of the group, 
     # i.e. duplicate entries for each taxa level are collapsed into a single entry and their counts summed together
     dplyr::summarise_all(funs(sum)) %>%  
     as.data.frame() # convert back to dataframe
   
-  otu_taxa_level_rare.df <- filtered_project_otu_table_rare[c(tax_string_level, sample_ids)] %>% 
+  otu_taxa_level_rare.df <- otu_metadata_merged_rare.df[c(tax_string_level, sample_ids)] %>% 
     group_by_(tax_string_level) %>%
     dplyr::summarise_all(funs(sum)) %>% 
     as.data.frame() 

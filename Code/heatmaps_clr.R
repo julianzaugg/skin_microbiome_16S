@@ -62,16 +62,16 @@ clr = function(x, base=2){
 setwd("/Users/julianzaugg/Desktop/ACE/major_projects/skin_microbiome_16S")
 
 # Load the metadata.df
-metadata.df <- read.table("data/metadata.df.tsv", header = T, sep = "\t")
+metadata.df <- read.table("data/metadata.tsv", header = T, sep = "\t")
 
 # Load count matrices and apply CLR transformation
-otu_clr.m <- clr(as.matrix(read.table(file = "Result_tables/count_tables/OTU_counts.csv", sep = ",", header = T, row.names = 1)))
-otu_species_clr.m <- clr(as.matrix(read.table(file = "Result_tables/count_tables/Specie_counts.csv", sep = ",", header = T, row.names = 1)))
-otu_genus_clr.m <- clr(as.matrix(read.table(file = "Result_tables/count_tables/Genus_counts.csv", sep = ",", header = T, row.names = 1)))
-otu_family_clr.m <- clr(as.matrix(read.table(file = "Result_tables/count_tables/Family_counts.csv", sep = ",", header = T, row.names = 1)))
-otu_order_clr.m <- clr(as.matrix(read.table(file = "Result_tables/count_tables/Order_counts.csv", sep = ",", header = T, row.names = 1)))
-otu_class_clr.m <- clr(as.matrix(read.table(file = "Result_tables/count_tables/Class_counts.csv", sep = ",", header = T, row.names = 1)))
-otu_phylum_clr.m <- clr(as.matrix(read.table(file = "Result_tables/count_tables/Phylum_counts.csv", sep = ",", header = T, row.names = 1)))
+otu_clr.m <- clr(as.matrix(read.table(file = "Result_tables/count_tables/OTU_counts_rarefied.csv", sep = ",", header = T, row.names = 1)))
+otu_species_clr.m <- clr(as.matrix(read.table(file = "Result_tables/count_tables/Specie_counts_rarefied.csv", sep = ",", header = T, row.names = 1)))
+otu_genus_clr.m <- clr(as.matrix(read.table(file = "Result_tables/count_tables/Genus_counts_rarefied.csv", sep = ",", header = T, row.names = 1)))
+otu_family_clr.m <- clr(as.matrix(read.table(file = "Result_tables/count_tables/Family_counts_rarefied.csv", sep = ",", header = T, row.names = 1)))
+otu_order_clr.m <- clr(as.matrix(read.table(file = "Result_tables/count_tables/Order_counts_rarefied.csv", sep = ",", header = T, row.names = 1)))
+otu_class_clr.m <- clr(as.matrix(read.table(file = "Result_tables/count_tables/Class_counts_rarefied.csv", sep = ",", header = T, row.names = 1)))
+otu_phylum_clr.m <- clr(as.matrix(read.table(file = "Result_tables/count_tables/Phylum_counts_rarefied.csv", sep = ",", header = T, row.names = 1)))
 
 
 # heatmap.m <- otu_clr.m

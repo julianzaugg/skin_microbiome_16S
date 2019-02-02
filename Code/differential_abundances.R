@@ -74,6 +74,10 @@ otu.m <- otu.df
 rownames(otu.m) <- otu.m$OTU.ID
 otu.m$OTU.ID <- NULL
 
+# CLR transform the otu matrix. We don't use this for DESeq, but we can refer to it to get the 
+# CLR transformed counts for OTUs of interest if necessary
+otu_clr.m <- clr(otu.m)
+
 
 ########################################################################################################################
 # Perform differential abundance calculations at the OTU level and genus level, 
@@ -121,6 +125,8 @@ metadata.df$Sampletype_SCCPL_C <- factor(as.character(lapply(as.character(metada
 # We do have the option later to compare any of the groups regardless of setting the reference.
 metadata.df$Sampletype <- relevel(metadata.df$Sampletype, ref = "C") # control as the reference
 #metadata.df$Sampletype <- relevel(metadata.df$Sampletype, ref = "negative") # negative as the reference
+
+
 
 # Create DESeq data set matrix. 
 dds <-DESeqDataSetFromMatrix(countData = otu.m, 
