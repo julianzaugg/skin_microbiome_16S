@@ -76,7 +76,7 @@ otu_rare.m <- otu_rare.m[,order(rownames(metadata.df))]
 otu_rare_clr.m <- clr(otu_rare.m)
 
 
-variables_of_interest <- c("Sampletype", "Sampletype")
+# variables_of_interest <- c("Sampletype", "Sampletype")
 samples_to_remove <- get_samples_missing_data(metadata.df, variables_of_interest)
 # Subset of the metadata describing the variables of interest for samples with entries across all variables
 metadata.df <- metadata.df[!rownames(metadata.df) %in% samples_to_remove,]
