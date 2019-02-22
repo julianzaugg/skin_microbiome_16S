@@ -309,6 +309,8 @@ column_sums.df <- melt(column_sums[order(column_sums)])
 column_sums.df$sample <- rownames(column_sums.df)
 rownames(column_sums.df) <- NULL
 column_sums.df <- column_sums.df[c("sample", "value")]
+column_sums.df$sample <- factor(column_sums.df$sample, levels = column_sums.df$sample)
+
 ggplot(column_sums.df, aes(x = sample, y = value)) + 
   geom_histogram(stat = "identity") +
   xlab("Sample") +

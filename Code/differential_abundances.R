@@ -43,7 +43,8 @@ filter_and_sort_dds_results <- function(x, p_value_threshold = 0.05){
 }
 
 ############################################################
-
+# Set the working directory
+setwd("/Users/julianzaugg/Desktop/ACE/major_projects/skin_microbiome_16S")
 
 # Load count table at the OTU level. These are the counts for OTUs that were above our abundance thresholds
 otu.df <- read.table("Result_tables/count_tables/OTU_counts_rarified.csv", sep =",", header =T)

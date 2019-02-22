@@ -100,6 +100,10 @@ my_colour_pallete_distinct_phylum <- setNames(my_colour_pallete_32_distinct[1:le
 
 ## WORK IN PROGRESS
 
+## Plots 
+# Abundance of each taxa level up to class for each patient
+# Abundance of each taxa level for each lesion type for each patient
+
 # Turn counts into abundances 
 temp <- otu_class_rare_melt.df %>% 
   # Grouping by the taxonomy is uncessary as we are using pre-grouped tables.
