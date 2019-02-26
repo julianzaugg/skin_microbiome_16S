@@ -57,6 +57,7 @@ setwd("/Users/julianzaugg/Desktop/ACE/major_projects/skin_microbiome_16S")
 
 # Load count table at the OTU level. These are the counts for OTUs that were above our abundance thresholds
 otu_rare.df <- read.table("Result_tables/count_tables/OTU_counts_rarified.csv", sep =",", header =T)
+otu.df <- read.table("Result_tables/count_tables/OTU_counts.csv", sep =",", header =T)
 
 # Load the OTU - taxonomy mapping file
 otu_taxonomy_map.df <- read.csv("Result_tables/other/otu_taxonomy_map.csv", header = T)
@@ -78,11 +79,12 @@ metadata.df$Sampletype <- factor(metadata.df$Sampletype)
 # Remove samples for different lesion types (nasal,scar,scar_PL,KA,KA_PL,VV,VV_PL,SF,SF_PL,other,other_PL) from metadata and otu table
 metadata.df <- metadata.df[metadata.df$Sampletype %in% c("C","AK_PL","IEC_PL","SCC_PL","AK","IEC","SCC"),]
 otu_rare.df <- otu_rare.df[,names(otu_rare.df) %in% c("OTU.ID", as.character(metadata.df$Index))]
+otu.df <- otu.df[,names(otu.df) %in% c("OTU.ID", as.character(metadata.df$Index))]
 
 pool_1 <- c("C","AK_PL","IEC_PL","SCC_PL")
 pool_2 <- c("AK","IEC")
 
-metadata.df$Sampletype_pooled <- factor(as.character(lapply(metadata.df$Sampletype, function(x) ifelse(x %in% pool_1, "Pool1", ifelse(x %in% pool_2, "Pool2", "SCC")))))
+metadata.df$Sampletype_pooled <- factor(as.character(lapply(metadata.df$Sampletype, function(x) ifelse(x %in% pool_1, "NLC", ifelse(x %in% pool_2, "AK", "SCC")))))
 
 # Order the metadata.df by the index value
 metadata.df <- metadata.df[order(metadata.df$Index),]
@@ -93,17 +95,35 @@ rownames(otu_rare.m) <- otu_rare.df$OTU.ID
 otu_rare.m$OTU.ID <- NULL
 otu_rare.m <- as.matrix(otu_rare.m)
 
+otu.m <- otu.df
+rownames(otu.m) <- otu.df$OTU.ID
+otu.m$OTU.ID <- NULL
+otu.m <- as.matrix(otu.m)
+
 # Order the matrices and metadata to be the same order
 metadata.df <- metadata.df[order(rownames(metadata.df)),]
 otu_rare.m <- otu_rare.m[,order(rownames(metadata.df))]
-
-# CLR transform the otu matrix.
-otu_rare_clr.m <- clr(otu_rare.m)
+otu.m <- otu.m[,order(rownames(metadata.df))]
 
 # Just get OTUs with more than counts of 3
-otu_rare_clr_filtered.m <- otu_rare_clr.m[apply(otu_rare_clr.m,1,max) >= 3,]
+dim(otu_rare.m)
+otu_rare_filtered.m <- otu_rare.m[apply(otu_rare.m,1,max) >= 3,]
+dim(otu_rare_filtered.m)
+
+dim(otu.m)
+otu_filtered.m <- otu_rare.m[apply(otu.m,1,max) >= 3,]
+dim(otu_filtered.m)
+
+# CLR transform the otu matrix.
+#otu_clr.m <- apply(otu_rare_count.m, MARGIN = 2, FUN = clr)
+otu_rare_clr_filtered.m <- clr(otu_rare_filtered.m)
+# head(otu_rare_clr_filtered.m)[,1:2]
+# head(apply(otu_rare_filtered.m, MARGIN = 2, FUN = clr))[,1:2]
+otu_clr_filtered.m <- clr(otu_filtered.m)
+
 # If there are negative values, assign them a value of zero
 otu_rare_clr_filtered.m[which(otu_rare_clr_filtered.m < 0)] <- 0
+otu_clr_filtered.m[which(otu_clr_filtered.m < 0)] <- 0
 
 # Determine which samples are missing metadata and remove them
 variables_of_interest <- c("Sampletype", "Patient","Sampletype_pooled")
@@ -228,11 +248,15 @@ write.csv(envfit_results_OTU,file="Result_tables/stats_various/ENVFIT_otu_clr_ra
 # Manually specify plots
 # Note - don't use bray-curtis as we are using CLR transformed values
 # m.pcoa <- capscale(t(otu_rare_clr_filtered.m)~1, data = metadata.df, dist = "bray") # ~1 makes it unconstrained
-#m.pcoa <- capscale(t(otu_rare_clr_filtered.m)~1, data = metadata.df, dist = "euclidean") # ~1 makes it unconstrained
-m.pcoa <- rda(t(otu_rare_clr_filtered.m), data = metadata.df) # ~1 makes it unconstrained
+m.pcoa <- capscale(t(otu_rare_clr_filtered.m)~1, data = metadata.df, dist = "euclidean") # ~1 makes it unconstrained
+#m.pcoa <- capscale(t(otu_clr_filtered.m)~1, data = metadata.df, dist = "euclidean") # ~1 makes it unconstrained
+# m.pcoa <- rda(t(otu_rare_clr_filtered.m), data = metadata.df) # ~1 makes it unconstrained
 # m.pcoa <- prcomp(t(otu_rare_clr_filtered.m), center = T) # ~1 makes it unconstrained
 #m.pcoa <- capscale(t(otu_rare_clr_filtered.m)~1, data = metadata.df, dist = "euclidean", scale = F) # ~1 makes it unconstrained
-
+# m.pcoa <- rda(t(otu_rare_clr_filtered.m), data = metadata.df, center = F)
+# temp <- prcomp(t(otu_rare_clr_filtered.m), center = F)
+# ?prcomp
+# plot(temp$x)
 ################################################################################################
 # TESTING
 # temp <- prcomp(t(otu_rare_clr_filtered.m), center =T)
@@ -351,6 +375,22 @@ plot_ellipses <- function (label_ellipse = F) {
 }
 plot_ellipses(F)
 
+#Plot spiders
+plot_spiders <- function (label_spider = F) {
+  for (member in variable_values){
+    if (nrow(metadata_ordered.df[metadata_ordered.df[["Patient"]] == member,]) > 2){ # if too few samples, skip plotting ellipse
+      ordispider(pcoa_site_scores,
+                  groups = metadata_ordered.df$Patient,
+                  border = variable_colours[member][[1]],
+                  col = variable_colours[member][[1]],
+                  show.groups = member,
+                  #alpha = .05,
+                  label = label_spider)
+    }
+  }
+}
+#plot_spiders(F)
+
 points(pcoa_site_scores, 
        cex = 0.8,
        pch = all_sample_shapes,
@@ -368,7 +408,7 @@ points(pcoa_site_scores,
 legend(
   title = expression(bold("Patient")),
   title.col="black",
-  x = x_min-2,
+  x = x_min,
   y = y_max, 
   legend= variable_values, 
   pch= unique(all_sample_shapes), 
@@ -382,8 +422,6 @@ legend(
 )
 # axis(side = 1, at = c(-9:4), labels = c(-9:4) )
 dev.off()
-
-
 
 
 
@@ -446,6 +484,24 @@ plot_ellipses <- function (label_ellipse = F) {
 }
 plot_ellipses(F)
 
+
+#Plot spiders
+plot_spiders <- function (label_spider = F) {
+  for (member in variable_values){
+    if (nrow(metadata_ordered.df[metadata_ordered.df[["Sampletype"]] == member,]) > 2){ # if too few samples, skip plotting ellipse
+      ordispider(pcoa_site_scores,
+                 groups = metadata_ordered.df$Sampletype,
+                 border = variable_colours[member][[1]],
+                 col = variable_colours[member][[1]],
+                 show.groups = member,
+                 #alpha = .05,
+                 label = label_spider)
+    }
+  }
+}
+#plot_spiders(F)
+
+
 points(pcoa_site_scores, 
        cex = 0.8,
        pch = all_sample_shapes,
@@ -463,7 +519,7 @@ points(pcoa_site_scores,
 legend(
   title = expression(bold("Sampletype")),
   title.col="black",
-  x = x_min-2,
+  x = x_min,
   y = y_max, 
   legend= variable_values, 
   pch= unique(all_sample_shapes), 
@@ -479,7 +535,7 @@ legend(
 dev.off()
 
 
-# Colour by sampletype
+# Colour by sampletype pooled
 metadata_ordered.df <- metadata.df[order(rownames(metadata.df)),]
 metadata_ordered.df <- metadata_ordered.df[order(metadata_ordered.df$Sampletype_pooled),]
 
@@ -536,6 +592,22 @@ plot_ellipses <- function (label_ellipse = F) {
 }
 plot_ellipses(F)
 
+#Plot spiders
+plot_spiders <- function (label_spider = F) {
+  for (member in variable_values){
+    if (nrow(metadata_ordered.df[metadata_ordered.df[["Sampletype_pooled"]] == member,]) > 2){ # if too few samples, skip plotting ellipse
+      ordispider(pcoa_site_scores,
+                 groups = metadata_ordered.df$Sampletype_pooled,
+                 border = variable_colours[member][[1]],
+                 col = variable_colours[member][[1]],
+                 show.groups = member,
+                 #lwd = .1,
+                 label = label_spider)
+    }
+  }
+}
+# plot_spiders(F)
+
 points(pcoa_site_scores, 
        cex = 0.8,
        pch = all_sample_shapes,
@@ -551,9 +623,9 @@ points(pcoa_site_scores,
 #      pos = 2)
 
 legend(
-  title = expression(bold("Sampletype_pooled")),
+  title = expression(bold("Sampletype pooled")),
   title.col="black",
-  x = x_min-2,
+  x = x_min,
   y = y_max, 
   legend= variable_values, 
   pch= unique(all_sample_shapes), 
@@ -569,293 +641,230 @@ legend(
 dev.off()
 
 
-
-
-pdf("Result_figures/pcoa_dbrda_plots/lesion_type_pcoa.pdf",height=8,width=8)
-plot(m.pcoa,          
-     type='n',         
-     xlim = c(-7,4), 
-     ylim = c(-5,7), 
-     xlab = my_xlab, 
-     ylab = my_ylab)
-grid(NULL,NULL, lty = 2, col = "grey80")
-variable_values <- factor(sort(as.character(unique(metadata.df[["Sampletype"]]))))
-variable_colours <- setNames(my_colour_pallete_20_distinct[1:length(variable_values)], variable_values)
-variable_shapes <- setNames(rep(c(21),length(variable_values))[1:length(variable_values)],variable_values)
-
-
-pcoa_site_scores <- scores(m.pcoa, display = "sites")
-all_sample_colours <- as.character(
-  lapply(as.character(metadata.df[rownames(pcoa_site_scores),"Sampletype"]), function(x) variable_colours[x])
-)
-all_sample_shapes <- as.numeric(lapply(as.character(metadata.df[rownames(pcoa_site_scores),"Sampletype"]), function(x) variable_shapes[x])
-)
-
-# Plot ellipses that are filled
-plot_ellipses <- function (label_ellipse = F) {
-  for (member in variable_values){
-    if (nrow(metadata.df[metadata.df[["Sampletype"]] == member,]) > 2){ # if too few samples, skip plotting ellipse
-      ordiellipse(m.pcoa,
-                  groups = metadata.df$Sampletype,
-                  kind = "ehull",
-                  border = variable_colours[member][[1]],
-                  col = variable_colours[member][[1]],
-                  show.groups = member,
-                  alpha = .05,
-                  draw = "polygon",
-                  label = label_ellipse)
-    }
-  }
-}
-plot_ellipses(T)
-
-points(m.pcoa, 
-       cex = 0.8,
-       pch = all_sample_shapes,
-       col = all_sample_colours,
-       #bg = all_sample_colours,
-)
-
-
-legend(
-  title = expression(bold("Lesion type")),
-  title.col="black",
-  x = -3,
-  y =2, 
-  legend= variable_values, 
-  pch= unique(all_sample_shapes), 
-  col= unique(all_sample_colours),
-  # pt.bg = unique(all_sample_colours),
-  bg = "white",
-  box.col = NA,
-  cex = 0.8
-)
-dev.off()
-
-
-
-#######################################################################################
-# db-RDA analysis (constrained ordination)
-
-# Distance-based redundancy analysis (db-RDA) is a constrained ordination method and is an extension of PCoA. 
-# db-RDA is used to predict the shifts in the community based on the environmental variables.
-# Constrained ordination focuses on only the variation that can be explained by the constraining environmental variables. 
-# The approach makes a few statistical assumptions about how the predictor (environmental) variables influence the dependent variables (species). 
-# The results explain a smaller proportion of total variation than unconstrained ordination, 
-# but they are more strongly interpretable with the constraints.
-
-#### Constraining by Patient
-#mydbRDA <- capscale(t(otu_rare_clr_filtered.m)~Patient, data = metadata.df, dist = "bray")
-mydbRDA <- capscale(t(otu_rare_clr_filtered.m)~Patient, data = metadata.df, dist = "euclidean")
-
-# Extract scores and calculate eigenvalue percentages
-mydbRDA.scores <- scores(mydbRDA, choices=c(1,2,3))
-mydbRDA_percentages <- (mydbRDA$CA$eig/sum(mydbRDA$CA$eig)) * 100
-
-# Make axis labels
-my_xlab = paste("MDS1 (", round(mydbRDA_percentages[1],1), "%)", sep = "")
-my_ylab = paste("MDS2 (", round(mydbRDA_percentages[2],1), "%)", sep = "")
-
-pdf("Result_figures/pcoa_dbrda_plots/patient_dbrda.pdf",height=8,width=8)
-
-# Generate plot
-plot(mydbRDA,          
-     type='n',         
-     xlim = c(-3,2), 
-     ylim = c(-2,2), 
-     xlab = my_xlab, 
-     ylab = my_ylab)
-
-# Set the background colour
-#rect(par("usr")[1],par("usr")[3],par("usr")[2],par("usr")[4],col = "gray97")
-
-# Plot grid
-grid(NULL,NULL, lty = 2, col = "grey80")
-
-# Define the mapping between unique values of the variable to colours and shapes.
-variable_values <- factor(sort(as.character(unique(metadata.df[["Patient"]]))))
-variable_colours <- setNames(my_colour_pallete_32_distinct[1:length(variable_values)], variable_values)
-#variable_shapes <- setNames(c(25,24,23,22,21,8,6,5,4,3,2,1)[1:length(variable_values)],variable_values)
-# variable_shapes <- setNames(rep(c(25,24,23,22,21,8,6,5,4,3,2,1),5)[1:length(variable_values)],variable_values)
-variable_shapes <- setNames(rep(c(21),length(variable_values))[1:length(variable_values)],variable_values)
-# Extract scores specific to sites (samples)
-dbrda_site_scores <- scores(mydbRDA, display = "sites")
-
-
-all_sample_colours <- as.character(
-  lapply(
-    as.character(
-      metadata.df[rownames(dbrda_site_scores),"Patient"]
-    ), 
-    function(x) variable_colours[x]
-  )
-)
-
-all_sample_shapes <- as.numeric(
-  lapply(
-    as.character(
-      metadata.df[rownames(dbrda_site_scores),"Patient"]
-    ), 
-    function(x) variable_shapes[x]
-  )
-)
-
-# Plot ellipses that are filled
-for (member in variable_values){
-  if (nrow(metadata.df[metadata.df[["Patient"]] == member,]) > 2){ # if too few samples, skip plotting ellipse
-    ordiellipse(mydbRDA,
-                groups = metadata.df$Patient,
-                kind = "ehull",
-                border = variable_colours[member][[1]],
-                col = variable_colours[member][[1]],
-                show.groups = member,
-                alpha = .05,
-                draw = "polygon")
-  }
-}
-
-
-# Plot the points for the samples
-points(mydbRDA, 
-       cex = 0.8,
-       pch = all_sample_shapes,  # Shape of point
-       col = all_sample_colours, # Outline color of point
-       #bg = all_sample_colours, # Background colour for point
-)
-
-
-# Plot spiders
+# #######################################################################################
+# # db-RDA analysis (constrained ordination)
+# 
+# # Distance-based redundancy analysis (db-RDA) is a constrained ordination method and is an extension of PCoA. 
+# # db-RDA is used to predict the shifts in the community based on the environmental variables.
+# # Constrained ordination focuses on only the variation that can be explained by the constraining environmental variables. 
+# # The approach makes a few statistical assumptions about how the predictor (environmental) variables influence the dependent variables (species). 
+# # The results explain a smaller proportion of total variation than unconstrained ordination, 
+# # but they are more strongly interpretable with the constraints.
+# 
+# #### Constraining by Patient
+# #mydbRDA <- capscale(t(otu_rare_clr_filtered.m)~Patient, data = metadata.df, dist = "bray")
+# mydbRDA <- capscale(t(otu_rare_clr_filtered.m)~Patient, data = metadata.df, dist = "euclidean")
+# 
+# # Extract scores and calculate eigenvalue percentages
+# mydbRDA.scores <- scores(mydbRDA, choices=c(1,2,3))
+# mydbRDA_percentages <- (mydbRDA$CA$eig/sum(mydbRDA$CA$eig)) * 100
+# 
+# # Make axis labels
+# my_xlab = paste("MDS1 (", round(mydbRDA_percentages[1],1), "%)", sep = "")
+# my_ylab = paste("MDS2 (", round(mydbRDA_percentages[2],1), "%)", sep = "")
+# 
+# pdf("Result_figures/pcoa_dbrda_plots/patient_dbrda.pdf",height=8,width=8)
+# 
+# # Generate plot
+# plot(mydbRDA,          
+#      type='n',         
+#      xlim = c(-3,2), 
+#      ylim = c(-2,2), 
+#      xlab = my_xlab, 
+#      ylab = my_ylab)
+# 
+# # Set the background colour
+# #rect(par("usr")[1],par("usr")[3],par("usr")[2],par("usr")[4],col = "gray97")
+# 
+# # Plot grid
+# grid(NULL,NULL, lty = 2, col = "grey80")
+# 
+# # Define the mapping between unique values of the variable to colours and shapes.
+# variable_values <- factor(sort(as.character(unique(metadata.df[["Patient"]]))))
+# variable_colours <- setNames(my_colour_pallete_32_distinct[1:length(variable_values)], variable_values)
+# #variable_shapes <- setNames(c(25,24,23,22,21,8,6,5,4,3,2,1)[1:length(variable_values)],variable_values)
+# # variable_shapes <- setNames(rep(c(25,24,23,22,21,8,6,5,4,3,2,1),5)[1:length(variable_values)],variable_values)
+# variable_shapes <- setNames(rep(c(21),length(variable_values))[1:length(variable_values)],variable_values)
+# # Extract scores specific to sites (samples)
+# dbrda_site_scores <- scores(mydbRDA, display = "sites")
+# 
+# 
+# all_sample_colours <- as.character(
+#   lapply(
+#     as.character(
+#       metadata.df[rownames(dbrda_site_scores),"Patient"]
+#     ), 
+#     function(x) variable_colours[x]
+#   )
+# )
+# 
+# all_sample_shapes <- as.numeric(
+#   lapply(
+#     as.character(
+#       metadata.df[rownames(dbrda_site_scores),"Patient"]
+#     ), 
+#     function(x) variable_shapes[x]
+#   )
+# )
+# 
+# 
+# 
+# # Plot ellipses that are filled
 # for (member in variable_values){
-#   if (nrow(metadata.df[metadata.df[["Patient"]] == member,]) > 1){ # if too few samples, skip plotting spider
-#     ordispider(mydbRDA,
-#                groups = metadata.df$Patient,
-#                kind = "ehull",
-#                col = variable_colours[member][[1]],
-#                show.groups = member)
-#  }
-# }
-# plot the legend
-legend(
-  title = expression(bold("Patient")),
-  title.col="black",
-  x = -3,
-  y =2, 
-  legend= variable_values, 
-  pch= unique(all_sample_shapes), 
-  col= unique(all_sample_colours),
-  # pt.bg = unique(all_sample_colours),
-  bg = "white",
-  box.col = NA,
-  cex = 0.8
-)
-dev.off()
-
-
-#### Constraining by Sampletype
-mydbRDA <- capscale(t(otu_rare_clr_filtered.m)~Sampletype, data = metadata.df, dist = "bray")
-mydbRDA.scores <- scores(mydbRDA, choices=c(1,2,3))
-mydbRDA_percentages <- (mydbRDA$CA$eig/sum(mydbRDA$CA$eig)) * 100
-
-my_xlab = paste("MDS1 (", round(mydbRDA_percentages[1],1), "%)", sep = "")
-my_ylab = paste("MDS2 (", round(mydbRDA_percentages[2],1), "%)", sep = "")
-
-pdf("Result_figures/pcoa_dbrda_plots/lesion_type_dbrda.pdf",height=8,width=8)
-
-plot(mydbRDA,          
-     type='n',         
-     # xlim = c(-3,2),
-     # ylim = c(-2,2),
-     xlab = my_xlab, 
-     ylab = my_ylab)
-
-# Set the background colour
-#rect(par("usr")[1],par("usr")[3],par("usr")[2],par("usr")[4],col = "gray97")
-
-grid(NULL,NULL, lty = 2, col = "grey80")
-
-variable_values <- factor(sort(as.character(unique(metadata.df[["Sampletype"]]))))
-variable_colours <- setNames(my_colour_pallete_20_distinct[1:length(variable_values)], variable_values)
-#variable_shapes <- setNames(c(25,24,23,22,21,8,6,5,4,3,2,1)[1:length(variable_values)],variable_values)
-# variable_shapes <- setNames(rep(c(25,24,23,22,21,8,6,5,4,3,2,1),5)[1:length(variable_values)],variable_values)
-variable_shapes <- setNames(rep(c(21),length(variable_values))[1:length(variable_values)],variable_values)
-dbrda_site_scores <- scores(mydbRDA, display = "sites")
-
-
-all_sample_colours <- as.character(
-  lapply(
-    as.character(
-      metadata.df[rownames(dbrda_site_scores),"Sampletype"]
-    ), 
-    function(x) variable_colours[x]
-  )
-)
-
-all_sample_shapes <- as.numeric(
-  lapply(
-    as.character(
-      metadata.df[rownames(dbrda_site_scores),"Sampletype"]
-    ), 
-    function(x) variable_shapes[x]
-  )
-)
-
-# Plot ellipses that are filled
-for (member in variable_values){
-  if (nrow(metadata.df[metadata.df[["Sampletype"]] == member,]) > 2){ # if too few samples, skip plotting ellipse
-    ordiellipse(mydbRDA,
-                groups = metadata.df$Sampletype,
-                kind = "ehull",
-                border = variable_colours[member][[1]],
-                col = variable_colours[member][[1]],
-                show.groups = member,
-                alpha = .05,
-                draw = "polygon")
-  }
-}
-
-# Plot just ellipses
-for (member in variable_values){
-  if (nrow(metadata.df[metadata.df[["Sampletype"]] == member,]) > 2){ # if too few samples, skip plotting ellipse
-    ordiellipse(mydbRDA,
-                groups = metadata.df$Sampletype,
-                kind = "ehull",
-                col = variable_colours[member][[1]],
-                show.groups = member)
-  }
-}
-
-points(mydbRDA, 
-       cex = 0.8,
-       pch = all_sample_shapes,  # Shape of point
-       col = all_sample_colours, # Outline color of point
-       #bg = all_sample_colours, # Background colour for point
-)
-
-
-# Plot spiders
-# for (member in variable_values){
-#   if (nrow(metadata.df[metadata.df[["Sampletype"]] == member,]) > 1){ # if too few samples, skip plotting spider
-#     ordispider(mydbRDA,
-#                groups = metadata.df$Sampletype,
-#                kind = "ehull",
-#                col = variable_colours[member][[1]],
-#                show.groups = member)
+#   if (nrow(metadata.df[metadata.df[["Patient"]] == member,]) > 2){ # if too few samples, skip plotting ellipse
+#     ordiellipse(mydbRDA,
+#                 groups = metadata.df$Patient,
+#                 kind = "ehull",
+#                 border = variable_colours[member][[1]],
+#                 col = variable_colours[member][[1]],
+#                 show.groups = member,
+#                 alpha = .05,
+#                 draw = "polygon")
 #   }
 # }
-
-# plot the legend
-legend(
-  title = expression(bold("Lesion type")),
-  title.col="black",
-  x = -3,
-  y =2, 
-  legend= variable_values, 
-  pch= unique(all_sample_shapes), 
-  col= unique(all_sample_colours),
-  # pt.bg = unique(all_sample_colours),
-  bg = "white",
-  box.col = NA,
-  cex = 0.8
-)
-
-dev.off()
+# 
+# 
+# # Plot the points for the samples
+# points(mydbRDA, 
+#        cex = 0.8,
+#        pch = all_sample_shapes,  # Shape of point
+#        col = all_sample_colours, # Outline color of point
+#        #bg = all_sample_colours, # Background colour for point
+# )
+# 
+# 
+# # Plot spiders
+# # for (member in variable_values){
+# #   if (nrow(metadata.df[metadata.df[["Patient"]] == member,]) > 1){ # if too few samples, skip plotting spider
+# #     ordispider(mydbRDA,
+# #                groups = metadata.df$Patient,
+# #                kind = "ehull",
+# #                col = variable_colours[member][[1]],
+# #                show.groups = member)
+# #  }
+# # }
+# # plot the legend
+# legend(
+#   title = expression(bold("Patient")),
+#   title.col="black",
+#   x = -3,
+#   y =2, 
+#   legend= variable_values, 
+#   pch= unique(all_sample_shapes), 
+#   col= unique(all_sample_colours),
+#   # pt.bg = unique(all_sample_colours),
+#   bg = "white",
+#   box.col = NA,
+#   cex = 0.8
+# )
+# dev.off()
+# 
+# 
+# #### Constraining by Sampletype
+# mydbRDA <- capscale(t(otu_rare_clr_filtered.m)~Sampletype, data = metadata.df, dist = "bray")
+# mydbRDA.scores <- scores(mydbRDA, choices=c(1,2,3))
+# mydbRDA_percentages <- (mydbRDA$CA$eig/sum(mydbRDA$CA$eig)) * 100
+# 
+# my_xlab = paste("MDS1 (", round(mydbRDA_percentages[1],1), "%)", sep = "")
+# my_ylab = paste("MDS2 (", round(mydbRDA_percentages[2],1), "%)", sep = "")
+# 
+# pdf("Result_figures/pcoa_dbrda_plots/lesion_type_dbrda.pdf",height=8,width=8)
+# 
+# plot(mydbRDA,          
+#      type='n',         
+#      # xlim = c(-3,2),
+#      # ylim = c(-2,2),
+#      xlab = my_xlab, 
+#      ylab = my_ylab)
+# 
+# # Set the background colour
+# #rect(par("usr")[1],par("usr")[3],par("usr")[2],par("usr")[4],col = "gray97")
+# 
+# grid(NULL,NULL, lty = 2, col = "grey80")
+# 
+# variable_values <- factor(sort(as.character(unique(metadata.df[["Sampletype"]]))))
+# variable_colours <- setNames(my_colour_pallete_20_distinct[1:length(variable_values)], variable_values)
+# #variable_shapes <- setNames(c(25,24,23,22,21,8,6,5,4,3,2,1)[1:length(variable_values)],variable_values)
+# # variable_shapes <- setNames(rep(c(25,24,23,22,21,8,6,5,4,3,2,1),5)[1:length(variable_values)],variable_values)
+# variable_shapes <- setNames(rep(c(21),length(variable_values))[1:length(variable_values)],variable_values)
+# dbrda_site_scores <- scores(mydbRDA, display = "sites")
+# 
+# 
+# all_sample_colours <- as.character(
+#   lapply(
+#     as.character(
+#       metadata.df[rownames(dbrda_site_scores),"Sampletype"]
+#     ), 
+#     function(x) variable_colours[x]
+#   )
+# )
+# 
+# all_sample_shapes <- as.numeric(
+#   lapply(
+#     as.character(
+#       metadata.df[rownames(dbrda_site_scores),"Sampletype"]
+#     ), 
+#     function(x) variable_shapes[x]
+#   )
+# )
+# 
+# # Plot ellipses that are filled
+# for (member in variable_values){
+#   if (nrow(metadata.df[metadata.df[["Sampletype"]] == member,]) > 2){ # if too few samples, skip plotting ellipse
+#     ordiellipse(mydbRDA,
+#                 groups = metadata.df$Sampletype,
+#                 kind = "ehull",
+#                 border = variable_colours[member][[1]],
+#                 col = variable_colours[member][[1]],
+#                 show.groups = member,
+#                 alpha = .05,
+#                 draw = "polygon")
+#   }
+# }
+# 
+# # Plot just ellipses
+# for (member in variable_values){
+#   if (nrow(metadata.df[metadata.df[["Sampletype"]] == member,]) > 2){ # if too few samples, skip plotting ellipse
+#     ordiellipse(mydbRDA,
+#                 groups = metadata.df$Sampletype,
+#                 kind = "ehull",
+#                 col = variable_colours[member][[1]],
+#                 show.groups = member)
+#   }
+# }
+# 
+# points(mydbRDA, 
+#        cex = 0.8,
+#        pch = all_sample_shapes,  # Shape of point
+#        col = all_sample_colours, # Outline color of point
+#        #bg = all_sample_colours, # Background colour for point
+# )
+# 
+# 
+# # Plot spiders
+# # for (member in variable_values){
+# #   if (nrow(metadata.df[metadata.df[["Sampletype"]] == member,]) > 1){ # if too few samples, skip plotting spider
+# #     ordispider(mydbRDA,
+# #                groups = metadata.df$Sampletype,
+# #                kind = "ehull",
+# #                col = variable_colours[member][[1]],
+# #                show.groups = member)
+# #   }
+# # }
+# 
+# # plot the legend
+# legend(
+#   title = expression(bold("Lesion type")),
+#   title.col="black",
+#   x = -3,
+#   y =2, 
+#   legend= variable_values, 
+#   pch= unique(all_sample_shapes), 
+#   col= unique(all_sample_colours),
+#   # pt.bg = unique(all_sample_colours),
+#   bg = "white",
+#   box.col = NA,
+#   cex = 0.8
+# )
+# 
+# dev.off()

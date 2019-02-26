@@ -106,6 +106,7 @@ sample_ids <- grep("R[0-9].*|S[AB][0-9].*", names(project_otu_table), value = T)
 
 # Load the metadata
 metadata.df <- read.table("data/metadata.tsv", header = T, sep = "\t")
+# metadata.df <- metadata.df[metadata.df$Sampletype %in% c("C","AK_PL","IEC_PL","SCC_PL","AK","IEC","SCC"),]
 
 # Sanity check whether all the samples are in the metadata, this should return nothing. 
 # Otherwise fix the sample names in the metadata or simply remove the offending samples
@@ -126,9 +127,9 @@ if ( length(missing_samples_metadata.df) == 0) {
 }
 
 # Remove samples that are not in the metadata
-#dim(project_otu_table)
-#project_otu_table <- project_otu_table[, ! colnames(project_otu_table) %in% missing_samples]
-#dim(project_otu_table)
+dim(project_otu_table)
+project_otu_table <- project_otu_table[, ! colnames(project_otu_table) %in% missing_samples]
+dim(project_otu_table)
 
 # Remove any patients that are not immunocompromised (MST); remove immunocompetent (MS) patients
 # from OTU table and metadata
@@ -149,20 +150,6 @@ sample_ids <- grep("R[0-9].*|S[AB][0-9].*", names(project_otu_table), value = T)
 # The command below will take each row (MARGIN = 1) for the sample columns and check if any value is not zero.
 project_otu_table <- project_otu_table[apply(project_otu_table[sample_ids], MARGIN = 1, function(z) any(z!=0)),]
 
-##################################################
-#         Remove unwanted lineages
-#
-# Remove OTUs that are Unassigned
-project_otu_table <- project_otu_table[project_otu_table$Taxon != "Unassigned",]
-
-# Discard anything not Bacterial or Fungal
-project_otu_table <- project_otu_table[grepl("D_0__Bacteria|D_3__Fungi", project_otu_table$Taxon),]
-
-# Discard anything not Bacterial
-#project_otu_table <- project_otu_table[grepl("D_0__Bacteria", project_otu_table$Taxon),]
-
-##################################################
-
 # Split the Taxon column into Domain, Phylum...Species 
 project_otu_table <- separate(project_otu_table, "Taxon", into = c("Domain", "Phylum", "Class", "Order", "Family","Genus", "Species"), remove =F, sep = ";")
 
@@ -179,7 +166,6 @@ project_otu_table$Family <- as.character(lapply(project_otu_table$Family, FUN = 
 project_otu_table$Genus <- as.character(lapply(project_otu_table$Genus, FUN = function(x) gsub("D_5", "g", x)))
 project_otu_table$Species <- as.character(lapply(project_otu_table$Species, FUN = function(x) gsub("D_6", "s", x)))
 
-
 # Recreate the full taxonomy string with the 'prettier' taxa labels
 project_otu_table$taxonomy_species <- with(project_otu_table, paste(Domain, Phylum, Class, Order, Family, Genus, Species, sep =";"))
 
@@ -192,8 +178,28 @@ project_otu_table$taxonomy_order <- with(project_otu_table, paste(Domain, Phylum
 project_otu_table$taxonomy_class <- with(project_otu_table, paste(Domain, Phylum, Class, sep =";"))
 project_otu_table$taxonomy_phylum <- with(project_otu_table, paste(Domain, Phylum, sep =";"))
 
+##################################################
+#         Remove unwanted lineages
+#
+project_otu_table_unfiltered <- project_otu_table
+
+# Remove OTUs that are Unassigned
+# project_otu_table <- project_otu_table[project_otu_table$Taxon != "Unassigned",]
+
+# Discard anything not Bacterial or Fungal
+project_otu_table <- project_otu_table[grepl("D_0__Bacteria|D_3__Fungi", project_otu_table$Taxon),]
+
+# Discard anything not Bacterial or Fungal or Unassigned
+# project_otu_table <- project_otu_table[grepl("D_0__Bacteria|D_3__Fungi|^Unassigned$", project_otu_table$Taxon),]
+
+# Discard anything not Bacterial
+# project_otu_table <- project_otu_table[grepl("D_0__Bacteria", project_otu_table$Taxon),]
+
+##################################################
+
 # Remove old Taxon column
 project_otu_table$Taxon <- NULL
+project_otu_table_unfiltered$Taxon <- NULL
 
 # Store the OTUs and corresponding taxonomy information in a separate dataframe
 otu_taxonomy_map <- project_otu_table[c("OTU.ID",
@@ -223,6 +229,7 @@ write.table(otu_taxonomy_map, file = "Result_tables/other/otu_taxonomy_map.csv",
 ########## OTU LEVEL ##########
 # Dataframe containing the counts for each OTU, for each sample
 otu.df <- project_otu_table[c("OTU.ID", sample_ids)]
+otu_unfiltered.df <- project_otu_table_unfiltered[c("OTU.ID", sample_ids)]
 
 # Create a matrix version for ease of processing
 otu.m <- otu.df
@@ -230,10 +237,10 @@ rownames(otu.m) <- otu.m$OTU.ID
 otu.m$OTU.ID <- NULL
 otu.m <- as.matrix(otu.m)
 
-
-# Discard samples with less than 0 reads (update the metadata??)
-# Otherwise relative abundance cannot be calculated (Nans)
-#otu.m <- otu.m[,colSums(otu.m) > 2000]
+otu_unfiltered.m <- otu_unfiltered.df
+rownames(otu_unfiltered.m) <- otu_unfiltered.m$OTU.ID
+otu_unfiltered.m$OTU.ID <- NULL
+otu_unfiltered.m <- as.matrix(otu_unfiltered.m)
 
 # Create relative abundance matrix from counts matrix
 otu_rel.m <- t(t(otu.m)/ colSums(otu.m))
@@ -245,52 +252,147 @@ otu_rel.m[is.nan(otu_rel.m)] <- 0
 # Filter those OTUs that are low abundance in all samples
 
 # Generally, low abundance OTUs are removed.
-# Check how many OTUs would be removed if we filtered any whose abundance is less than 0.05% (0.0005) in any sample
+# Check how many OTUs would be removed if we filtered any whose abundance is less than 0.05% (0.0005) in all samples
 filter_percentage = 0.0005
 otu_rel_low_abundance_otus.m <- otu_rel.m[apply(otu_rel.m[,sample_ids],1,function(z) all(z < filter_percentage)),]
 
-print(paste("There is a total of", dim(otu_rel.m)[1], "OTUs before filtering"))
+# TODO - Collect low abundance OTUs that will be filtered out at this stage
+otu_rel_low_abundance_otus.df <- as.data.frame(otu_rel_low_abundance_otus.m)
+# FIXME write.table(otu_rel_low_abundance_otus.df, file = "Result_tables/count_tables/low_abundance_OTUs.csv", sep = ",", quote = F, col.names = T, row.names = F)
+
+print(paste("There are a total of", dim(otu_rel.m)[1], "OTUs before filtering"))
 print(paste("A total of", dim(otu_rel_low_abundance_otus.m)[1], "OTUs will be filtered at a threshold of", filter_percentage * 100, "percent"))
 
 # If you are happy with the filtering threshold, apply it.
-# colSums(otu_rel.m)
 otu_rel.m <- otu_rel.m[apply(otu_rel.m[,sample_ids],1,function(z) any(z>=filter_percentage)),]
-# dim(otu_rel.m)
-# colSums(otu_rel.m)
 
 # Re-normalise the matrix after filtering
 otu_rel.m <- t(t(otu_rel.m) / colSums(otu_rel.m))
 
+# Change nans to 0. Occurs when a sample has no hits at this point.
+otu_rel.m[is.nan(otu_rel.m)] <- 0
+
 # Also remove low abundance OTUs from the original OTU count matrix
 otu.m  <- otu.m[rownames(otu_rel.m),]
 
-
 ############################################################
-### Determine which OTUs from AK samples have a higher mean relative abundance compared to the swab controls (C)
-# First get the sample ids for AK and C samples
-# TODO - Do we want to actually use negative samples rather than the control samples?
+### Keep only those OTUs from AK samples that have a higher mean relative abundance compared to the swab controls (C) or negatives
+
+# Note in David's code for the 2018 paper, he first rarified before calculating contaminants presence/absence
+# e.g. otu_rare_count.m <- t(rrarefy(x = t(otu_count_raw.m), sample = 2000))
+# I think this makes sense. Large differences in read depth between samples will make it harder to determine the 
+# true-positive contaminants from false-positive.
+otu_rare_count.m <- t(rrarefy(x = t(otu.m), sample=10000))
+otu_rare_rel.m <- t(t(otu_rare_count.m) / colSums(otu_rare_count.m))
+# Change nans to 0. Occurs when a sample has no hits at this point.
+otu_rare_rel.m[is.nan(otu_rare_rel.m)] <- 0
+
+# First get the sample ids for AK and C samples (and other groups)
+# TODO - Do we want to actually use negative samples rather than the control samples? I think so!
 negative_sample_ids <- as.character(metadata.df[metadata.df$Sampletype == "negative",]$Index)
 AK_sample_ids <- as.character(metadata.df[metadata.df$Sampletype == "AK",]$Index)
 C_sample_ids <- as.character(metadata.df[metadata.df$Sampletype == "C",]$Index)
+pooled_AK_sample_ids <- as.character(metadata.df[metadata.df$Sampletype %in% c("AK", "IEC"),]$Index)
+not_negative_sample_ids <- as.character(metadata.df[metadata.df$Sampletype != "negative",]$Index)
+not_negative_or_control_sample_ids <- as.character(metadata.df[!metadata.df$Sampletype %in% c("negative", "C"),]$Index)
 
-# Generate dataframe for ease of filtering
-otu_rel.df <- as.data.frame(otu_rel.m)
+pooled_not_negative_sample_ids <- as.character(metadata.df[metadata.df$Sampletype %in% c("C","AK_PL","IEC_PL","SCC_PL","AK","IEC"),]$Index)
 
-# And filter
-#otu_rel.df <- otu_rel.df[rowMeans(otu_rel.df[,AK_sample_ids]) > rowMeans(otu_rel.df[,C_sample_ids]),]
-otu_rel.df <- otu_rel.df[rowMeans(otu_rel.df[,AK_sample_ids]) > rowMeans(otu_rel.df[,negative_sample_ids]),]
+###
+# TODO Collect contaminating OTUs based on mean relative abundance differences
+# Different variations are for testing
+# contaminating_otus_from_mean_abundances <- rownames(otu_rare_rel.m[rowMeans(otu_rare_rel.m[,pooled_AK_sample_ids]) < rowMeans(otu_rare_rel.m[,negative_sample_ids]),])
+# length(contaminating_otus_from_mean_abundances)
+# contaminating_otus_from_mean_abundances <- rownames(otu_rare_rel.m[rowMeans(otu_rare_rel.m[,not_negative_or_control_sample_ids]) < rowMeans(otu_rare_rel.m[,negative_sample_ids]),])
+# length(contaminating_otus_from_mean_abundances)
+# contaminating_otus_from_mean_abundances <- rownames(otu_rare_rel.m[rowMeans(otu_rare_rel.m[,not_negative_sample_ids]) < rowMeans(otu_rare_rel.m[,negative_sample_ids]),])
+# length(contaminating_otus_from_mean_abundances)
+# contaminating_otus_from_mean_abundances <- rownames(otu_rare_rel.m[rowMeans(otu_rare_rel.m[,AK_sample_ids]) < rowMeans(otu_rare_rel.m[,negative_sample_ids]),])
+# length(contaminating_otus_from_mean_abundances)
+contaminating_otus_from_mean_abundances <- rownames(otu_rare_rel.m[rowMeans(otu_rare_rel.m[,pooled_not_negative_sample_ids]) < rowMeans(otu_rare_rel.m[,negative_sample_ids]),])
+# length(contaminating_otus_from_mean_abundances)
 
-# re-assign matrix
-otu_rel.m <- as.matrix(otu_rel.df)
+################################
+# David's approach to identifying contaminants. It looks like the frequency/abundance among sample type, rather than the mean relative abundance.
+#presences.df[,type] <- apply(otu_rare_count.m[,tmp_samples.v], MARGIN = 1, function(x) { length(which(x > 0)) }) / length(tmp_samples.v)
+# length(AK_sample_ids) = 50
+# length(negative_sample_ids) = 19
+# a <- apply(otu_rare_rel.m[,AK_sample_ids], 1, function(x) {length(which(x > 0))}) /length(AK_sample_ids)
+# #a <- apply(otu_rare_rel.m[,pooled_AK_sample_ids], 1, function(x) {length(which(x > 0))}) /length(pooled_AK_sample_ids)
+# b <- apply(otu_rare_rel.m[,negative_sample_ids], 1, function(x) {length(which(x > 0))}) /length(negative_sample_ids)
+# length(a)
+# length(b)
+# length(a[a > b])
+# length(a[a < b])
+# contaminating_otus_d_appr <- names(a[a < b])
+# summary(contaminating_otus %in% contaminating_otus_d_appr)
+# summary(contaminating_otus_d_appr  %in% contaminating_otus)
+# 
+# otu_rare_rel.m["7d419005f0932066f90620b736226814",AK_sample_ids]
+# otu_rare_rel.m["8d29bf1cc91d94bb7a8a95e457efd186",AK_sample_ids]
+# summary(otu_rare_rel.m["e5a225f331863582e6f0d9f04d433910",AK_sample_ids] == "0")
+# #7d419005f0932066f90620b736226814 = 0
+# #8d29bf1cc91d94bb7a8a95e457efd186 = 1
+# # e5a225f331863582e6f0d9f04d433910 = 0.94 (47 samples)
+# # 69ac787bf420286d73000eb819e1a0a4 = 0
+# # 51730ef83df29f08302bcfb90b167065 = 0.78
+# 
+# summary(otu_rare_rel.m["69ac787bf420286d73000eb819e1a0a4",AK_sample_ids] > 0)
+# summary(otu_rare_rel.m["51730ef83df29f08302bcfb90b167065",AK_sample_ids] > 0)
+# summary(otu_rare_rel.m["69ac787bf420286d73000eb819e1a0a4",negative_sample_ids] > 0)
+# summary(otu_rare_rel.m["51730ef83df29f08302bcfb90b167065",negative_sample_ids] > 0)
+# a["51730ef83df29f08302bcfb90b167065"]
+# b["51730ef83df29f08302bcfb90b167065"]
+################################
 
-# Now go back to original OTU counts matrix and remove contaminate OTUs
+# Determine contaminating otus from prevalence differences between groups
+###
+# This will calculate what percentage of samples in each group an OTU is present in
+otu_not_negative_or_control_sample_prevalences <- apply(otu_rare_rel.m[,not_negative_or_control_sample_ids], 1, function(x) {length(which(x > 0))}) /length(not_negative_or_control_sample_ids)
+otu_not_negative_sample_prevalences <- apply(otu_rare_rel.m[,not_negative_sample_ids], 1, function(x) {length(which(x > 0))}) /length(not_negative_sample_ids)
+otu_pooled_AK_sample_prevalences <- apply(otu_rare_rel.m[,pooled_AK_sample_ids], 1, function(x) {length(which(x > 0))}) /length(pooled_AK_sample_ids)
+otu_negative_sample_prevalences <- apply(otu_rare_rel.m[,negative_sample_ids], 1, function(x) {length(which(x > 0))}) /length(negative_sample_ids)
+otu_pooled_not_negative_sample_prevalences <- apply(otu_rare_rel.m[,pooled_not_negative_sample_ids], 1, function(x) {length(which(x > 0))}) /length(negative_sample_ids)
+###
+# contaminating_otus_from_prevalences <- names(otu_pooled_AK_sample_prevalences[otu_pooled_AK_sample_prevalences > otu_negative_sample_prevalences])
+# contaminating_otus_from_prevalences <- names(otu_not_negative_sample_prevalences[otu_not_negative_sample_prevalences > otu_negative_sample_prevalences])
+# contaminating_otus_from_prevalences <- names(otu_not_negative_or_control_sample_prevalences[otu_not_negative_or_control_sample_prevalences > otu_negative_sample_prevalences])
+contaminating_otus_from_prevalences <- names(otu_pooled_not_negative_sample_prevalences[otu_pooled_not_negative_sample_prevalences > otu_negative_sample_prevalences])
+
+# metadata.df[metadata.df$Index %in% not_negative_sample_ids,]$Sampletype
+# metadata.df[metadata.df$Index %in% not_negative_or_control_sample_ids,]$Sampletype
+
+print(paste("There are", length(contaminating_otus_from_mean_abundances), "contaminating OTUs based on mean abundances"))
+print(paste("There are", length(contaminating_otus_from_prevalences), "contaminating OTUs based on prevalences"))
+# length(contaminating_otus_from_mean_abundances[!contaminating_otus_from_mean_abundances %in% contaminating_otus_from_prevalences])
+# length(contaminating_otus_from_prevalences[!contaminating_otus_from_prevalences %in% contaminating_otus_from_mean_abundances])
+
+###
+# And filter. Either filter the contaminating otus calculating from prevalences or from mean abundances
+# colSums(otu_rel.m)
+dim(otu_rel.m)
+otu_rel.m <- otu_rel.m[!rownames(otu_rel.m) %in% contaminating_otus_from_mean_abundances,]
+# otu_rel.m <- otu_rel.m[!rownames(otu_rel.m) %in% contaminating_otus_from_prevalences,]
+# colSums(otu_rel.m)
+dim(otu_rel.m)
+
+# Re-normalise the matrix after filtering
+otu_rel.m <- t(t(otu_rel.m) / colSums(otu_rel.m))
+
+# Change nans to 0. Occurs when a sample has no hits at this point.
+otu_rel.m[is.nan(otu_rel.m)] <- 0
+
+# Now go back to OTU counts matrix and remove contaminate OTUs
 otu.m <- otu.m[rownames(otu_rel.m),]
 
 # Remove those samples with less than 5000 reads - used in previous paper
 # TODO - is 5000 too much in this study?
+# TODO - write to file those samples that are removed
 dim(otu.m)
+# colnames(otu.m)[which(colSums(otu.m) < 5000)]
 otu.m <- otu.m[,colSums(otu.m) >= 5000]
 dim(otu.m)
+# dim(otu_unfiltered.m[,colSums(otu_unfiltered.m) >= 2000])
 
 # Remove those samples with less than 2000 reads
 #otu.m <- otu.m[,colSums(otu.m) >= 2000]
@@ -313,10 +415,12 @@ column_sums.df$sample <- factor(column_sums.df$sample, levels = column_sums.df$s
 
 ggplot(column_sums.df, aes(x = sample, y = value)) + 
   geom_histogram(stat = "identity") +
+  scale_y_continuous(breaks = seq(0,max(column_sums.df$value), 5000)) +
   xlab("Sample") +
   ylab("Read count") +
   common_theme +
   theme(axis.text.x = element_text(angle = 90))
+summary(column_sums.df$value)
 mean(column_sums.df$value)
 median(column_sums.df$value)
 #row_sums <- #rowSums(otu.m) # counts for OTUs
@@ -327,6 +431,7 @@ median(column_sums.df$value)
 # Generate a rarefied OTU count matrix
 # In the paper from 2018, a rarefaction maximum of 20,000 was used
 # IGNORE -> Here we are going to use 15,000 based on the rarefaction curve and mean / median counts
+# otu_rare_count.m <- t(rrarefy(x = t(otu.m), sample=5000))
 otu_rare_count.m <- t(rrarefy(x = t(otu.m), sample=20000))
 
 # Compare before and after
@@ -348,8 +453,8 @@ otu_rel.m <- t(t(otu.m)/ colSums(otu.m))
 otu_rel.m[is.nan(otu_rel.m)] <- 0
 otu_rel_rare.m <- t(t(otu_rare_count.m) /colSums(otu_rare_count.m))
 otu_rel_rare.m[is.nan(otu_rel_rare.m)] <- 0
-otu_rel.m[1:2,1:2]
-otu_rel_rare.m[1:2,1:2]
+otu_rel.m[1:4,1:4]
+otu_rel_rare.m[1:4,1:4]
 
 # Reassign sample IDs
 sample_ids <- colnames(otu_rel.m)
