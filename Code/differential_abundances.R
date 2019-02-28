@@ -54,6 +54,18 @@ otu_taxonomy_map.df <- read.csv("Result_tables/other/otu_taxonomy_map.csv", head
 
 # Load the metadata.df
 metadata.df <- read.table("data/metadata.tsv", sep ="\t", header = T)
+# We are only interested in C,AK_PL,IEC_PL,SCC_PL,AK,IEC and SCC lesions. 
+# Remove samples for different lesion types (nasal,scar,scar_PL,KA,KA_PL,VV,VV_PL,SF,SF_PL,other,other_PL) from metadata and otu table
+metadata.df <- metadata.df[metadata.df$Sampletype %in% c("C","AK_PL","IEC_PL","SCC_PL","AK","IEC","SCC"),]
+otu.df <- otu.df[,names(otu.df) %in% c("OTU.ID", as.character(metadata.df$Index))]
+
+pool_1 <- c("C","AK_PL","IEC_PL","SCC_PL")
+pool_2 <- c("AK","IEC")
+
+metadata.df$Sampletype_pooled <- factor(as.character(lapply(metadata.df$Sampletype, function(x) ifelse(x %in% pool_1, "NLC", ifelse(x %in% pool_2, "AK", "SCC")))))
+
+# Order the metadata.df by the index value
+metadata.df <- metadata.df[order(metadata.df$Index),]
 
 # Since we likely removed samples from the count matrix
 # in the main script, remove them from the metadata.df here
@@ -74,6 +86,7 @@ metadata.df$Patient <- factor(metadata.df$Patient)
 otu.m <- otu.df
 rownames(otu.m) <- otu.m$OTU.ID
 otu.m$OTU.ID <- NULL
+otu.m <- as.matrix(otu.m)
 
 # CLR transform the otu matrix. We don't use this for DESeq, but we can refer to it to get the 
 # CLR transformed counts for OTUs of interest if necessary
@@ -128,11 +141,10 @@ metadata.df$Sampletype <- relevel(metadata.df$Sampletype, ref = "C") # control a
 #metadata.df$Sampletype <- relevel(metadata.df$Sampletype, ref = "negative") # negative as the reference
 
 
-
 # Create DESeq data set matrix. 
 dds <-DESeqDataSetFromMatrix(countData = otu.m, 
-                            colData = metadata.df, 
-                            design = ~ Sampletype)
+                             colData = metadata.df, 
+                             design = ~ Sampletype_pooled)
 
 # https://www.rdocumentation.org/packages/DESeq2/versions/1.12.3/topics/estimateSizeFactors
 # dds <- estimateSizeFactors(dds, geoMeans = geoMeans) # Needed if zeros in every row 
@@ -146,6 +158,39 @@ dds <- DESeq(dds)
 # P-values produced by DESeq are adjusted for false-discovery-rate (FDR) using, by default, the Benjamin-Hochberg correction.
 # The alpha parameter controls the FDR threshold. Here a value FDR threhold of 0.05 is used, i.e. the proportion of false positives 
 # we expect amongst our differentially abundant otus/genera is less than 5%.
+
+# Compare pooled sample combinations first
+sample_type_combinations_pooled <- combn(as.character(unique(metadata.df$Sampletype_pooled)), 2)
+for (i in 1:ncol(sample_type_combinations_pooled)){
+  group_1 <- as.character(sample_type_combinations_pooled[1,i])
+  group_2 <- as.character(sample_type_combinations_pooled[2,i])
+  resMFSource <- results(dds, contrast = c("Sampletype_pooled",group_1,group_2), alpha=0.05, independentFiltering = F, cooksCutoff = F)
+  #lfcShrink(dds)?
+  resMFSourceOrdered <- resMFSource[order(resMFSource$padj),]
+  resMFSourceOrdered$taxonomy <- assign_taxonomy_to_otu(resMFSourceOrdered, otu_taxonomy_map.df)
+  resMFSourceOrdered <- filter_and_sort_dds_results(resMFSourceOrdered)
+  # Write the results to file
+  result_name <- paste(group_1, group_2, sep = "_vs_")
+  outfilename <- paste("Result_tables/DESeq_results/", result_name, "__pooled.csv", sep= "")
+  write.csv(as.data.frame(resMFSourceOrdered),file=outfilename, quote = F)
+  
+  # Frequency bar graph of adjusted p-values
+  # p_value_distribution <- ggplot(as.data.frame(resMFSourceOrdered), aes(x = padj)) + 
+  #   stat_bin(bins = 50, fill =  "white", colour = "black") + 
+  #   ylab("Frequency") +
+  #   xlab("Adjusted p-value") +
+  #   ggtitle() + 
+  #   common_theme
+}
+
+#########
+# Now normal sample type
+dds <-DESeqDataSetFromMatrix(countData = otu.m, 
+                             colData = metadata.df, 
+                             design = ~ Sampletype)
+
+dds <- estimateSizeFactors(dds)
+dds <- DESeq(dds) 
 
 # Determine what are the pairwise combinations among the Sampletypes
 sample_type_combinations <- combn(as.character(unique(metadata.df$Sampletype)), 2)
@@ -193,6 +238,7 @@ dds_SCCPL_C <-DESeqDataSetFromMatrix(countData = otu.m, colData = metadata.df, d
 dds_SCC <- DESeqDataSetFromMatrix(countData = otu.m, colData = metadata.df, design = ~ Sampletype_SCC)
 dds_SCC_SCCPL <- DESeqDataSetFromMatrix(countData = otu.m, colData = metadata.df, design = ~ Sampletype_SCC_both)
 dds_AK <- DESeqDataSetFromMatrix(countData = otu.m, colData = metadata.df, design = ~ Sampletype_AK)
+# dds_pooled <- DESeqDataSetFromMatrix(countData = otu.m, colData = metadata.df, design = ~ Sampletype_pooled)
 
 geoMeans <- apply(counts(dds_SCCPL_C), 1, gm_mean)
 #dds <- estimateSizeFactors(dds_SCCPL_C, geoMeans = geoMeans)
@@ -210,6 +256,10 @@ geoMeans <- apply(counts(dds_AK), 1, gm_mean)
 #dds_AK <- estimateSizeFactors(dds_AK, geoMeans = geoMeans)
 dds_AK <- estimateSizeFactors(dds_AK)
 
+# geoMeans <- apply(counts(dds_pooled), 1, gm_mean)
+#dds_AK <- estimateSizeFactors(dds_AK, geoMeans = geoMeans)
+# dds_pooled <- estimateSizeFactors(dds_pooled)
+
 # Calculate results
 # dds_SCCPL_C <- DESeq(dds_SCCPL_C, betaPrior = FALSE)
 # dds_SCC<-DESeq(dds_SCC, betaPrior = FALSE)
@@ -219,12 +269,14 @@ dds_SCCPL_C <- DESeq(dds_SCCPL_C)
 dds_SCC<-DESeq(dds_SCC)
 dds_SCC_SCCPL<-DESeq(dds_SCC_SCCPL)
 dds_AK<-DESeq(dds_AK)
+# dds_pooled <- DESeq(dds_pooled)
 
 # Get results for each contrast
 res_SCCPL_C <- results(dds_SCCPL_C, contrast = c("Sampletype_SCCPL_C", "SCC","SCCPL_C"), alpha = 0.05, independentFiltering = F, cooksCutoff = F)
 res_SCC <- results(dds_SCC, contrast = c("Sampletype_SCC", "SCC", "all"),  alpha = 0.05, independentFiltering = F, cooksCutoff = F)
 res_SCC_SCCPL <- results(dds_SCC_SCCPL, contrast = c("Sampletype_SCC_both", "SCC", "all"), alpha = 0.05, independentFiltering = F, cooksCutoff = F)
 res_AK <- results(dds_AK, contrast = c("Sampletype_AK", "AK", "all"), alpha = 0.05, independentFiltering = F, cooksCutoff = F)
+# res_pooled <- results(dds_pooled, contrast = c("Sampletype_pooled", "AK", "all"), alpha = 0.05, independentFiltering = F, cooksCutoff = F)
 
 # Order the result tables
 res_SCCPL_C_Ordered <- res_SCCPL_C[order(res_SCCPL_C$padj),]

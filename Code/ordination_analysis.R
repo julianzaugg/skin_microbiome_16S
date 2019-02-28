@@ -248,45 +248,15 @@ write.csv(envfit_results_OTU,file="Result_tables/stats_various/ENVFIT_otu_clr_ra
 # Manually specify plots
 # Note - don't use bray-curtis as we are using CLR transformed values
 # m.pcoa <- capscale(t(otu_rare_clr_filtered.m)~1, data = metadata.df, dist = "bray") # ~1 makes it unconstrained
-m.pcoa <- capscale(t(otu_rare_clr_filtered.m)~1, data = metadata.df, dist = "euclidean") # ~1 makes it unconstrained
+# m.pcoa <- capscale(t(otu_rare_clr_filtered.m)~1, data = metadata.df, dist = "euclidean") # ~1 makes it unconstrained
 #m.pcoa <- capscale(t(otu_clr_filtered.m)~1, data = metadata.df, dist = "euclidean") # ~1 makes it unconstrained
-# m.pcoa <- rda(t(otu_rare_clr_filtered.m), data = metadata.df) # ~1 makes it unconstrained
+m.pcoa <- rda(t(otu_rare_clr_filtered.m), data = metadata.df) # ~1 makes it unconstrained
 # m.pcoa <- prcomp(t(otu_rare_clr_filtered.m), center = T) # ~1 makes it unconstrained
 #m.pcoa <- capscale(t(otu_rare_clr_filtered.m)~1, data = metadata.df, dist = "euclidean", scale = F) # ~1 makes it unconstrained
 # m.pcoa <- rda(t(otu_rare_clr_filtered.m), data = metadata.df, center = F)
 # temp <- prcomp(t(otu_rare_clr_filtered.m), center = F)
 # ?prcomp
 # plot(temp$x)
-################################################################################################
-# TESTING
-# temp <- prcomp(t(otu_rare_clr_filtered.m), center =T)
-# components <- c(1,2)
-# compA <- paste0("PC", components[1])
-# compB <- paste0("PC", components[2])
-# # get the x and y sample plot lims
-# sample_xlim.v <- c(
-#   min(c(temp$x[,compA], temp$rotation[,compA])),
-#   max(c(temp$x[,compA],temp$rotation[,compA])))
-# 
-# sample_ylim.v <- c(
-#   min(
-#     c(temp$x[,compB],temp$rotation[,compB])),
-#   max(
-#     c(temp$x[,compB],temp$rotation[,compB])))
-# 
-# # adjust the lims by the increase factor 
-# #xlim.v <- xlim.v * (1+plot_lim_increase_frac)
-# #ylim.v <- ylim.v * (1+plot_lim_increase_frac)
-# plot(x = 0, y=0, col='white',
-#      xlab=paste0(compA, " (", round((summary(temp)$importance[2,compA]*100), 2), "%)"), 
-#      ylab=paste0(compB, " (", round((summary(temp)$importance[2,compB]*100), 2), "%)"))
-# points(x = temp$rotation[,compA], y=temp$rotation[,compB])
-# 
-# temp$rotation
-# temp <- as.data.frame(temp$rotation)
-# ggplot(temp, aes( x= PC1, y = PC2)) + 
-#   geom_point()
-
 ################################################################################################
 
 pcoa.scores <- scores(m.pcoa, choices=c(1,2,3))
@@ -389,7 +359,7 @@ plot_spiders <- function (label_spider = F) {
     }
   }
 }
-#plot_spiders(F)
+# plot_spiders(F)
 
 points(pcoa_site_scores, 
        cex = 0.8,
@@ -408,7 +378,7 @@ points(pcoa_site_scores,
 legend(
   title = expression(bold("Patient")),
   title.col="black",
-  x = x_min,
+  x = x_min-2,
   y = y_max, 
   legend= variable_values, 
   pch= unique(all_sample_shapes), 
@@ -484,14 +454,12 @@ plot_ellipses <- function (label_ellipse = F) {
 }
 plot_ellipses(F)
 
-
 #Plot spiders
 plot_spiders <- function (label_spider = F) {
   for (member in variable_values){
     if (nrow(metadata_ordered.df[metadata_ordered.df[["Sampletype"]] == member,]) > 2){ # if too few samples, skip plotting ellipse
       ordispider(pcoa_site_scores,
                  groups = metadata_ordered.df$Sampletype,
-                 border = variable_colours[member][[1]],
                  col = variable_colours[member][[1]],
                  show.groups = member,
                  #alpha = .05,
@@ -499,7 +467,7 @@ plot_spiders <- function (label_spider = F) {
     }
   }
 }
-#plot_spiders(F)
+# plot_spiders(F)
 
 
 points(pcoa_site_scores, 
@@ -598,7 +566,6 @@ plot_spiders <- function (label_spider = F) {
     if (nrow(metadata_ordered.df[metadata_ordered.df[["Sampletype_pooled"]] == member,]) > 2){ # if too few samples, skip plotting ellipse
       ordispider(pcoa_site_scores,
                  groups = metadata_ordered.df$Sampletype_pooled,
-                 border = variable_colours[member][[1]],
                  col = variable_colours[member][[1]],
                  show.groups = member,
                  #lwd = .1,
