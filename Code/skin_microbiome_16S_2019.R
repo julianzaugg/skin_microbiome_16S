@@ -268,19 +268,100 @@ human_OTUs <- project_otu_table_unfiltered[grep("Mammalia", project_otu_table_un
 # otu_unfiltered.m[which(rownames(otu_unfiltered.m) %in% human_OTUs),]
 sample_fraction_human_reads <- 
   melt(colSums(otu_unfiltered.m[rownames(otu_unfiltered.m) %in% human_OTUs,]) / 
-         colSums(otu_unfiltered.m[!rownames(otu_unfiltered.m) %in% human_OTUs,]),value.name = "Fraction")
+         colSums(otu_unfiltered.m),value.name = "Fraction")
 sample_fraction_human_reads$Patient <- unlist(lapply(rownames(sample_fraction_human_reads), function(x) metadata.df[metadata.df$Index == x,]$Patient))
 
 myplot <- ggplot(sample_fraction_human_reads, aes(y= Fraction, x= Patient, fill = Patient)) +
   geom_boxplot() +
   scale_fill_manual(values = my_colour_pallete_32_distinct)+
-  scale_y_continuous(limits = c(0,.51), breaks = seq(0,1,.1)) +
-  xlab("Human fraction") +
-  ylab("Patient") +
+  scale_y_continuous(limits = c(0,1), breaks = seq(0,1,.1)) +
+  ylab("Human fraction") +
+  xlab("Patient") +
   coord_flip() +
   common_theme
 myplot
 ggsave(plot = myplot, filename = "./Result_figures/exploratory_analysis/human_fraction_reads_boxplot.pdf", width=6, height=6)
+
+####
+bacterial_fungal_OTUs <- project_otu_table_unfiltered[grep("d__Bacteria|Fungi", project_otu_table_unfiltered$taxonomy_species),]$OTU.ID
+sample_fraction_bacterial_fungal_reads <- 
+  melt(colSums(otu_unfiltered.m[rownames(otu_unfiltered.m) %in% bacterial_fungal_OTUs,]) / 
+         colSums(otu_unfiltered.m),value.name = "Fraction")
+
+sample_fraction_bacterial_fungal_reads$Patient <- unlist(lapply(rownames(sample_fraction_bacterial_fungal_reads), function(x) metadata.df[metadata.df$Index == x,]$Patient))
+
+myplot <- ggplot(sample_fraction_bacterial_fungal_reads, aes(y= Fraction, x= Patient, fill = Patient)) +
+  geom_boxplot() +
+  scale_fill_manual(values = my_colour_pallete_32_distinct)+
+  scale_y_continuous(limits = c(0,1), breaks = seq(0,1,.1)) +
+  ylab("Bacterial and Fungal fraction") +
+  xlab("Patient") +
+  coord_flip() +
+  common_theme
+myplot
+ggsave(plot = myplot, filename = "./Result_figures/exploratory_analysis/bacterial_fungal_fraction_reads_boxplot.pdf", width=6, height=6)
+
+###
+fungal_OTUs <- project_otu_table_unfiltered[grep("Fungi", project_otu_table_unfiltered$taxonomy_species),]$OTU.ID
+sample_fraction_fungal_reads <- 
+  melt(colSums(otu_unfiltered.m[rownames(otu_unfiltered.m) %in% fungal_OTUs,]) / 
+         colSums(otu_unfiltered.m),value.name = "Fraction")
+
+sample_fraction_fungal_reads$Patient <- unlist(lapply(rownames(sample_fraction_fungal_reads), function(x) metadata.df[metadata.df$Index == x,]$Patient))
+
+myplot <- ggplot(sample_fraction_fungal_reads, aes(y= Fraction, x= Patient, fill = Patient)) +
+  geom_boxplot() +
+  scale_fill_manual(values = my_colour_pallete_32_distinct)+
+  scale_y_continuous(limits = c(0,1), breaks = seq(0,1,.1)) +
+  ylab("Fungal fraction") +
+  xlab("Patient") +
+  coord_flip() +
+  common_theme
+myplot
+ggsave(plot = myplot, filename = "./Result_figures/exploratory_analysis/fungal_fraction_reads_boxplot.pdf", width=6, height=6)
+
+###
+
+bacterial_OTUs <- project_otu_table_unfiltered[grep("d__Bacteria", project_otu_table_unfiltered$taxonomy_species),]$OTU.ID
+sample_fraction_bacterial_reads <- 
+  melt(colSums(otu_unfiltered.m[rownames(otu_unfiltered.m) %in% bacterial_OTUs,]) / 
+         colSums(otu_unfiltered.m),value.name = "Fraction")
+
+sample_fraction_bacterial_reads$Patient <- unlist(lapply(rownames(sample_fraction_bacterial_reads), function(x) metadata.df[metadata.df$Index == x,]$Patient))
+
+myplot <- ggplot(sample_fraction_bacterial_reads, aes(y= Fraction, x= Patient, fill = Patient)) +
+  geom_boxplot() +
+  scale_fill_manual(values = my_colour_pallete_32_distinct)+
+  scale_y_continuous(limits = c(0,1), breaks = seq(0,1,.1)) +
+  ylab("Bacterial fraction") +
+  xlab("Patient") +
+  coord_flip() +
+  common_theme
+myplot
+ggsave(plot = myplot, filename = "./Result_figures/exploratory_analysis/bacterial_fraction_reads_boxplot.pdf", width=6, height=6)
+
+
+###
+Unassigned_OTUs <- project_otu_table_unfiltered[project_otu_table_unfiltered$Domain == "Unassigned",]$OTU.ID
+
+sample_fraction_unassigned_reads <- 
+  melt(colSums(otu_unfiltered.m[rownames(otu_unfiltered.m) %in% Unassigned_OTUs,]) / 
+         colSums(otu_unfiltered.m),value.name = "Fraction")
+
+sample_fraction_unassigned_reads$Patient <- unlist(lapply(rownames(sample_fraction_unassigned_reads), function(x) metadata.df[metadata.df$Index == x,]$Patient))
+
+myplot <- ggplot(sample_fraction_unassigned_reads, aes(y= Fraction, x= Patient, fill = Patient)) +
+  geom_boxplot() +
+  scale_fill_manual(values = my_colour_pallete_32_distinct)+
+  scale_y_continuous(limits = c(0,1), breaks = seq(0,1,.1)) +
+  ylab("Unassigned fraction") +
+  xlab("Patient") +
+  coord_flip() +
+  common_theme
+myplot
+ggsave(plot = myplot, filename = "./Result_figures/exploratory_analysis/unassigned_fraction_reads_boxplot.pdf", width=6, height=6)
+
+
 ############################################################
 # Filter those OTUs that are low abundance in all samples
 

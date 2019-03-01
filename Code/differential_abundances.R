@@ -61,8 +61,12 @@ otu.df <- otu.df[,names(otu.df) %in% c("OTU.ID", as.character(metadata.df$Index)
 
 pool_1 <- c("C","AK_PL","IEC_PL","SCC_PL")
 pool_2 <- c("AK","IEC")
+pool_3 <- c("AK_PL","IEC_PL","SCC_PL")
 
 metadata.df$Sampletype_pooled <- factor(as.character(lapply(metadata.df$Sampletype, function(x) ifelse(x %in% pool_1, "NLC", ifelse(x %in% pool_2, "AK", "SCC")))))
+metadata.df$Sampletype_pooled_C_sep <- factor(as.character(lapply(metadata.df$Sampletype, function(x) ifelse(x %in% pool_3, "NLC", 
+                                                                                                             ifelse(x %in% pool_2, "AK", 
+                                                                                                                    ifelse(x == "C", "C","SCC"))))))
 
 # Order the metadata.df by the index value
 metadata.df <- metadata.df[order(metadata.df$Index),]
@@ -144,7 +148,7 @@ metadata.df$Sampletype <- relevel(metadata.df$Sampletype, ref = "C") # control a
 # Create DESeq data set matrix. 
 dds <-DESeqDataSetFromMatrix(countData = otu.m, 
                              colData = metadata.df, 
-                             design = ~ Sampletype_pooled)
+                             design = ~ Sampletype_pooled_C_sep)
 
 # https://www.rdocumentation.org/packages/DESeq2/versions/1.12.3/topics/estimateSizeFactors
 # dds <- estimateSizeFactors(dds, geoMeans = geoMeans) # Needed if zeros in every row 
@@ -160,18 +164,18 @@ dds <- DESeq(dds)
 # we expect amongst our differentially abundant otus/genera is less than 5%.
 
 # Compare pooled sample combinations first
-sample_type_combinations_pooled <- combn(as.character(unique(metadata.df$Sampletype_pooled)), 2)
+sample_type_combinations_pooled <- combn(as.character(unique(metadata.df$Sampletype_pooled_C_sep)), 2)
 for (i in 1:ncol(sample_type_combinations_pooled)){
   group_1 <- as.character(sample_type_combinations_pooled[1,i])
   group_2 <- as.character(sample_type_combinations_pooled[2,i])
-  resMFSource <- results(dds, contrast = c("Sampletype_pooled",group_1,group_2), alpha=0.05, independentFiltering = F, cooksCutoff = F)
+  resMFSource <- results(dds, contrast = c("Sampletype_pooled_C_sep",group_1,group_2), alpha=0.05, independentFiltering = F, cooksCutoff = F)
   #lfcShrink(dds)?
   resMFSourceOrdered <- resMFSource[order(resMFSource$padj),]
   resMFSourceOrdered$taxonomy <- assign_taxonomy_to_otu(resMFSourceOrdered, otu_taxonomy_map.df)
   resMFSourceOrdered <- filter_and_sort_dds_results(resMFSourceOrdered)
   # Write the results to file
   result_name <- paste(group_1, group_2, sep = "_vs_")
-  outfilename <- paste("Result_tables/DESeq_results/", result_name, "__pooled.csv", sep= "")
+  outfilename <- paste("Result_tables/DESeq_results/", result_name, "__pooled_C_sep.csv", sep= "")
   write.csv(as.data.frame(resMFSourceOrdered),file=outfilename, quote = F)
   
   # Frequency bar graph of adjusted p-values
@@ -182,6 +186,36 @@ for (i in 1:ncol(sample_type_combinations_pooled)){
   #   ggtitle() + 
   #   common_theme
 }
+
+
+
+#########
+# Now pooled sample type
+dds <-DESeqDataSetFromMatrix(countData = otu.m, 
+                             colData = metadata.df, 
+                             design = ~ Sampletype_pooled)
+
+dds <- estimateSizeFactors(dds)
+dds <- DESeq(dds) 
+
+# Determine what are the pairwise combinations among the Sampletypes
+sample_type_combinations <- combn(as.character(unique(metadata.df$Sampletype_pooled)), 2)
+# Loop and compare each combination
+for (i in 1:ncol(sample_type_combinations)){
+  group_1 <- as.character(sample_type_combinations[1,i])
+  group_2 <- as.character(sample_type_combinations[2,i])
+  resMFSource <- results(dds, contrast = c("Sampletype_pooled",group_1,group_2), alpha=0.05, independentFiltering = F, cooksCutoff = F)
+  #lfcShrink(dds)?
+  resMFSourceOrdered <- resMFSource[order(resMFSource$padj),]
+  resMFSourceOrdered$taxonomy <- assign_taxonomy_to_otu(resMFSourceOrdered, otu_taxonomy_map.df)
+  resMFSourceOrdered <- filter_and_sort_dds_results(resMFSourceOrdered)
+  # Write the results to file
+  result_name <- paste(group_1, group_2, sep = "_vs_")
+  outfilename <- paste("Result_tables/DESeq_results/", result_name, "__pooled.csv", sep= "")
+  write.csv(as.data.frame(resMFSourceOrdered),file=outfilename, quote = F)
+}
+
+
 
 #########
 # Now normal sample type
