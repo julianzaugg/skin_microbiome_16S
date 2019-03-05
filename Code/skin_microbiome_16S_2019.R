@@ -398,13 +398,13 @@ otu.m  <- otu.m[rownames(otu_rel.m),]
 ############################################################
 ### Keep only those OTUs from AK samples that have a higher mean relative abundance compared to the swab controls (C) or negatives
 
-# Note that in David's code for the 2018 paper, he first rarified before calculating contaminants presence/absence
+# Note that in David's code for the 2018 paper, he first rarefied before calculating contaminants presence/absence
 # e.g. otu_rare_count.m <- t(rrarefy(x = t(otu_count_raw.m), sample = 2000))
 # I think this makes sense. Large differences in read depth between samples will make it harder to determine the 
 # true-positive contaminants from false-positive.
 otu_rare_count.m <- t(rrarefy(x = t(otu.m), sample=30000))
 
-# Calculate the relative abundance on this rarified table. Can use this to calculate the mean relative abundance of each OTU in different groups.
+# Calculate the relative abundance on this rarefied table. Can use this to calculate the mean relative abundance of each OTU in different groups.
 # In theory, a contaminant will make up a larger percent of the abundance in the negative control.
 otu_rare_rel.m <- t(t(otu_rare_count.m) / colSums(otu_rare_count.m))
 
@@ -561,7 +561,7 @@ sample_ids <- colnames(otu_rel.m)
 
 ## (Re)build dataframes
 
-# Un-rarified
+# Un-rarefied
 otu_rel.df <- data.frame("OTU.ID" = rownames(otu_rel.m))
 otu_rel.df <- cbind(otu_rel.df, otu_rel.m[,colnames(otu_rel.m)])
 rownames(otu_rel.df) <- c()
@@ -583,8 +583,8 @@ rownames(otu_rare.df) <- c()
 # Write the final otu counts and abundances to file
 write.table(otu.df, file = "Result_tables/count_tables/OTU_counts.csv", sep = ",", quote = F, col.names = T, row.names = F)
 write.table(otu_rel.df, file = "Result_tables/relative_abundance_tables/OTU_relative_abundances.csv", sep = ",", quote = F, col.names = T, row.names = F)
-write.table(otu_rare.df, file = "Result_tables/count_tables/OTU_counts_rarified.csv", sep = ",", quote = F, col.names = T, row.names = F)
-write.table(otu_rel_rare.df, file = "Result_tables/relative_abundance_tables/OTU_relative_abundances_rarified.csv", sep = ",", quote = F, col.names = T, row.names = F)
+write.table(otu_rare.df, file = "Result_tables/count_tables/OTU_counts_rarefied.csv", sep = ",", quote = F, col.names = T, row.names = F)
+write.table(otu_rel_rare.df, file = "Result_tables/relative_abundance_tables/OTU_relative_abundances_rarefied.csv", sep = ",", quote = F, col.names = T, row.names = F)
 
 # NOTE - otu.df, otu.m, otu_rel.df and otu_rel.m are the final, filtered OTU count / relative abundance dataframes and matrices. These can be used
 # elsewhere for a variety of analyses at the OTU level, or, as is shown below, used to calculate abundances at different taxa levels
@@ -643,7 +643,7 @@ write.table(otu_abundance_metadata.df, file = "Result_tables/other/OTU_abundance
 # otu_metadata_merged.df
 otu_metadata_merged.df <- merge(otu.df, otu_taxonomy_map, by.x = "OTU.ID", by.y = "OTU.ID")
 
-# Do the same for the rarified data
+# Do the same for the rarefied data
 otu_metadata_merged_rare.df <- merge(otu_rare.df, otu_taxonomy_map, by.x = "OTU.ID", by.y = "OTU.ID")
 
 dim(otu_metadata_merged.df)
@@ -758,7 +758,7 @@ m2df_tax_convert_save <- function(mymatrix, name_of_taxonomy_col = "taxonomy"){
   return(mydf)
 }
 
-# Not rarified
+# Not rarefied
 write.table(otu_species.df, file = "Result_tables/count_tables/Specie_counts.csv", sep = ",", quote = F, col.names = T, row.names = F)
 write.table(m2df_tax_convert_save(otu_species_rel.m, "taxonomy_species"), file = "Result_tables/relative_abundance_tables/Specie_relative_abundances.csv", sep = ",", quote = F, col.names = T, row.names = F)
 
@@ -778,21 +778,21 @@ write.table(otu_phylum.df, file = "Result_tables/count_tables/Phylum_counts.csv"
 write.table(m2df_tax_convert_save(otu_phylum_rel.m, "taxonomy_phylum"), file = "Result_tables/relative_abundance_tables/Phylum_relative_abundances.csv", sep = ",", quote = F, col.names = T, row.names = F)
 
 # Rarified
-write.table(otu_species_rare.df, file = "Result_tables/count_tables/Specie_counts_rarified.csv", sep = ",", quote = F, col.names = T, row.names = F)
-write.table(m2df_tax_convert_save(otu_species_rel_rare.m, "taxonomy_species"), file = "Result_tables/relative_abundance_tables/Specie_relative_abundances_rarified.csv", sep = ",", quote = F, col.names = T, row.names = F)
+write.table(otu_species_rare.df, file = "Result_tables/count_tables/Specie_counts_rarefied.csv", sep = ",", quote = F, col.names = T, row.names = F)
+write.table(m2df_tax_convert_save(otu_species_rel_rare.m, "taxonomy_species"), file = "Result_tables/relative_abundance_tables/Specie_relative_abundances_rarefied.csv", sep = ",", quote = F, col.names = T, row.names = F)
 
-write.table(otu_genus_rare.df, file = "Result_tables/count_tables/Genus_counts_rarified.csv", sep = ",", quote = F, col.names = T, row.names = F)
-write.table(m2df_tax_convert_save(otu_genus_rel_rare.m, "taxonomy_genus"), file = "Result_tables/relative_abundance_tables/Genus_relative_abundances_rarified.csv", sep = ",", quote = F, col.names = T, row.names = F)
+write.table(otu_genus_rare.df, file = "Result_tables/count_tables/Genus_counts_rarefied.csv", sep = ",", quote = F, col.names = T, row.names = F)
+write.table(m2df_tax_convert_save(otu_genus_rel_rare.m, "taxonomy_genus"), file = "Result_tables/relative_abundance_tables/Genus_relative_abundances_rarefied.csv", sep = ",", quote = F, col.names = T, row.names = F)
 
-write.table(otu_family_rare.df, file = "Result_tables/count_tables/Family_counts_rarified.csv", sep = ",", quote = F, col.names = T, row.names = F)
-write.table(m2df_tax_convert_save(otu_family_rel_rare.m, "taxonomy_family"), file = "Result_tables/relative_abundance_tables/Family_relative_abundances_rarified.csv", sep = ",", quote = F, col.names = T, row.names = F)
+write.table(otu_family_rare.df, file = "Result_tables/count_tables/Family_counts_rarefied.csv", sep = ",", quote = F, col.names = T, row.names = F)
+write.table(m2df_tax_convert_save(otu_family_rel_rare.m, "taxonomy_family"), file = "Result_tables/relative_abundance_tables/Family_relative_abundances_rarefied.csv", sep = ",", quote = F, col.names = T, row.names = F)
 
-write.table(otu_order_rare.df, file = "Result_tables/count_tables/Order_counts_rarified.csv", sep = ",", quote = F, col.names = T, row.names = F)
-write.table(m2df_tax_convert_save(otu_order_rel_rare.m, "taxonomy_order"), file = "Result_tables/relative_abundance_tables/Order_relative_abundances_rarified.csv", sep = ",", quote = F, col.names = T, row.names = F)
+write.table(otu_order_rare.df, file = "Result_tables/count_tables/Order_counts_rarefied.csv", sep = ",", quote = F, col.names = T, row.names = F)
+write.table(m2df_tax_convert_save(otu_order_rel_rare.m, "taxonomy_order"), file = "Result_tables/relative_abundance_tables/Order_relative_abundances_rarefied.csv", sep = ",", quote = F, col.names = T, row.names = F)
 
-write.table(otu_class_rare.df, file = "Result_tables/count_tables/Class_counts_rarified.csv", sep = ",", quote = F, col.names = T, row.names = F)
-write.table(m2df_tax_convert_save(otu_class_rel_rare.m, "taxonomy_class"), file = "Result_tables/relative_abundance_tables/Class_relative_abundances_rarified.csv", sep = ",", quote = F, col.names = T, row.names = F)
+write.table(otu_class_rare.df, file = "Result_tables/count_tables/Class_counts_rarefied.csv", sep = ",", quote = F, col.names = T, row.names = F)
+write.table(m2df_tax_convert_save(otu_class_rel_rare.m, "taxonomy_class"), file = "Result_tables/relative_abundance_tables/Class_relative_abundances_rarefied.csv", sep = ",", quote = F, col.names = T, row.names = F)
 
-write.table(otu_phylum_rare.df, file = "Result_tables/count_tables/Phylum_counts_rarified.csv", sep = ",", quote = F, col.names = T, row.names = F)
-write.table(m2df_tax_convert_save(otu_phylum_rel_rare.m, "taxonomy_phylum"), file = "Result_tables/relative_abundance_tables/Phylum_relative_abundances_rarified.csv", sep = ",", quote = F, col.names = T, row.names = F)
+write.table(otu_phylum_rare.df, file = "Result_tables/count_tables/Phylum_counts_rarefied.csv", sep = ",", quote = F, col.names = T, row.names = F)
+write.table(m2df_tax_convert_save(otu_phylum_rel_rare.m, "taxonomy_phylum"), file = "Result_tables/relative_abundance_tables/Phylum_relative_abundances_rarefied.csv", sep = ",", quote = F, col.names = T, row.names = F)
 

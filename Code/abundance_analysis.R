@@ -57,21 +57,44 @@ setwd("/Users/julianzaugg/Desktop/ACE/major_projects/skin_microbiome_16S")
 
 # Load the metadata.df
 metadata.df <- read.table("data/metadata.tsv", header = T, sep = "\t")
+
+# Set the Index to be the rowname
+rownames(metadata.df) <- metadata.df$Index
+
+# Since we likely removed samples from the count matrix
+# in the main script, remove them from the metadata.df here
+samples_removed <- metadata.df$Index[!metadata.df$Index %in% names(otu_rare.df)]
+metadata.df <- metadata.df[! metadata.df$Index %in% samples_removed,]
+metadata.df$Patient <- factor(metadata.df$Patient)
+metadata.df$Sampletype <- factor(metadata.df$Sampletype)
+
 # Remove uncessary columns
 metadata.df$Sampletype_2 <- NULL
 metadata.df$Swab.sample.name <- NULL
-metadata.df$Sampletype_2 <- NULL
 metadata.df$Pool <- NULL
 
+# We are only interested in C,AK_PL,IEC_PL,SCC_PL,AK,IEC and SCC lesions. 
+# Remove samples for different lesion types (nasal,scar,scar_PL,KA,KA_PL,VV,VV_PL,SF,SF_PL,other,other_PL) from metadata and otu table
+metadata.df <- metadata.df[metadata.df$Sampletype %in% c("C","AK_PL","IEC_PL","SCC_PL","AK","IEC","SCC"),]
+pool_1 <- c("C","AK_PL","IEC_PL","SCC_PL")
+pool_2 <- c("AK","IEC")
+pool_3 <- c("AK_PL","IEC_PL","SCC_PL")
 
-# Load rarified counts
-otu_rare.df <- read.table(file = "Result_tables/count_tables/OTU_counts_rarified.csv", sep = ",", header = T)
-otu_species_rare.df <- read.table(file = "Result_tables/count_tables/Specie_counts_rarified.csv", sep = ",", header = T)
-otu_genus_rare.df <- read.table(file = "Result_tables/count_tables/Genus_counts_rarified.csv", sep = ",", header = T)
-otu_family_rare.df <- read.table(file = "Result_tables/count_tables/Family_counts_rarified.csv", sep = ",", header = T)
-otu_order_rare.df <- read.table(file = "Result_tables/count_tables/Order_counts_rarified.csv", sep = ",", header = T)
-otu_class_rare.df <- read.table(file = "Result_tables/count_tables/Class_counts_rarified.csv", sep = ",", header = T)
-otu_phylum_rare.df <- read.table(file = "Result_tables/count_tables/Phylum_counts_rarified.csv", sep = ",", header = T)
+
+metadata.df$Sampletype_pooled <- factor(as.character(lapply(metadata.df$Sampletype, function(x) ifelse(x %in% pool_1, "NLC", ifelse(x %in% pool_2, "AK", "SCC")))))
+metadata.df$Sampletype_pooled_C_sep <- factor(as.character(lapply(metadata.df$Sampletype, function(x) ifelse(x %in% pool_3, "NLC", 
+                                                                                                             ifelse(x %in% pool_2, "AK", 
+                                                                                                                    ifelse(x == "C", "C","SCC"))))))
+
+
+# Load rarefied counts
+otu_rare.df <- read.table(file = "Result_tables/count_tables/OTU_counts_rarefied.csv", sep = ",", header = T)
+otu_species_rare.df <- read.table(file = "Result_tables/count_tables/Specie_counts_rarefied.csv", sep = ",", header = T)
+otu_genus_rare.df <- read.table(file = "Result_tables/count_tables/Genus_counts_rarefied.csv", sep = ",", header = T)
+otu_family_rare.df <- read.table(file = "Result_tables/count_tables/Family_counts_rarefied.csv", sep = ",", header = T)
+otu_order_rare.df <- read.table(file = "Result_tables/count_tables/Order_counts_rarefied.csv", sep = ",", header = T)
+otu_class_rare.df <- read.table(file = "Result_tables/count_tables/Class_counts_rarefied.csv", sep = ",", header = T)
+otu_phylum_rare.df <- read.table(file = "Result_tables/count_tables/Phylum_counts_rarefied.csv", sep = ",", header = T)
 
 # Melt count dataframes
 otu_rare_melt.df <- melt(otu_rare.df, variable.name = "Index", value.name = "Count")
@@ -82,6 +105,15 @@ otu_order_rare_melt.df <- melt(otu_order_rare.df, variable.name = "Index", value
 otu_class_rare_melt.df <- melt(otu_class_rare.df, variable.name = "Index", value.name = "Count")
 otu_phylum_rare_melt.df <- melt(otu_phylum_rare.df, variable.name = "Index", value.name = "Count")
 
+# Remove samples that are not in the metadata. Merge will do this, but good to be explicit.
+otu_rare_melt.df <- otu_rare_melt.df[otu_rare_melt.df$Index %in% metadata.df$Index,]
+otu_species_rare_melt.df <- otu_species_rare_melt.df[otu_species_rare_melt.df$Index %in% metadata.df$Index,]
+otu_genus_rare_melt.df <- otu_genus_rare_melt.df[otu_genus_rare_melt.df$Index %in% metadata.df$Index,]
+otu_family_rare_melt.df <- otu_family_rare_melt.df[otu_family_rare_melt.df$Index %in% metadata.df$Index,]
+otu_order_rare_melt.df <- otu_order_rare_melt.df[otu_order_rare_melt.df$Index %in% metadata.df$Index,]
+otu_class_rare_melt.df <- otu_class_rare_melt.df[otu_class_rare_melt.df$Index %in% metadata.df$Index,]
+otu_phylum_rare_melt.df <- otu_phylum_rare_melt.df[otu_phylum_rare_melt.df$Index %in% metadata.df$Index,]
+
 
 # Combine melted dataframes with metadata
 otu_rare_melt.df <- merge(otu_rare_melt.df, metadata.df, by.x = "Index", by.y = "Index")
@@ -91,7 +123,6 @@ otu_family_rare_melt.df <- merge(otu_family_rare_melt.df, metadata.df, by.x = "I
 otu_order_rare_melt.df <- merge(otu_order_rare_melt.df, metadata.df, by.x = "Index", by.y = "Index")
 otu_class_rare_melt.df <- merge(otu_class_rare_melt.df, metadata.df, by.x = "Index", by.y = "Index")
 otu_phylum_rare_melt.df <- merge(otu_phylum_rare_melt.df, metadata.df, by.x = "Index", by.y = "Index")
-
 
 
 # Make consistent colour palletes. Associate each taxonomy string with a specific hex code.

@@ -47,7 +47,7 @@ filter_and_sort_dds_results <- function(x, p_value_threshold = 0.05){
 setwd("/Users/julianzaugg/Desktop/ACE/major_projects/skin_microbiome_16S")
 
 # Load count table at the OTU level. These are the counts for OTUs that were above our abundance thresholds
-otu.df <- read.table("Result_tables/count_tables/OTU_counts_rarified.csv", sep =",", header =T)
+otu.df <- read.table("Result_tables/count_tables/OTU_counts_rarefied.csv", sep =",", header =T)
 
 # Load the OTU - taxonomy mapping file
 otu_taxonomy_map.df <- read.csv("Result_tables/other/otu_taxonomy_map.csv", header = T)

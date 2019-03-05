@@ -29,6 +29,7 @@ library(reshape2)
 library(gplots)
 # library(DESeq2)
 library(mixOmics)
+library(pheatmap)
 
 ####################################
 # Define various colour palletes
@@ -62,25 +63,69 @@ clr = function(x, base=2){
 setwd("/Users/julianzaugg/Desktop/ACE/major_projects/skin_microbiome_16S")
 
 # Load the metadata.df
-metadata.df <- read.table("data/metadata.tsv", header = T, sep = "\t")
+metadata.df <- read.table("data/metadata.tsv", sep ="\t", header = T)
+
+# Set the Index to be the rowname
+rownames(metadata.df) <- metadata.df$Index
+
+# We are only interested in C,AK_PL,IEC_PL,SCC_PL,AK,IEC and SCC lesions. 
+# Remove samples for different lesion types (nasal,scar,scar_PL,KA,KA_PL,VV,VV_PL,SF,SF_PL,other,other_PL) from metadata and otu table
+metadata.df <- metadata.df[metadata.df$Sampletype %in% c("C","AK_PL","IEC_PL","SCC_PL","AK","IEC","SCC"),]
+
+pool_1 <- c("C","AK_PL","IEC_PL","SCC_PL")
+pool_2 <- c("AK","IEC")
+pool_3 <- c("AK_PL","IEC_PL","SCC_PL")
+
+
+metadata.df$Sampletype_pooled <- factor(as.character(lapply(metadata.df$Sampletype, function(x) ifelse(x %in% pool_1, "NLC", ifelse(x %in% pool_2, "AK", "SCC")))))
+metadata.df$Sampletype_pooled_C_sep <- factor(as.character(lapply(metadata.df$Sampletype, function(x) ifelse(x %in% pool_3, "NLC", 
+                                                                                                             ifelse(x %in% pool_2, "AK", 
+                                                                                                                    ifelse(x == "C", "C","SCC"))))))
 
 # Load count matrices and apply CLR transformation
-otu_clr.m <- clr(as.matrix(read.table(file = "Result_tables/count_tables/OTU_counts_rarefied.csv", sep = ",", header = T, row.names = 1)))
-otu_species_clr.m <- clr(as.matrix(read.table(file = "Result_tables/count_tables/Specie_counts_rarefied.csv", sep = ",", header = T, row.names = 1)))
-otu_genus_clr.m <- clr(as.matrix(read.table(file = "Result_tables/count_tables/Genus_counts_rarefied.csv", sep = ",", header = T, row.names = 1)))
-otu_family_clr.m <- clr(as.matrix(read.table(file = "Result_tables/count_tables/Family_counts_rarefied.csv", sep = ",", header = T, row.names = 1)))
-otu_order_clr.m <- clr(as.matrix(read.table(file = "Result_tables/count_tables/Order_counts_rarefied.csv", sep = ",", header = T, row.names = 1)))
-otu_class_clr.m <- clr(as.matrix(read.table(file = "Result_tables/count_tables/Class_counts_rarefied.csv", sep = ",", header = T, row.names = 1)))
-otu_phylum_clr.m <- clr(as.matrix(read.table(file = "Result_tables/count_tables/Phylum_counts_rarefied.csv", sep = ",", header = T, row.names = 1)))
+otu_rare_clr.m <- clr(as.matrix(read.table(file = "Result_tables/count_tables/OTU_counts_rarefied.csv", sep = ",", header = T, row.names = 1)))
+otu_rare_species_clr.m <- clr(as.matrix(read.table(file = "Result_tables/count_tables/Specie_counts_rarefied.csv", sep = ",", header = T, row.names = 1)))
+otu_rare_genus_clr.m <- clr(as.matrix(read.table(file = "Result_tables/count_tables/Genus_counts_rarefied.csv", sep = ",", header = T, row.names = 1)))
+otu_rare_family_clr.m <- clr(as.matrix(read.table(file = "Result_tables/count_tables/Family_counts_rarefied.csv", sep = ",", header = T, row.names = 1)))
+otu_rare_order_clr.m <- clr(as.matrix(read.table(file = "Result_tables/count_tables/Order_counts_rarefied.csv", sep = ",", header = T, row.names = 1)))
+otu_rare_class_clr.m <- clr(as.matrix(read.table(file = "Result_tables/count_tables/Class_counts_rarefied.csv", sep = ",", header = T, row.names = 1)))
+otu_rare_phylum_clr.m <- clr(as.matrix(read.table(file = "Result_tables/count_tables/Phylum_counts_rarefied.csv", sep = ",", header = T, row.names = 1)))
 
 
-# heatmap.m <- otu_clr.m
-# heatmap.m <- otu_species_clr.m
-# heatmap.m <- otu_genus_clr.m
-# heatmap.m <- otu_family_clr.m
-# heatmap.m <- otu_order_clr.m
-# heatmap.m <- otu_class_clr.m
-heatmap.m <- otu_phylum_clr.m
+# Since we likely removed samples from the count matrix
+# in the main script, remove them from the metadata.df here
+samples_removed <- metadata.df$Index[!metadata.df$Index %in% colnames(otu_rare_clr.m)]
+metadata.df <- metadata.df[! metadata.df$Index %in% samples_removed,]
+metadata.df$Patient <- factor(metadata.df$Patient)
+metadata.df$Sampletype <- factor(metadata.df$Sampletype)
+
+
+# Remove samples that are not in the metadata.
+otu_rare_clr.m <- otu_rare_clr.m[,colnames(otu_rare_clr.m) %in% metadata.df$Index]
+otu_rare_species_clr.m <- otu_rare_species_clr.m[,colnames(otu_rare_species_clr.m) %in% metadata.df$Index]
+otu_rare_genus_clr.m <- otu_rare_genus_clr.m[,colnames(otu_rare_genus_clr.m) %in% metadata.df$Index]
+otu_rare_family_clr.m <- otu_rare_family_clr.m[,colnames(otu_rare_family_clr.m) %in% metadata.df$Index]
+otu_rare_order_clr.m <- otu_rare_order_clr.m[,colnames(otu_rare_order_clr.m) %in% metadata.df$Index]
+otu_rare_class_clr.m <- otu_rare_class_clr.m[,colnames(otu_rare_class_clr.m) %in% metadata.df$Index]
+otu_rare_phylum_clr.m <- otu_rare_phylum_clr.m[,colnames(otu_rare_phylum_clr.m) %in% metadata.df$Index]
+
+# If there are negative values, assign them a value of zero
+otu_rare_clr.m[which(otu_rare_clr.m < 0)] <- 0
+otu_rare_species_clr.m[which(otu_rare_species_clr.m < 0)] <- 0
+otu_rare_genus_clr.m[which(otu_rare_genus_clr.m < 0)] <- 0
+otu_rare_family_clr.m[which(otu_rare_family_clr.m < 0)] <- 0
+otu_rare_order_clr.m[which(otu_rare_order_clr.m < 0)] <- 0
+otu_rare_class_clr.m[which(otu_rare_class_clr.m < 0)] <- 0
+otu_rare_phylum_clr.m[which(otu_rare_phylum_clr.m < 0)] <- 0
+
+
+# heatmap.m <- otu_rare_clr.m
+# heatmap.m <- otu_rare_species_clr.m
+# heatmap.m <- otu_rare_genus_clr.m
+# heatmap.m <- otu_rare_family_clr.m
+# heatmap.m <- otu_rare_order_clr.m
+# heatmap.m <- otu_rare_class_clr.m
+heatmap.m <- otu_rare_phylum_clr.m
 
 
 # Determine the corresponding metadata.df group for the sample id in the OTU table
@@ -88,7 +133,6 @@ heatmap.m <- otu_phylum_clr.m
 my_groups <- c()
 for (sample_id in colnames(heatmap.m)){
   sample_group <- paste(metadata.df[metadata.df$Index == sample_id,]$Sampletype)
-  
   # Combination of two variables
   # sample_group <- paste(metadata.df[metadata.df$sample_name == sample_id,]$preservation, 
   #                       metadata.df[metadata.df$sample_name == sample_id,]$treatment, sep = ";")
@@ -126,8 +170,9 @@ my_palette <- colorRampPalette(c("white", "#ffffcc","#cce1b8", "#91cabc", "#61b4
 
 # And the breaks at which the colours are assigned
 #col_breaks = c(0,0.5,1,5,10,20,30,40,50,60,70,80,90,100)
-#col_breaks = clr(c(0,0.5,1,5,10,20,30,40,50,60,70,80,90,100))
-
+col_breaks = clr(c(0,0.5,1,5,10,20,30,40,50,60,70,80,90,100))
+col_breaks[col_breaks < 0] <- 0
+col_breaks <- round(col_breaks,2)
 
 ############
 # Function to build the legend for the col breaks
@@ -159,22 +204,28 @@ my_group_colours_ordered <- as.vector(my_group_colours[order(my_groups)])
 ####################################################################################################
 # Testing heatmap creation using CIM from mixomics
 
-pdf("Result_figures/relative_abundance_heatmap.pdf", height = 20, width = 30)
-cim(heatmap_ordered.m,
-    color = my_palette,
-    #comp = c(2,1),
-    #comp = c(2),
-    cluster = "none",
-    col.sideColors = cbind(my_group_colours_ordered,my_group_colours_ordered),
-    #margins = c(10,25),
-    scale = F,
-    center = F,
-    transpose = F,
-    keysize = c(1, .5),
-)
-dev.off()
-####################################################################################################
-# 
+# pdf("Result_figures/relative_abundance_heatmap.pdf", height = 20, width = 30)
+# cim(heatmap_ordered.m,
+#     color = my_palette,
+#     #comp = c(2,1),
+#     #comp = c(2),
+#     cluster = "none",
+#     col.sideColors = cbind(my_group_colours_ordered,my_group_colours_ordered),
+#     #margins = c(10,25),
+#     scale = T,
+#     center = F,
+#     transpose = F,
+#     keysize = c(1, .5),
+# )
+# dev.off()
+# ####################################################################################################
+
+pheatmap(heatmap_ordered.m,
+         color = my_palette,
+         cluster_rows = F, 
+         cluster_cols = F,
+         annotation_colors = my_group_colours_ordered)
+# ####
 # heatmap.2(heatmap_ordered.m,
 #           col = my_palette, # color palette defined earlier
 #           # breaks=col_breaks, # enable color transition at specified limits

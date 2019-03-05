@@ -83,8 +83,13 @@ otu.df <- otu.df[,names(otu.df) %in% c("OTU.ID", as.character(metadata.df$Index)
 
 pool_1 <- c("C","AK_PL","IEC_PL","SCC_PL")
 pool_2 <- c("AK","IEC")
+pool_3 <- c("AK_PL","IEC_PL","SCC_PL")
+
 
 metadata.df$Sampletype_pooled <- factor(as.character(lapply(metadata.df$Sampletype, function(x) ifelse(x %in% pool_1, "NLC", ifelse(x %in% pool_2, "AK", "SCC")))))
+metadata.df$Sampletype_pooled_C_sep <- factor(as.character(lapply(metadata.df$Sampletype, function(x) ifelse(x %in% pool_3, "NLC", 
+                                                                                                             ifelse(x %in% pool_2, "AK", 
+                                                                                                                    ifelse(x == "C", "C","SCC"))))))
 
 # Order the metadata.df by the index value
 metadata.df <- metadata.df[order(metadata.df$Index),]
@@ -168,6 +173,11 @@ run_permanova <- function(my_community_data, my_metadata, my_variables){
 
 # adonis(t(otu_rare_clr_filtered.m)~Sampletype,data = metadata.df, permu=999,method="euclidean")
 # adonis(t(otu_rare_clr_filtered.m)~Sampletype,data = metadata.df, permu=999,method="bray")
+adonis(t(otu_rare_clr_filtered.m)~Patient,data = metadata.df, permu=999,method="euclidean")
+adonis(t(otu_rare_clr_filtered.m)~Sampletype,data = metadata.df, permu=999,method="euclidean")
+adonis(t(otu_rare_clr_filtered.m)~Sampletype_pooled,data = metadata.df, permu=999,method="euclidean")
+adonis(t(otu_rare_clr_filtered.m)~Patient+Sampletype+Sampletype_pooled+Patient:Sampletype+Patient:Sampletype_pooled,data = metadata.df, permu=999,method="euclidean")
+adonis(t(otu_rare_clr_filtered.m)~Patient+Sampletype_pooled+Sampletype+Patient:Sampletype+Patient:Sampletype_pooled,data = metadata.df, permu=999,method="euclidean")
 
 permanova_results_OTU <- run_permanova(t(otu_rare_clr_filtered.m), metadata.df, variables_of_interest)
 write.csv(permanova_results_OTU,file="Result_tables/stats_various/PERMANOVA_otu_clr_rarified.csv",row.names = F)
