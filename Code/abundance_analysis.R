@@ -61,13 +61,6 @@ metadata.df <- read.table("data/metadata.tsv", header = T, sep = "\t")
 # Set the Index to be the rowname
 rownames(metadata.df) <- metadata.df$Index
 
-# Since we likely removed samples from the count matrix
-# in the main script, remove them from the metadata.df here
-samples_removed <- metadata.df$Index[!metadata.df$Index %in% names(otu_rare.df)]
-metadata.df <- metadata.df[! metadata.df$Index %in% samples_removed,]
-metadata.df$Patient <- factor(metadata.df$Patient)
-metadata.df$Sampletype <- factor(metadata.df$Sampletype)
-
 # Remove uncessary columns
 metadata.df$Sampletype_2 <- NULL
 metadata.df$Swab.sample.name <- NULL
@@ -123,6 +116,15 @@ otu_family_rare_melt.df <- merge(otu_family_rare_melt.df, metadata.df, by.x = "I
 otu_order_rare_melt.df <- merge(otu_order_rare_melt.df, metadata.df, by.x = "Index", by.y = "Index")
 otu_class_rare_melt.df <- merge(otu_class_rare_melt.df, metadata.df, by.x = "Index", by.y = "Index")
 otu_phylum_rare_melt.df <- merge(otu_phylum_rare_melt.df, metadata.df, by.x = "Index", by.y = "Index")
+
+
+# Since we likely removed samples from the count matrix
+# in the main script, remove them from the metadata.df here
+samples_removed <- metadata.df$Index[!metadata.df$Index %in% colnames(otu_rare.df)]
+metadata.df <- metadata.df[! metadata.df$Index %in% samples_removed,]
+metadata.df$Patient <- factor(metadata.df$Patient)
+metadata.df$Sampletype <- factor(metadata.df$Sampletype)
+
 
 
 # Make consistent colour palletes. Associate each taxonomy string with a specific hex code.
