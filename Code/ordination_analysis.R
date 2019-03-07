@@ -56,7 +56,7 @@ get_samples_missing_data <- function(my_metadata, variables){
 setwd("/Users/julianzaugg/Desktop/ACE/major_projects/skin_microbiome_16S")
 
 # Load count table at the OTU level. These are the counts for OTUs that were above our abundance thresholds
-otu_rare.df <- read.table("Result_tables/count_tables/OTU_counts_rarified.csv", sep =",", header =T)
+otu_rare.df <- read.table("Result_tables/count_tables/OTU_counts_rarefied.csv", sep =",", header =T)
 otu.df <- read.table("Result_tables/count_tables/OTU_counts.csv", sep =",", header =T)
 
 # Load the OTU - taxonomy mapping file
@@ -306,7 +306,7 @@ pdf("Result_figures/pcoa_dbrda_plots/patient_pcoa.pdf",height=10,width=10)
 #      xaxt = "n")
 plot(m.pcoa,
      type='n',
-     xlim = c(x_min,x_max),
+     xlim = c(x_min-2,x_max),
      ylim = c(y_min,y_max),
      xlab = my_xlab,
      ylab = my_ylab)
@@ -353,7 +353,7 @@ plot_ellipses <- function (label_ellipse = F) {
     }
   }
 }
-plot_ellipses(F)
+# plot_ellipses(F)
 
 #Plot spiders
 plot_spiders <- function (label_spider = F) {
@@ -369,7 +369,7 @@ plot_spiders <- function (label_spider = F) {
     }
   }
 }
-# plot_spiders(F)
+plot_spiders(F)
 
 points(pcoa_site_scores, 
        cex = 0.8,
@@ -389,7 +389,7 @@ legend(
   title = expression(bold("Patient")),
   title.col="black",
   x = x_min-2,
-  y = y_max, 
+  y = y_max-5, 
   legend= variable_values, 
   pch= unique(all_sample_shapes), 
   #col= unique(all_sample_colours),
@@ -462,7 +462,7 @@ plot_ellipses <- function (label_ellipse = F) {
     }
   }
 }
-plot_ellipses(F)
+# plot_ellipses(F)
 
 #Plot spiders
 plot_spiders <- function (label_spider = F) {
@@ -477,7 +477,7 @@ plot_spiders <- function (label_spider = F) {
     }
   }
 }
-# plot_spiders(F)
+plot_spiders(F)
 
 
 points(pcoa_site_scores, 
@@ -568,7 +568,7 @@ plot_ellipses <- function (label_ellipse = F) {
     }
   }
 }
-plot_ellipses(F)
+# plot_ellipses(F)
 
 #Plot spiders
 plot_spiders <- function (label_spider = F) {
@@ -583,7 +583,7 @@ plot_spiders <- function (label_spider = F) {
     }
   }
 }
-# plot_spiders(F)
+plot_spiders(F)
 
 points(pcoa_site_scores, 
        cex = 0.8,

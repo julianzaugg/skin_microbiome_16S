@@ -97,7 +97,7 @@ dir.create(file.path("./Result_tables", "shannon_simpson_diversities"), showWarn
 ###############################################################
 
 # Load the OTU table
-project_otu_table <- read.csv("data/features_statistics.csv")
+project_otu_table <- read.csv("data/acepipe_immunocompromised/features_statistics.csv")
 
 # Fix name of first column
 names(project_otu_table)[1] <- "OTU.ID"

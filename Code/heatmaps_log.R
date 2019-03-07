@@ -1,5 +1,6 @@
 #************************************
 # Build heatmaps at OTU/ASV and varying taxonomy levels for the skin microbiome dataset
+# This version is designed for log transformed read counts
 #************************************
 
 # Uncomment and run to install the libraries that might be needed 
@@ -84,76 +85,47 @@ metadata.df$Sampletype_pooled_C_sep <- factor(as.character(lapply(metadata.df$Sa
                                                                                                              ifelse(x %in% pool_2, "AK", 
                                                                                                                     ifelse(x == "C", "C","SCC"))))))
 
-# Load count matrices and apply CLR transformation
-otu_rare_clr.m <- clr(as.matrix(read.table(file = "Result_tables/count_tables/OTU_counts_rarefied.csv", sep = ",", header = T, row.names = 1)))
-otu_rare_species_clr.m <- clr(as.matrix(read.table(file = "Result_tables/count_tables/Specie_counts_rarefied.csv", sep = ",", header = T, row.names = 1)))
-otu_rare_genus_clr.m <- clr(as.matrix(read.table(file = "Result_tables/count_tables/Genus_counts_rarefied.csv", sep = ",", header = T, row.names = 1)))
-otu_rare_family_clr.m <- clr(as.matrix(read.table(file = "Result_tables/count_tables/Family_counts_rarefied.csv", sep = ",", header = T, row.names = 1)))
-otu_rare_order_clr.m <- clr(as.matrix(read.table(file = "Result_tables/count_tables/Order_counts_rarefied.csv", sep = ",", header = T, row.names = 1)))
-otu_rare_class_clr.m <- clr(as.matrix(read.table(file = "Result_tables/count_tables/Class_counts_rarefied.csv", sep = ",", header = T, row.names = 1)))
-otu_rare_phylum_clr.m <- clr(as.matrix(read.table(file = "Result_tables/count_tables/Phylum_counts_rarefied.csv", sep = ",", header = T, row.names = 1)))
+log_matrix <- function(mymat){
+  out <- log(mymat, 10)
+  out[is.infinite(out)] <- 0
+  return(out)
+}
 
-# Or if we just want to use abundances
-otu_genus_rel_rare.m <- as.matrix(read.table(file = "Result_tables/relative_abundance_tables/Genus_relative_abundances_rarefied.csv", sep = ",", header = T, row.names = 1))
-otu_class_rel_rare.m <- as.matrix(read.table(file = "Result_tables/relative_abundance_tables/Class_relative_abundances_rarefied.csv", sep = ",", header = T, row.names = 1))
+# Load abundance matrices
+otu_rare_log.m <- log_matrix(as.matrix(read.table(file = "Result_tables/count_tables/OTU_counts_rarefied.csv", sep = ",", header = T, row.names = 1)))
+otu_genus_rare_log.m <- log_matrix(as.matrix(read.table(file = "Result_tables/count_tables/Genus_counts_rarefied.csv", sep = ",", header = T, row.names = 1)))
+otu_family_rare_log.m <- log_matrix(as.matrix(read.table(file = "Result_tables/count_tables/Family_counts_rarefied.csv", sep = ",", header = T, row.names = 1)))
+otu_order_rare_log.m <- log_matrix(as.matrix(read.table(file = "Result_tables/count_tables/Order_counts_rarefied.csv", sep = ",", header = T, row.names = 1)))
+otu_class_rare_log.m <- log_matrix(as.matrix(read.table(file = "Result_tables/count_tables/Class_counts_rarefied.csv", sep = ",", header = T, row.names = 1)))
+otu_phylum_rare_log.m <- log_matrix(as.matrix(read.table(file = "Result_tables/count_tables/Phylum_counts_rarefied.csv", sep = ",", header = T, row.names = 1)))
 
 # Cleanup column (sample) names
-colnames(otu_rare_clr.m) <- gsub("_J.*", "", colnames(otu_rare_clr.m))
-colnames(otu_rare_species_clr.m) <- gsub("_J.*", "", colnames(otu_rare_species_clr.m))
-colnames(otu_rare_genus_clr.m) <- gsub("_J.*", "", colnames(otu_rare_genus_clr.m))
-colnames(otu_rare_family_clr.m) <- gsub("_J.*", "", colnames(otu_rare_family_clr.m))
-colnames(otu_rare_order_clr.m) <- gsub("_J.*", "", colnames(otu_rare_order_clr.m))
-colnames(otu_rare_class_clr.m) <- gsub("_J.*", "", colnames(otu_rare_class_clr.m))
-colnames(otu_rare_phylum_clr.m) <- gsub("_J.*", "", colnames(otu_rare_phylum_clr.m))
-
-colnames(otu_genus_rel_rare.m) <- gsub("_J.*", "", colnames(otu_genus_rel_rare.m))
-colnames(otu_class_rel_rare.m) <- gsub("_J.*", "", colnames(otu_class_rel_rare.m))
-
+colnames(otu_rare_log.m) <- gsub("_J.*", "", colnames(otu_rare_log.m))
+colnames(otu_genus_rare_log.m) <- gsub("_J.*", "", colnames(otu_genus_rare_log.m))
+colnames(otu_family_rare_log.m) <- gsub("_J.*", "", colnames(otu_family_rare_log.m))
+colnames(otu_order_rare_log.m) <- gsub("_J.*", "", colnames(otu_order_rare_log.m))
+colnames(otu_class_rare_log.m) <- gsub("_J.*", "", colnames(otu_class_rare_log.m))
+colnames(otu_phylum_rare_log.m) <- gsub("_J.*", "", colnames(otu_phylum_rare_log.m))
 
 # and correct metadata
 rownames(metadata.df) <- gsub("_J.*", "", rownames(metadata.df))
 metadata.df$Index <- gsub("_J.*", "", metadata.df$Index)
 
-
-################################################################
-##### For evaluating scale of clr values compared to counts and abundances
-otu_rare_phylum.m <- as.matrix(read.table(file = "Result_tables/count_tables/Phylum_counts_rarefied.csv", sep = ",", header = T, row.names = 1))
-temp <- melt(sort(otu_rare_phylum.m[,"R1369_J1477"]))
-colSums(otu_rare_phylum.m)["R1369_J1477"]
-temp2 <- melt(sort(clr(otu_rare_phylum.m)[,"R1369_J1477"]))
-temp2$counts <- temp[rownames(temp2),]
-temp <- melt(sort(otu_rare_phylum.m[,"R1369_J1477"])/colSums(otu_rare_phylum.m)["R1369_J1477"])
-temp2$abundances <- temp[rownames(temp2),]
-temp2$abundances <- temp2$abundances * 100
-################################################################
-
 # Since we likely removed samples from the count matrix
 # in the main script, remove them from the metadata.df here
-samples_removed <- metadata.df$Index[!metadata.df$Index %in% colnames(otu_rare_clr.m)]
+samples_removed <- metadata.df$Index[!metadata.df$Index %in% colnames(otu_rare_log.m)]
 metadata.df <- metadata.df[! metadata.df$Index %in% samples_removed,]
 metadata.df$Patient <- factor(metadata.df$Patient)
 metadata.df$Sampletype <- factor(metadata.df$Sampletype)
 
 # Remove samples that are not in the metadata.
-otu_rare_clr.m <- otu_rare_clr.m[,colnames(otu_rare_clr.m) %in% metadata.df$Index]
-otu_rare_species_clr.m <- otu_rare_species_clr.m[,colnames(otu_rare_species_clr.m) %in% metadata.df$Index]
-otu_rare_genus_clr.m <- otu_rare_genus_clr.m[,colnames(otu_rare_genus_clr.m) %in% metadata.df$Index]
-otu_rare_family_clr.m <- otu_rare_family_clr.m[,colnames(otu_rare_family_clr.m) %in% metadata.df$Index]
-otu_rare_order_clr.m <- otu_rare_order_clr.m[,colnames(otu_rare_order_clr.m) %in% metadata.df$Index]
-otu_rare_class_clr.m <- otu_rare_class_clr.m[,colnames(otu_rare_class_clr.m) %in% metadata.df$Index]
-otu_rare_phylum_clr.m <- otu_rare_phylum_clr.m[,colnames(otu_rare_phylum_clr.m) %in% metadata.df$Index]
+otu_rare_log.m <- otu_rare_log.m[,colnames(otu_rare_log.m) %in% metadata.df$Index]
+otu_genus_rare_log.m <- otu_genus_rare_log.m[,colnames(otu_genus_rare_log.m) %in% metadata.df$Index]
+otu_family_rare_log.m <- otu_family_rare_log.m[,colnames(otu_family_rare_log.m) %in% metadata.df$Index]
+otu_order_rare_log.m <- otu_order_rare_log.m[,colnames(otu_order_rare_log.m) %in% metadata.df$Index]
+otu_class_rare_log.m <- otu_class_rare_log.m[,colnames(otu_class_rare_log.m) %in% metadata.df$Index]
+otu_phylum_rare_log.m <- otu_phylum_rare_log.m[,colnames(otu_phylum_rare_log.m) %in% metadata.df$Index]
 
-otu_genus_rel_rare.m <- otu_genus_rel_rare.m[,colnames(otu_genus_rel_rare.m) %in% metadata.df$Index]
-otu_class_rel_rare.m <- otu_class_rel_rare.m[,colnames(otu_class_rel_rare.m) %in% metadata.df$Index]
-
-# If there are negative values, assign them a value of zero
-otu_rare_clr.m[which(otu_rare_clr.m < 0)] <- 0
-otu_rare_species_clr.m[which(otu_rare_species_clr.m < 0)] <- 0
-otu_rare_genus_clr.m[which(otu_rare_genus_clr.m < 0)] <- 0
-otu_rare_family_clr.m[which(otu_rare_family_clr.m < 0)] <- 0
-otu_rare_order_clr.m[which(otu_rare_order_clr.m < 0)] <- 0
-otu_rare_class_clr.m[which(otu_rare_class_clr.m < 0)] <- 0
-otu_rare_phylum_clr.m[which(otu_rare_phylum_clr.m < 0)] <- 0
 
 filter_heatmap_matrix <- function(myheatmap, row_max = 0, prevalence = 0){
   internal_heatmap <- myheatmap
@@ -163,14 +135,11 @@ filter_heatmap_matrix <- function(myheatmap, row_max = 0, prevalence = 0){
   entry_prevalences <- apply(internal_heatmap, 1, function(x) {length(which(x > 0))})/dim(internal_heatmap)[2]
   entries_from_prevalences <- names(entry_prevalences)[entry_prevalences > filter_fraction]
   entries_from_prevalences <- entries_from_prevalences[!is.na(entries_from_prevalences)]
-  # dim(heatmap.m)
-  # heatmap.m <- heatmap.m[entries_from_prevalences,]
-  # dim(heatmap.m)
   return(internal_heatmap[entries_from_prevalences,])
 }
 
 # Function to create heatmap
-make_lesion_heatmap_clr <- function(myheatmap,
+make_lesion_heatmap <- function(myheatmap,
                                 filename,
                                 height,
                                 width,
@@ -190,6 +159,7 @@ make_lesion_heatmap_clr <- function(myheatmap,
     }
     sample_annotations.df[sample_id, "Lesion_type"] <- sample_lesion_type
   }
+  # Reassign the ordering found in the metadata
   sample_annotations.df$Lesion_type <- factor(sample_annotations.df$Lesion_type, levels = levels(metadata.df$Sampletype_pooled_IEC_sep))
   
   # Assign a distinct colour to each unique lesion type
@@ -206,34 +176,6 @@ make_lesion_heatmap_clr <- function(myheatmap,
   ## White - yellow - blue
   my_palette <- colorRampPalette(c("white", "#ffffcc","#cce1b8", "#91cabc", "#61b4c1","#335fa5","#28387a", "#071447"))(13)
   
-  # if (value_type == "clr"){
-    # my_breaks = c(0,0.5,1,5,10,20,30,40,50,60,70,80,90,100)
-    # break
-    # min_break_value = min(myheatmap)
-    # max_break_value = max(myheatmap)
-    # my_breaks <- c(min_break_value:max_break_value)
-    # my_palette <- colorRampPalette(c("white", "#ffffcc","#cce1b8", "#91cabc", "#61b4c1","#335fa5","#28387a", "#071447"))(13)
-    # my_palette <- colorRampPalette(unique(my_palette[cut(c(min_break_value:max_break_value),13,include.lowest = T)]))
-    # my_breaks <- c()
-  # }
-  # else if (value_type == "rel"){
-  #   my_palette <- colorRampPalette(c("white", "#ffffcc","#cce1b8", "#91cabc", "#61b4c1","#335fa5","#28387a", "#071447"))(13)
-  #   my_breaks = c(0,0.5,1,5,10,20,30,40,50,60,70,80,90,100)
-  # }
-  # print(my_breaks)
-  
-  # my_palette <- colorRampPalette(c("white", "#ffffcc","#cce1b8", "#91cabc", "#61b4c1","#335fa5","#28387a", "#071447"))(300)
-  ## Blue to red
-  # my_palette <- colorRampPalette(rev(brewer.pal(name = "RdBu", n = 11)))(13)
-  ## White to red
-  # my_palette <- brewer.pal(name = "Reds", n = 9)
-  # my_palette[1] <- "white"
-  # my_palette <- colorRampPalette(my_palette)(13)
-  # my_palette <- colorRampPalette(c("navy", "yellow", "firebrick3"))(50)
-  # my_palette <- colorRampPalette(c("darkblue", "yellow", "firebrick3"))(50)
-  # my_palette <- colorRampPalette(rev(brewer.pal(n = 7, name ="RdYlBu")))(30)
-  ########################
-  
   # Order heatmap by lesion type
   heatmap_ordered.m <- internal_heatmap[,order(sample_annotations.df$Lesion_type)]
   
@@ -247,18 +189,22 @@ make_lesion_heatmap_clr <- function(myheatmap,
   
   annotation_breaks <- unlist(lapply(unique(sample_annotations.df[,"Lesion_type"]), function(x) { min(which(sample_annotations.df[,"Lesion_type"] == x))})) - 1
   
+  
   # pdf("Result_figures/heatmaps/lesion_genus_heatmap.pdf",height=15,width=40)
   pdf(filename,height=height,width=width)
   setHook("grid.newpage", function() pushViewport(viewport(x=1,y=1,width=0.9, height=0.9, name="vp", just=c("right","top"))), action="prepend")
   pheatmap(heatmap_ordered.m,
            treeheight_row = 0, # To hide row tree
            treeheight_col = 0, # To hide column tree
+           # cutree_cols = 2,
            # treeheight_col = 100,
            # gaps_col = annotation_breaks,
            #breaks = my_breaks,
+           # scale = "column",
            annotation_names_col = F,
            color = my_palette,
            fontsize_row = 6,
+           fontsize_col = 6,
            cluster_rows = clust_rows,
            cluster_cols = clust_cols,
            # legend_breaks = my_breaks,
@@ -271,7 +217,7 @@ make_lesion_heatmap_clr <- function(myheatmap,
   dev.off()
 }
 
-# from pheatmap
+
 generate_breaks = function(x, n, center = F){
   if(center){
     m = max(abs(c(min(x, na.rm = T), max(x, na.rm = T))))
@@ -283,29 +229,21 @@ generate_breaks = function(x, n, center = F){
   
   return(res)
 }
+log(150,10)
+10**3
+# 2.176091 = 150 reads (0.5 %)
+heatmap_genus.m <- filter_heatmap_matrix(otu_genus_rare_log.m, row_max = 2.176091, prevalence = 0.3)
+heatmap_class.m <- filter_heatmap_matrix(otu_class_rare_log.m, row_max = 2.176091, prevalence = 0.0)
 
-# seq(-14.15267, 14.15267, length.out = 14)
-# generate_breaks(otu_genus_rel_rare.m, 13)
-# my_palette(13)[cut(mean_prevalence_values,seq(0,100,by=10))]
+# heatmap_rel_genus.m <- otu_genus_rel_rare.m[rownames(heatmap_genus.m),]
 
-### Define the heatmap matrix to be used
-heatmap_otu.m <- filter_heatmap_matrix(otu_rare_clr.m, row_max = 0, 0.3)
-heatmap_species.m <- filter_heatmap_matrix(otu_rare_species_clr.m, row_max = 0, 0.3)
-heatmap_genus.m <- filter_heatmap_matrix(otu_rare_genus_clr.m, row_max = 0, 0.3)
-heatmap_family.m <- filter_heatmap_matrix(otu_rare_family_clr.m, row_max = 0, 0.3)
-heatmap_order.m <- filter_heatmap_matrix(otu_rare_order_clr.m, row_max = 0, 0.3)
-heatmap_class.m <- filter_heatmap_matrix(otu_rare_class_clr.m, row_max = 0, 0.3)
-heatmap_phylum.m <- filter_heatmap_matrix(otu_rare_phylum_clr.m, row_max = 0, 0.3)
-
+# If it’s not too much hassle, a heatmap based on the relative abundance would be really great.
+# Is it possible to order the lesion type so that we see NLCs on left, then AK, IEC next, and SCC all the way to the right?
 metadata.df$Sampletype_pooled_IEC_sep <- factor(metadata.df$Sampletype_pooled_IEC_sep, levels = c("NLC","AK","IEC","SCC"))
-heatmap_genus.m <- filter_heatmap_matrix(otu_genus_rel_rare.m*100, 10, 0.3)
-make_lesion_heatmap_clr(heatmap_genus.m,filename = "Result_figures/heatmaps/lesion_genus_heatmap.pdf", 5,35, clust_cols = F, clust_rows = T)
 
-make_lesion_heatmap_clr(heatmap_otu.m,filename = "Result_figures/heatmaps/lesion_otu_heatmap.pdf", 10,30, clust_cols = F, clust_rows = T)
-make_lesion_heatmap_clr(heatmap_species.m,filename = "Result_figures/heatmaps/lesion_species_heatmap.pdf", 10,30, clust_cols = F, clust_rows = T)
-make_lesion_heatmap_clr(heatmap_genus.m,filename = "Result_figures/heatmaps/lesion_genus_heatmap.pdf", 10,30, clust_cols = F, clust_rows = T)
-make_lesion_heatmap_clr(heatmap_family.m,filename = "Result_figures/heatmaps/lesion_family_heatmap.pdf", 10,30, clust_cols = F, clust_rows = T)
-make_lesion_heatmap_clr(heatmap_order.m,filename = "Result_figures/heatmaps/lesion_order_heatmap.pdf", 10,30, clust_cols = F, clust_rows = T)
-make_lesion_heatmap_clr(heatmap_class.m,filename = "Result_figures/heatmaps/lesion_class_heatmap.pdf", 10,30, clust_cols = F, clust_rows = T)
-make_lesion_heatmap_clr(heatmap_phylum.m,filename = "Result_figures/heatmaps/lesion_phylum_heatmap.pdf", 10,30, clust_cols = F, clust_rows = T)
+make_lesion_heatmap(heatmap_genus.m,filename = "Result_figures/heatmaps/lesion_genus_heatmap_log_read_count_clustered_colrow.pdf", 15,35,clust_cols = T,clust_rows = T)
+make_lesion_heatmap(heatmap_class.m,filename = "Result_figures/heatmaps/lesion_class_heatmap_log_read_count_clustered_colrow.pdf", 10,30,clust_cols = T,clust_rows = T)
+
+make_lesion_heatmap(heatmap_genus.m,filename = "Result_figures/heatmaps/lesion_genus_heatmap_log_read_count_clustered_row.pdf", 15,35,clust_cols = F,clust_rows = T)
+make_lesion_heatmap(heatmap_class.m,filename = "Result_figures/heatmaps/lesion_class_heatmap_log_read_count_clustered_row.pdf", 10,30,clust_cols = F,clust_rows = T)
 
