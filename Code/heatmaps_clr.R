@@ -115,6 +115,17 @@ rownames(metadata.df) <- gsub("_J.*", "", rownames(metadata.df))
 metadata.df$Index <- gsub("_J.*", "", metadata.df$Index)
 
 
+log_matrix <- function(mymat){
+  out <- log(mymat, 10)
+  out[is.infinite(out)] <- 0
+  return(out)
+}
+otu_genus_rare_log.m <- log_matrix(as.matrix(read.table(file = "Result_tables/count_tables/Genus_counts_rarefied.csv", sep = ",", header = T, row.names = 1)))
+colnames(otu_genus_rare_log.m) <- gsub("_J.*", "", colnames(otu_genus_rare_log.m))
+otu_genus_rare_log.m <- otu_genus_rare_log.m[,colnames(otu_genus_rare_log.m) %in% metadata.df$Index]
+
+
+
 ################################################################
 ##### For evaluating scale of clr values compared to counts and abundances
 otu_rare_phylum.m <- as.matrix(read.table(file = "Result_tables/count_tables/Phylum_counts_rarefied.csv", sep = ",", header = T, row.names = 1))
@@ -300,6 +311,9 @@ heatmap_phylum.m <- filter_heatmap_matrix(otu_rare_phylum_clr.m, row_max = 0, 0.
 metadata.df$Sampletype_pooled_IEC_sep <- factor(metadata.df$Sampletype_pooled_IEC_sep, levels = c("NLC","AK","IEC","SCC"))
 heatmap_genus.m <- filter_heatmap_matrix(otu_genus_rel_rare.m*100, 10, 0.3)
 make_lesion_heatmap_clr(heatmap_genus.m,filename = "Result_figures/heatmaps/lesion_genus_heatmap.pdf", 5,35, clust_cols = F, clust_rows = T)
+
+heatmap_genus.m <- filter_heatmap_matrix(otu_genus_rare_log.m, row_max = 2.176091, prevalence = 0.3)
+make_lesion_heatmap(heatmap_genus.m,filename = "Result_figures/heatmaps/test.pdf", 15,35,clust_cols = T,clust_rows = T)
 
 make_lesion_heatmap_clr(heatmap_otu.m,filename = "Result_figures/heatmaps/lesion_otu_heatmap.pdf", 10,30, clust_cols = F, clust_rows = T)
 make_lesion_heatmap_clr(heatmap_species.m,filename = "Result_figures/heatmaps/lesion_species_heatmap.pdf", 10,30, clust_cols = F, clust_rows = T)

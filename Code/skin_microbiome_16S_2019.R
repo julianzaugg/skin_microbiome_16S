@@ -97,17 +97,45 @@ dir.create(file.path("./Result_tables", "shannon_simpson_diversities"), showWarn
 ###############################################################
 
 # Load the OTU table
-project_otu_table <- read.csv("data/acepipe_immunocompromised/features_statistics.csv")
+# project_otu_table <- read.csv("data/acepipe_immunocompromised/features_statistics.csv")
+project_otu_table <- read.csv("data/acepipe_immunocompromised_competent/features_statistics.csv")
+
 
 # Fix name of first column
 names(project_otu_table)[1] <- "OTU.ID"
 
-# Get the sample ids from the OTU table
-sample_ids_original <- grep("R[0-9].*|S[AB][0-9].*", names(project_otu_table), value = T)
-sample_ids <- grep("R[0-9].*|S[AB][0-9].*", names(project_otu_table), value = T)
+# Fix names of r and b samples
+names(project_otu_table) <- gsub("R([1-4]_)","r\\1", names(project_otu_table))
+names(project_otu_table) <- gsub("B(_)","b\\1", names(project_otu_table))
+# grep("R([1-4]_)", names(project_otu_table), value = T)
+# gsub("R[1-4]_","\\1", names(project_otu_table))
+# test_names <- c("S4297B_J220","S4298_J220", "S4293R1_J220","S4293R2_J220","S4293R3_J220","S4294_J220")
+# test_names
+
 
 # Load the metadata
-metadata.df <- read.table("data/metadata.tsv", header = T, sep = "\t")
+# metadata.df <- read.table("data/metadata.tsv", header = T, sep = "\t")
+metadata.df <- read.table("data/metadata_immunocompromised_competent.tsv", header = T, sep = "\t")
+
+# Change SwabCo to negative as they are the same
+# temp <- metadata.df[metadata.df$Sampletype == "SwabCo",]$Index
+# metadata.df[metadata.df$Index %in% temp,]
+levels(metadata.df$Sampletype)[match("SwabCo",levels(metadata.df$Sampletype))] <- "negative"
+# metadata.df[metadata.df$Index %in% temp,]
+# FIXME - Change NLC to C ?
+
+#Fix the some of the _J607 samples where read files did not have the r4 included. These are described in the metadata
+samples_to_fix <- as.character(metadata.df[!metadata.df$internal_name == "",]$internal_name)
+for (s2f in samples_to_fix){
+  pattern <- paste("(",s2f,")", "(_J607)", sep ="")
+  # print(pattern)
+  # print(grep(pattern, names(project_otu_table), value = T))
+  names(project_otu_table) <- gsub(pattern, "\\1r4\\2", names(project_otu_table))
+}
+
+# Get the sample ids from the OTU table
+sample_ids_original <- grep("R[0-9].*|S[AB][0-9].*|S[0-9].*", names(project_otu_table), value = T)
+sample_ids <- grep("R[0-9].*|S[AB][0-9].*|S[0-9].*", names(project_otu_table), value = T)
 
 # Results from the ACE amplicon pipeline `should' contain at least one observation/count in every row, however just to be sure
 # remove any rows containing all zeros. To do this, simply keep any row where there is any value not equal to zero.
@@ -151,7 +179,9 @@ project_otu_table_unfiltered <- project_otu_table
 
 # We are currently only interested in a samples with the following lesion types. Filter the metadata to just those
 # dim(metadata.df)
-metadata.df <- metadata.df[metadata.df$Sampletype %in% c("C","AK_PL","IEC_PL","SCC_PL","AK","IEC","SCC", "negative"),]
+# metadata.df <- metadata.df[metadata.df$Sampletype %in% c("C","AK_PL","IEC_PL","SCC_PL","AK","IEC","SCC", "negative"),]
+# metadata.df <- metadata.df[metadata.df$Sampletype %in% c("C","AK_PL","IEC_PL","SCC_PL","AK","IEC","SCC", "negative", "NLC", "SwabCo"),]
+metadata.df <- metadata.df[metadata.df$Sampletype %in% c("C","AK_PL","IEC_PL","SCC_PL","AK","IEC","SCC", "negative", "NLC"),]
 # dim(metadata.df)
 
 # Sanity check whether all the samples are in the metadata, this should return nothing. 
@@ -179,16 +209,16 @@ dim(project_otu_table)
 
 # Remove any patients that are not immunocompromised (MST); remove immunocompetent (MS) patients
 # from OTU table and metadata
-MS_patients <- unique(metadata.df[grepl("MS[0-9]", metadata.df$Patient),]$Index)
-project_otu_table <- project_otu_table[,!colnames(project_otu_table) %in% MS_patients]
-metadata.df <- metadata.df[!metadata.df$Index %in% MS_patients,]
+# MS_patients <- unique(metadata.df[grepl("MS[0-9]", metadata.df$Patient),]$Index)
+# project_otu_table <- project_otu_table[,!colnames(project_otu_table) %in% MS_patients]
+# metadata.df <- metadata.df[!metadata.df$Index %in% MS_patients,]
 
 # Save the final filtered metadata use elsewhere
 #write.table(metadata.df, file = "Result_tables/filtered_metadata.csv", sep = ",", quote = F, row.names = F)
 
 # Reassign the sample ids 
-sample_ids <- grep("R[0-9].*|S[AB][0-9].*", names(project_otu_table), value = T)
-
+# sample_ids <- grep("R[0-9].*|S[AB][0-9].*", names(project_otu_table), value = T)
+sample_ids <- grep("R[0-9].*|S[AB][0-9].*|S[0-9].*", names(project_otu_table), value = T)
 
 
 ##################################################
@@ -264,102 +294,102 @@ otu_rel.m[is.nan(otu_rel.m)] <- 0
 ############################################################
 ## TODO Calculate the fraction of human reads in each sample
 # Get human OTUs
-human_OTUs <- project_otu_table_unfiltered[grep("Mammalia", project_otu_table_unfiltered$taxonomy_species),]$OTU.ID
-# otu_unfiltered.m[which(rownames(otu_unfiltered.m) %in% human_OTUs),]
-sample_fraction_human_reads <- 
-  melt(colSums(otu_unfiltered.m[rownames(otu_unfiltered.m) %in% human_OTUs,]) / 
-         colSums(otu_unfiltered.m),value.name = "Fraction")
-sample_fraction_human_reads$Patient <- unlist(lapply(rownames(sample_fraction_human_reads), function(x) metadata.df[metadata.df$Index == x,]$Patient))
-
-myplot <- ggplot(sample_fraction_human_reads, aes(y= Fraction, x= Patient, fill = Patient)) +
-  geom_boxplot() +
-  scale_fill_manual(values = my_colour_pallete_32_distinct)+
-  scale_y_continuous(limits = c(0,1), breaks = seq(0,1,.1)) +
-  ylab("Human fraction") +
-  xlab("Patient") +
-  coord_flip() +
-  common_theme
-myplot
-ggsave(plot = myplot, filename = "./Result_figures/exploratory_analysis/human_fraction_reads_boxplot.pdf", width=6, height=6)
-
-####
-bacterial_fungal_OTUs <- project_otu_table_unfiltered[grep("d__Bacteria|Fungi", project_otu_table_unfiltered$taxonomy_species),]$OTU.ID
-sample_fraction_bacterial_fungal_reads <- 
-  melt(colSums(otu_unfiltered.m[rownames(otu_unfiltered.m) %in% bacterial_fungal_OTUs,]) / 
-         colSums(otu_unfiltered.m),value.name = "Fraction")
-
-sample_fraction_bacterial_fungal_reads$Patient <- unlist(lapply(rownames(sample_fraction_bacterial_fungal_reads), function(x) metadata.df[metadata.df$Index == x,]$Patient))
-
-myplot <- ggplot(sample_fraction_bacterial_fungal_reads, aes(y= Fraction, x= Patient, fill = Patient)) +
-  geom_boxplot() +
-  scale_fill_manual(values = my_colour_pallete_32_distinct)+
-  scale_y_continuous(limits = c(0,1), breaks = seq(0,1,.1)) +
-  ylab("Bacterial and Fungal fraction") +
-  xlab("Patient") +
-  coord_flip() +
-  common_theme
-myplot
-ggsave(plot = myplot, filename = "./Result_figures/exploratory_analysis/bacterial_fungal_fraction_reads_boxplot.pdf", width=6, height=6)
-
-###
-fungal_OTUs <- project_otu_table_unfiltered[grep("Fungi", project_otu_table_unfiltered$taxonomy_species),]$OTU.ID
-sample_fraction_fungal_reads <- 
-  melt(colSums(otu_unfiltered.m[rownames(otu_unfiltered.m) %in% fungal_OTUs,]) / 
-         colSums(otu_unfiltered.m),value.name = "Fraction")
-
-sample_fraction_fungal_reads$Patient <- unlist(lapply(rownames(sample_fraction_fungal_reads), function(x) metadata.df[metadata.df$Index == x,]$Patient))
-
-myplot <- ggplot(sample_fraction_fungal_reads, aes(y= Fraction, x= Patient, fill = Patient)) +
-  geom_boxplot() +
-  scale_fill_manual(values = my_colour_pallete_32_distinct)+
-  scale_y_continuous(limits = c(0,1), breaks = seq(0,1,.1)) +
-  ylab("Fungal fraction") +
-  xlab("Patient") +
-  coord_flip() +
-  common_theme
-myplot
-ggsave(plot = myplot, filename = "./Result_figures/exploratory_analysis/fungal_fraction_reads_boxplot.pdf", width=6, height=6)
-
-###
-
-bacterial_OTUs <- project_otu_table_unfiltered[grep("d__Bacteria", project_otu_table_unfiltered$taxonomy_species),]$OTU.ID
-sample_fraction_bacterial_reads <- 
-  melt(colSums(otu_unfiltered.m[rownames(otu_unfiltered.m) %in% bacterial_OTUs,]) / 
-         colSums(otu_unfiltered.m),value.name = "Fraction")
-
-sample_fraction_bacterial_reads$Patient <- unlist(lapply(rownames(sample_fraction_bacterial_reads), function(x) metadata.df[metadata.df$Index == x,]$Patient))
-
-myplot <- ggplot(sample_fraction_bacterial_reads, aes(y= Fraction, x= Patient, fill = Patient)) +
-  geom_boxplot() +
-  scale_fill_manual(values = my_colour_pallete_32_distinct)+
-  scale_y_continuous(limits = c(0,1), breaks = seq(0,1,.1)) +
-  ylab("Bacterial fraction") +
-  xlab("Patient") +
-  coord_flip() +
-  common_theme
-myplot
-ggsave(plot = myplot, filename = "./Result_figures/exploratory_analysis/bacterial_fraction_reads_boxplot.pdf", width=6, height=6)
-
-
-###
-Unassigned_OTUs <- project_otu_table_unfiltered[project_otu_table_unfiltered$Domain == "Unassigned",]$OTU.ID
-
-sample_fraction_unassigned_reads <- 
-  melt(colSums(otu_unfiltered.m[rownames(otu_unfiltered.m) %in% Unassigned_OTUs,]) / 
-         colSums(otu_unfiltered.m),value.name = "Fraction")
-
-sample_fraction_unassigned_reads$Patient <- unlist(lapply(rownames(sample_fraction_unassigned_reads), function(x) metadata.df[metadata.df$Index == x,]$Patient))
-
-myplot <- ggplot(sample_fraction_unassigned_reads, aes(y= Fraction, x= Patient, fill = Patient)) +
-  geom_boxplot() +
-  scale_fill_manual(values = my_colour_pallete_32_distinct)+
-  scale_y_continuous(limits = c(0,1), breaks = seq(0,1,.1)) +
-  ylab("Unassigned fraction") +
-  xlab("Patient") +
-  coord_flip() +
-  common_theme
-myplot
-ggsave(plot = myplot, filename = "./Result_figures/exploratory_analysis/unassigned_fraction_reads_boxplot.pdf", width=6, height=6)
+# human_OTUs <- project_otu_table_unfiltered[grep("Mammalia", project_otu_table_unfiltered$taxonomy_species),]$OTU.ID
+# # otu_unfiltered.m[which(rownames(otu_unfiltered.m) %in% human_OTUs),]
+# sample_fraction_human_reads <- 
+#   melt(colSums(otu_unfiltered.m[rownames(otu_unfiltered.m) %in% human_OTUs,]) / 
+#          colSums(otu_unfiltered.m),value.name = "Fraction")
+# sample_fraction_human_reads$Patient <- unlist(lapply(rownames(sample_fraction_human_reads), function(x) metadata.df[metadata.df$Index == x,]$Patient))
+# 
+# myplot <- ggplot(sample_fraction_human_reads, aes(y= Fraction, x= Patient, fill = Patient)) +
+#   geom_boxplot() +
+#   scale_fill_manual(values = my_colour_pallete_32_distinct)+
+#   scale_y_continuous(limits = c(0,1), breaks = seq(0,1,.1)) +
+#   ylab("Human fraction") +
+#   xlab("Patient") +
+#   coord_flip() +
+#   common_theme
+# myplot
+# ggsave(plot = myplot, filename = "./Result_figures/exploratory_analysis/human_fraction_reads_boxplot.pdf", width=6, height=6)
+# 
+# ####
+# bacterial_fungal_OTUs <- project_otu_table_unfiltered[grep("d__Bacteria|Fungi", project_otu_table_unfiltered$taxonomy_species),]$OTU.ID
+# sample_fraction_bacterial_fungal_reads <- 
+#   melt(colSums(otu_unfiltered.m[rownames(otu_unfiltered.m) %in% bacterial_fungal_OTUs,]) / 
+#          colSums(otu_unfiltered.m),value.name = "Fraction")
+# 
+# sample_fraction_bacterial_fungal_reads$Patient <- unlist(lapply(rownames(sample_fraction_bacterial_fungal_reads), function(x) metadata.df[metadata.df$Index == x,]$Patient))
+# 
+# myplot <- ggplot(sample_fraction_bacterial_fungal_reads, aes(y= Fraction, x= Patient, fill = Patient)) +
+#   geom_boxplot() +
+#   scale_fill_manual(values = my_colour_pallete_32_distinct)+
+#   scale_y_continuous(limits = c(0,1), breaks = seq(0,1,.1)) +
+#   ylab("Bacterial and Fungal fraction") +
+#   xlab("Patient") +
+#   coord_flip() +
+#   common_theme
+# myplot
+# ggsave(plot = myplot, filename = "./Result_figures/exploratory_analysis/bacterial_fungal_fraction_reads_boxplot.pdf", width=6, height=6)
+# 
+# ###
+# fungal_OTUs <- project_otu_table_unfiltered[grep("Fungi", project_otu_table_unfiltered$taxonomy_species),]$OTU.ID
+# sample_fraction_fungal_reads <- 
+#   melt(colSums(otu_unfiltered.m[rownames(otu_unfiltered.m) %in% fungal_OTUs,]) / 
+#          colSums(otu_unfiltered.m),value.name = "Fraction")
+# 
+# sample_fraction_fungal_reads$Patient <- unlist(lapply(rownames(sample_fraction_fungal_reads), function(x) metadata.df[metadata.df$Index == x,]$Patient))
+# 
+# myplot <- ggplot(sample_fraction_fungal_reads, aes(y= Fraction, x= Patient, fill = Patient)) +
+#   geom_boxplot() +
+#   scale_fill_manual(values = my_colour_pallete_32_distinct)+
+#   scale_y_continuous(limits = c(0,1), breaks = seq(0,1,.1)) +
+#   ylab("Fungal fraction") +
+#   xlab("Patient") +
+#   coord_flip() +
+#   common_theme
+# myplot
+# ggsave(plot = myplot, filename = "./Result_figures/exploratory_analysis/fungal_fraction_reads_boxplot.pdf", width=6, height=6)
+# 
+# ###
+# 
+# bacterial_OTUs <- project_otu_table_unfiltered[grep("d__Bacteria", project_otu_table_unfiltered$taxonomy_species),]$OTU.ID
+# sample_fraction_bacterial_reads <- 
+#   melt(colSums(otu_unfiltered.m[rownames(otu_unfiltered.m) %in% bacterial_OTUs,]) / 
+#          colSums(otu_unfiltered.m),value.name = "Fraction")
+# 
+# sample_fraction_bacterial_reads$Patient <- unlist(lapply(rownames(sample_fraction_bacterial_reads), function(x) metadata.df[metadata.df$Index == x,]$Patient))
+# 
+# myplot <- ggplot(sample_fraction_bacterial_reads, aes(y= Fraction, x= Patient, fill = Patient)) +
+#   geom_boxplot() +
+#   scale_fill_manual(values = my_colour_pallete_32_distinct)+
+#   scale_y_continuous(limits = c(0,1), breaks = seq(0,1,.1)) +
+#   ylab("Bacterial fraction") +
+#   xlab("Patient") +
+#   coord_flip() +
+#   common_theme
+# myplot
+# ggsave(plot = myplot, filename = "./Result_figures/exploratory_analysis/bacterial_fraction_reads_boxplot.pdf", width=6, height=6)
+# 
+# 
+# ###
+# Unassigned_OTUs <- project_otu_table_unfiltered[project_otu_table_unfiltered$Domain == "Unassigned",]$OTU.ID
+# 
+# sample_fraction_unassigned_reads <- 
+#   melt(colSums(otu_unfiltered.m[rownames(otu_unfiltered.m) %in% Unassigned_OTUs,]) / 
+#          colSums(otu_unfiltered.m),value.name = "Fraction")
+# 
+# sample_fraction_unassigned_reads$Patient <- unlist(lapply(rownames(sample_fraction_unassigned_reads), function(x) metadata.df[metadata.df$Index == x,]$Patient))
+# 
+# myplot <- ggplot(sample_fraction_unassigned_reads, aes(y= Fraction, x= Patient, fill = Patient)) +
+#   geom_boxplot() +
+#   scale_fill_manual(values = my_colour_pallete_32_distinct)+
+#   scale_y_continuous(limits = c(0,1), breaks = seq(0,1,.1)) +
+#   ylab("Unassigned fraction") +
+#   xlab("Patient") +
+#   coord_flip() +
+#   common_theme
+# myplot
+# ggsave(plot = myplot, filename = "./Result_figures/exploratory_analysis/unassigned_fraction_reads_boxplot.pdf", width=6, height=6)
 
 
 ############################################################
@@ -403,6 +433,7 @@ otu.m  <- otu.m[rownames(otu_rel.m),]
 # I think this makes sense. Large differences in read depth between samples will make it harder to determine the 
 # true-positive contaminants from false-positive.
 otu_rare_count.m <- t(rrarefy(x = t(otu.m), sample=30000))
+# otu_rare_count.m <- t(rrarefy(x = t(otu.m), sample=2000))
 
 # Calculate the relative abundance on this rarefied table. Can use this to calculate the mean relative abundance of each OTU in different groups.
 # In theory, a contaminant will make up a larger percent of the abundance in the negative control.
@@ -418,11 +449,13 @@ AK_sample_ids <- as.character(metadata.df[metadata.df$Sampletype == "AK",]$Index
 C_sample_ids <- as.character(metadata.df[metadata.df$Sampletype == "C",]$Index)
 pooled_AK_sample_ids <- as.character(metadata.df[metadata.df$Sampletype %in% c("AK", "IEC"),]$Index)
 not_negative_sample_ids <- as.character(metadata.df[metadata.df$Sampletype != "negative",]$Index)
-not_negative_or_control_sample_ids <- as.character(metadata.df[!metadata.df$Sampletype %in% c("negative", "C"),]$Index)
-pooled_not_negative_sample_ids <- as.character(metadata.df[metadata.df$Sampletype %in% c("C","AK_PL","IEC_PL","SCC_PL","AK","IEC"),]$Index)
+# not_negative_or_control_sample_ids <- as.character(metadata.df[!metadata.df$Sampletype %in% c("negative", "C"),]$Index)
+not_negative_or_control_sample_ids <- as.character(metadata.df[!metadata.df$Sampletype %in% c("negative", "C","NLC"),]$Index)
+# pooled_not_negative_sample_ids <- as.character(metadata.df[metadata.df$Sampletype %in% c("C","AK_PL","IEC_PL","SCC_PL","AK","IEC"),]$Index)
+pooled_not_negative_sample_ids <- as.character(metadata.df[metadata.df$Sampletype %in% c("C","NLC","AK_PL","IEC_PL","SCC_PL","AK","IEC"),]$Index)
 
 ###
-# TODO Collect contaminating OTUs based on mean relative abundance differences
+# TODO - determine whether to include controls when comparing against negative samples
 
 contaminating_otus_from_mean_abundances <- rownames(otu_rare_rel.m[rowMeans(otu_rare_rel.m[,not_negative_sample_ids]) < rowMeans(otu_rare_rel.m[,negative_sample_ids]),])
 length(contaminating_otus_from_mean_abundances)
@@ -431,7 +464,9 @@ length(contaminating_otus_from_mean_abundances)
 # David's approach to identifying contaminants. It is the prevalence/frequency/abundance among sample type, rather than the mean relative abundance.
 # Determine contaminating otus from prevalence differences between groups
 # This will calculate what percentage of samples in each group an OTU is present in
+otu_negative_sample_prevalences <- apply(otu_rare_count.m[,negative_sample_ids], 1, function(x) {length(which(x > 0))}) /length(negative_sample_ids)
 otu_pooled_not_negative_sample_prevalences <- apply(otu_rare_count.m[,pooled_not_negative_sample_ids], 1, function(x) {length(which(x > 0))}) /length(pooled_not_negative_sample_ids)
+
 contaminating_otus_from_prevalences <- names(otu_pooled_not_negative_sample_prevalences[otu_pooled_not_negative_sample_prevalences < otu_negative_sample_prevalences])
 
 print(paste("There are", length(contaminating_otus_from_mean_abundances), "contaminating OTUs based on mean abundances"))
@@ -537,6 +572,7 @@ median(column_sums.df$value)
 # Generate a rarefied OTU count matrix
 # In the paper from 2018, a rarefaction maximum of 20,000 was used
 otu_rare_count.m <- t(rrarefy(x = t(otu.m), sample=30000))
+# otu_rare_count.m <- t(rrarefy(x = t(otu.m), sample=20000))
 
 # Compare before and after
 # colSums(otu.m)[1:5]
