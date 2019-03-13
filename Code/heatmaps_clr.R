@@ -66,6 +66,9 @@ setwd("/Users/julianzaugg/Desktop/ACE/major_projects/skin_microbiome_16S")
 # Load the metadata.df
 metadata.df <- read.table("data/metadata.tsv", sep ="\t", header = T)
 
+# metadata.df <- metadata.df[metadata.df$Project == "immunocompetent",]
+# metadata.df <- metadata.df[metadata.df$Project == "immunocompromised",]
+
 # Set the Index to be the rowname
 rownames(metadata.df) <- metadata.df$Index
 

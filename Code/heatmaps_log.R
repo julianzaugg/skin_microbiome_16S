@@ -66,14 +66,14 @@ clr = function(x, base=2){
 setwd("/Users/julianzaugg/Desktop/ACE/major_projects/skin_microbiome_16S")
 
 # Load the metadata.df
-metadata.df <- read.table("data/metadata.tsv", sep ="\t", header = T)
+metadata.df <- read.table("data/metadata_immunocompromised_competent.tsv", header = T, sep = "\t")
 
 # Set the Index to be the rowname
 rownames(metadata.df) <- metadata.df$Index
 
 # We are only interested in C,AK_PL,IEC_PL,SCC_PL,AK,IEC and SCC lesions. 
 # Remove samples for different lesion types (nasal,scar,scar_PL,KA,KA_PL,VV,VV_PL,SF,SF_PL,other,other_PL) from metadata and otu table
-metadata.df <- metadata.df[metadata.df$Sampletype %in% c("C","AK_PL","IEC_PL","SCC_PL","AK","IEC","SCC"),]
+metadata.df <- metadata.df[metadata.df$Sampletype %in% c("C","AK_PL","IEC_PL","SCC_PL","AK","IEC","SCC", "NLC"),]
 
 pool_1 <- c("C","AK_PL","IEC_PL","SCC_PL")
 pool_2 <- c("AK","IEC")

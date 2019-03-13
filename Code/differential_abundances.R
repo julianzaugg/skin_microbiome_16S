@@ -52,21 +52,14 @@ otu.df <- read.table("Result_tables/count_tables/OTU_counts_rarefied.csv", sep =
 # Load the OTU - taxonomy mapping file
 otu_taxonomy_map.df <- read.csv("Result_tables/other/otu_taxonomy_map.csv", header = T)
 
-# Load the metadata.df
-metadata.df <- read.table("data/metadata.tsv", sep ="\t", header = T)
-# We are only interested in C,AK_PL,IEC_PL,SCC_PL,AK,IEC and SCC lesions. 
-# Remove samples for different lesion types (nasal,scar,scar_PL,KA,KA_PL,VV,VV_PL,SF,SF_PL,other,other_PL) from metadata and otu table
-metadata.df <- metadata.df[metadata.df$Sampletype %in% c("C","AK_PL","IEC_PL","SCC_PL","AK","IEC","SCC"),]
+# Load the processed metadata
+metadata.df <- read.csv("Result_tables/other/processed_metadata.csv", sep =",", header = T)
+
+# We are only interested in C,AK_PL,IEC_PL,SCC_PL,AK,IEC, NLC and SCC lesions. 
+metadata.df <- metadata.df[metadata.df$Sampletype %in% c("C","AK_PL","IEC_PL","SCC_PL","AK","IEC","SCC", "NLC"),]
+
+
 otu.df <- otu.df[,names(otu.df) %in% c("OTU.ID", as.character(metadata.df$Index))]
-
-pool_1 <- c("C","AK_PL","IEC_PL","SCC_PL")
-pool_2 <- c("AK","IEC")
-pool_3 <- c("AK_PL","IEC_PL","SCC_PL")
-
-metadata.df$Sampletype_pooled <- factor(as.character(lapply(metadata.df$Sampletype, function(x) ifelse(x %in% pool_1, "NLC", ifelse(x %in% pool_2, "AK", "SCC")))))
-metadata.df$Sampletype_pooled_C_sep <- factor(as.character(lapply(metadata.df$Sampletype, function(x) ifelse(x %in% pool_3, "NLC", 
-                                                                                                             ifelse(x %in% pool_2, "AK", 
-                                                                                                                    ifelse(x == "C", "C","SCC"))))))
 
 # Order the metadata.df by the index value
 metadata.df <- metadata.df[order(metadata.df$Index),]
@@ -83,6 +76,7 @@ metadata.df <- metadata.df[order(metadata.df$Index),]
 # DESeq2 may do this automatically but it is good to be explicit.
 metadata.df$Sampletype <- factor(metadata.df$Sampletype)
 metadata.df$Patient <- factor(metadata.df$Patient)
+metadata.df$Project <- factor(metadata.df$Project)
 
 
 
@@ -97,7 +91,7 @@ otu.m <- as.matrix(otu.m)
 otu_clr.m <- clr(otu.m)
 
 
-########################################################################################################################
+# ---------------------------------------------------------------------------------------------------------
 # Perform differential abundance calculations at the OTU level and genus level, 
 # comparing between the groups within variables of interest
 
@@ -113,49 +107,83 @@ all(names(otu.m) == metadata.df$Index) # Should be 'True'
 # Can order the columns of the count matrices by the order of the metadata.df as follows
 otu.m <- otu.m[,order(metadata.df$Index)]
 
-# Filter to only OTUs that have more than 10 reads in at least one sample
-# otu.m <- otu.m[which(apply(otu.m, 1, max) >= 10),]
+# Filter to only OTUs that have more than 15 reads in at least one sample
+dim(otu.m)
+otu.m <- otu.m[which(apply(otu.m, 1, max) >= 15),]
+dim(otu.m)
+# otu.m <- otu.m[which(apply(otu.m, 1, max) >= 30),]
+dim(otu.m)
+otu.m <- otu.m[which(apply(otu.m, 1, max) >= 150),]
+dim(otu.m)
+#150 / 30000 * 100
+# ---------------------------------------------------------------------------------------------------------
+### Create new variables where different lesions types have been grouped
 
-################################################################################
+metadata.df$Sampletype_fixed <- factor(as.character(lapply(metadata.df$Sampletype, function(x)ifelse(x == "C", "NLC", as.character(x)))))
+# # SCC and all
+metadata.df$Sampletype_SCC <- factor(as.character(lapply(metadata.df$Sampletype, function(x)ifelse(x == "SCC", "SCC", "all"))))
+# # SCC+SCC_PL and all
+metadata.df$Sampletype_SCC_both <- factor(as.character(lapply(metadata.df$Sampletype, function(x)ifelse(x == "SCC" | x == "SCC_PL", "SCC", "all"))))
+# # AK and all
+metadata.df$Sampletype_AK <- factor(as.character(lapply(metadata.df$Sampletype, function(x)ifelse(x == "AK", "AK", "all"))))
+
+metadata.df$Sampletype_pooled_cohort <- factor(paste0(metadata.df$Sampletype_pooled, "_", metadata.df$Project))
+
+# # SCC_PL + C
+# metadata.df$Sampletype_SCCPL_C <- factor(as.character(lapply(as.character(metadata.df$Sampletype),function(x)ifelse(x == "SCC_PL" | x == "C", "SCCPL_C", x))))
+# 
+# 
+# metadata.df$Sampletype_cohort <- factor(paste0(metadata.df$Sampletype, "_", metadata.df$Project))
+# metadata.df$Sampletype_pooled_C_sep_cohort <- factor(paste0(metadata.df$Sampletype_pooled_C_sep, "_", metadata.df$Project))
+# 
+# metadata.df$Sampletype_SCC_cohort <- factor(paste0(metadata.df$Sampletype_SCC, "_", metadata.df$Project))
+# metadata.df$Sampletype_SCC_both_cohort <- factor(paste0(metadata.df$Sampletype_SCC_both, "_", metadata.df$Project))
+# metadata.df$Sampletype_AK_cohort <- factor(paste0(metadata.df$Sampletype_SCC_both, "_", metadata.df$Project))
+# metadata.df$Sampletype_SCCPL_C_cohort <- factor(paste0(metadata.df$Sampletype_SCCPL_C, "_", metadata.df$Project))
+# ---------------------------------------------------------------------------------------------------------
+
+
+# https://github.com/joey711/phyloseq/issues/445
+# rs <- rowSums(counts(dds))
+# rmx <- apply(counts(dds), 1, max)
+# plot(rs+1, rmx/rs, log="x")
+# geoMeans <- apply(counts(dds), 1, gm_mean)
+
+# --------------------
+# FOR TESTING
+
 # Just to cut down on numbers for fasta script testing
 # dim(otu.m)
 # otu.m <- otu.m[which(apply(otu.m, 1, max) >= 1000),] # Just to cut down on numbers for quick script testing
+# otu.m <- otu.m[,base::sample(colnames(otu.m),replace = F,size =200)]
+# metadata.df <- metadata.df[metadata.df$Index %in% colnames(otu.m),]
 # dim(otu.m)
-################################################################################
 
-####################################
-### Create new variables where different lesions types have been grouped
-# SCC and all
-metadata.df$Sampletype_SCC <- factor(as.character(lapply(metadata.df$Sampletype, function(x)ifelse(x == "SCC", "SCC", "all"))))
-# SCC+SCC_PL and all
-metadata.df$Sampletype_SCC_both <- factor(as.character(lapply(metadata.df$Sampletype, function(x)ifelse(x == "SCC" | x == "SCC_PL", "SCC", "all"))))
-# AK and all
-metadata.df$Sampletype_AK <- factor(as.character(lapply(metadata.df$Sampletype, function(x)ifelse(x == "AK", "AK", "all"))))
-# SCC_PL + C
-metadata.df$Sampletype_SCCPL_C <- factor(as.character(lapply(as.character(metadata.df$Sampletype),function(x)ifelse(x == "SCC_PL" | x == "C", "SCCPL_C", x))))
-####################################
+# 
+# dds <-DESeqDataSetFromMatrix(countData = otu.m, 
+#                              colData = metadata.df,
+#                              design = ~ Sampletype_cohort)
+# geoMeans <- apply(counts(dds), 1, gm_mean)
+# dds <- estimateSizeFactors(dds, geoMeans = geoMeans) 
+# dds <- estimateSizeFactors(dds)
+# dds <- DESeq(dds) 
+# results(dds)
+# resultsNames(dds)
+# resMFSource <- results(dds, contrast = c("Sampletype_pooled_C_sep",group_1,group_2), alpha=0.05, independentFiltering = F, cooksCutoff = F)
+# --------------------
 
-#### First we will just compare each Sampletype against all other sample types
 
+
+# ---------------------------------------------------------------------------------------------------------
 # To compare specific groups, it is useful to set the levels of metadata.df. 
 # The first entry in levels is the reference. All other levels will be compared to this.
 # By default and for convenience, set the control group (C) as the reference.
 # We do have the option later to compare any of the groups regardless of setting the reference.
-metadata.df$Sampletype <- relevel(metadata.df$Sampletype, ref = "C") # control as the reference
+# metadata.df$Sampletype <- relevel(metadata.df$Sampletype, ref = "C") # control as the reference
+metadata.df$Sampletype_fixed <- relevel(metadata.df$Sampletype_fixed, ref = "NLC") # control as the reference
+metadata.df$Sampletype_pooled_cohort <- relevel(metadata.df$Sampletype_pooled_cohort, ref = "NLC_immunocompetent") # control as the reference
 #metadata.df$Sampletype <- relevel(metadata.df$Sampletype, ref = "negative") # negative as the reference
 
-
-# Create DESeq data set matrix. 
-dds <-DESeqDataSetFromMatrix(countData = otu.m, 
-                             colData = metadata.df, 
-                             design = ~ Sampletype_pooled_C_sep)
-
-# https://www.rdocumentation.org/packages/DESeq2/versions/1.12.3/topics/estimateSizeFactors
-# dds <- estimateSizeFactors(dds, geoMeans = geoMeans) # Needed if zeros in every row 
-dds <- estimateSizeFactors(dds)
-# This may take awhile to run
-dds <- DESeq(dds) 
-#dds <- DESeq(dds, betaPrior = FALSE)
 
 
 # Generate the results for the different comparisons using "contrast".
@@ -163,40 +191,44 @@ dds <- DESeq(dds)
 # The alpha parameter controls the FDR threshold. Here a value FDR threhold of 0.05 is used, i.e. the proportion of false positives 
 # we expect amongst our differentially abundant otus/genera is less than 5%.
 
-# Compare pooled sample combinations first
-sample_type_combinations_pooled <- combn(as.character(unique(metadata.df$Sampletype_pooled_C_sep)), 2)
-for (i in 1:ncol(sample_type_combinations_pooled)){
-  group_1 <- as.character(sample_type_combinations_pooled[1,i])
-  group_2 <- as.character(sample_type_combinations_pooled[2,i])
-  resMFSource <- results(dds, contrast = c("Sampletype_pooled_C_sep",group_1,group_2), alpha=0.05, independentFiltering = F, cooksCutoff = F)
+
+# Create DESeq data set matrix. 
+dds <-DESeqDataSetFromMatrix(countData = otu.m,
+                             colData = metadata.df,
+                             design = ~ Sampletype_pooled_cohort)
+
+geoMeans <- apply(counts(dds), 1, gm_mean)
+
+# https://www.rdocumentation.org/packages/DESeq2/versions/1.12.3/topics/estimateSizeFactors
+dds <- estimateSizeFactors(dds, geoMeans = geoMeans) # Needed if zeros in every row
+# dds <- estimateSizeFactors(dds)
+# This may take awhile to run
+dds <- DESeq(dds, parallel = T)
+# saveRDS(dds, file = paste0("Result_objects/DESeq_Sampletype_pooled_cohort_DDS", format(Sys.Date(), "%d%m%y"), ".RData"))
+
+sample_type_combinations_cohort_pooled <- combn(as.character(unique(metadata.df$Sampletype_pooled_cohort)), 2)
+for (i in 1:ncol(sample_type_combinations_cohort_pooled)){
+  group_1 <- as.character(sample_type_combinations_cohort_pooled[1,i])
+  group_2 <- as.character(sample_type_combinations_cohort_pooled[2,i])
+  resMFSource <- results(dds, contrast = c("Sampletype_pooled_cohort",group_1,group_2), alpha=0.05, independentFiltering = F, cooksCutoff = F)
   #lfcShrink(dds)?
   resMFSourceOrdered <- resMFSource[order(resMFSource$padj),]
   resMFSourceOrdered$taxonomy <- assign_taxonomy_to_otu(resMFSourceOrdered, otu_taxonomy_map.df)
   resMFSourceOrdered <- filter_and_sort_dds_results(resMFSourceOrdered)
   # Write the results to file
   result_name <- paste(group_1, group_2, sep = "_vs_")
-  outfilename <- paste("Result_tables/DESeq_results/", result_name, "__pooled_C_sep.csv", sep= "")
+  outfilename <- paste("Result_tables/DESeq_results/", result_name, "__pooled_cohort.csv", sep= "")
   write.csv(as.data.frame(resMFSourceOrdered),file=outfilename, quote = F)
-  
-  # Frequency bar graph of adjusted p-values
-  # p_value_distribution <- ggplot(as.data.frame(resMFSourceOrdered), aes(x = padj)) + 
-  #   stat_bin(bins = 50, fill =  "white", colour = "black") + 
-  #   ylab("Frequency") +
-  #   xlab("Adjusted p-value") +
-  #   ggtitle() + 
-  #   common_theme
 }
 
-
-
 #########
-# Now pooled sample type
+# Now pooled sample type, not accounting for cohort
 dds <-DESeqDataSetFromMatrix(countData = otu.m, 
                              colData = metadata.df, 
                              design = ~ Sampletype_pooled)
 
 dds <- estimateSizeFactors(dds)
-dds <- DESeq(dds) 
+dds <- DESeq(dds)
 
 # Determine what are the pairwise combinations among the Sampletypes
 sample_type_combinations <- combn(as.character(unique(metadata.df$Sampletype_pooled)), 2)
@@ -217,17 +249,17 @@ for (i in 1:ncol(sample_type_combinations)){
 
 
 
-#########
+# ---------------------------------------------------------------------------------------------------------
 # Now normal sample type
 dds <-DESeqDataSetFromMatrix(countData = otu.m, 
                              colData = metadata.df, 
-                             design = ~ Sampletype)
+                             design = ~ Sampletype_fixed)
 
 dds <- estimateSizeFactors(dds)
-dds <- DESeq(dds) 
+dds <- DESeq(dds)
 
 # Determine what are the pairwise combinations among the Sampletypes
-sample_type_combinations <- combn(as.character(unique(metadata.df$Sampletype)), 2)
+sample_type_combinations <- combn(as.character(unique(metadata.df$Sampletype_fixed)), 2)
 # Loop and compare each combination
 for (i in 1:ncol(sample_type_combinations)){
   group_1 <- as.character(sample_type_combinations[1,i])
@@ -266,7 +298,7 @@ for (i in 1:ncol(sample_type_combinations)){
 #   ggtitle() + 
 #   common_theme
 ##############################
-
+# ---------------------------------------------------------------------------------------------------------
 # Compare SCC vs SCC_PL+C, SCC vs all, SCC+SCC_PL vs all, Compare AK vs all
 dds_SCCPL_C <-DESeqDataSetFromMatrix(countData = otu.m, colData = metadata.df, design = ~ Sampletype_SCCPL_C)
 dds_SCC <- DESeqDataSetFromMatrix(countData = otu.m, colData = metadata.df, design = ~ Sampletype_SCC)
