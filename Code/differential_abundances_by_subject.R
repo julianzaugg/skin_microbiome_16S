@@ -1,4 +1,5 @@
 # Differential abundance analysis, collapsing down to various taxonomic levels
+# Specifically comparing the lesions per-subject
 
 library(DESeq2)
 library(dplyr)
@@ -50,10 +51,9 @@ filter_and_sort_dds_results <- function(x, p_value_threshold = 0.05){
 # Set the working directory
 setwd("/Users/julianzaugg/Desktop/ACE/major_projects/skin_microbiome_16S")
 
-# Load count table at the OTU level. These are the counts for OTUs that were above our abundance thresholds
-# otu.df <- read.table("Result_tables/count_tables/OTU_counts_rarefied.csv", sep =",", header =T)
 
 # Load count table at the taxonomy levels of interest.
+otu_rare.m <- as.matrix(read.table("Result_tables/count_tables/OTU_counts_rarefied.csv", sep =",", header =T, row.names = 1))
 otu_species_rare.m <- as.matrix(read.table("Result_tables/count_tables/Specie_counts_rarefied.csv", sep =",", header =T, row.names = 1))
 otu_genus_rare.m <-  as.matrix(read.table("Result_tables/count_tables/Genus_counts_rarefied.csv", sep =",", header =T, row.names = 1))
 
@@ -67,16 +67,16 @@ metadata.df <- read.csv("Result_tables/other/processed_metadata.csv", sep =",", 
 metadata.df <- metadata.df[metadata.df$Sampletype %in% c("C","AK_PL","IEC_PL","SCC_PL","AK","IEC","SCC", "NLC"),]
 
 
-# otu.df <- otu.df[,names(otu.df) %in% c("OTU.ID", as.character(metadata.df$Index))]
+otu_rare.m <- otu_rare.m[,colnames(otu_rare.m) %in% as.character(metadata.df$Index)]
 otu_species_rare.m <- otu_species_rare.m[,colnames(otu_species_rare.m) %in% as.character(metadata.df$Index)]
 otu_genus_rare.m <- otu_genus_rare.m[,colnames(otu_genus_rare.m) %in% as.character(metadata.df$Index)]
 
-# otu_species_rare.df <- otu_species_rare.df[,names(otu_species_rare.df) %in% c("taxonomy_species", as.character(metadata.df$Index))]
-# otu_genus_rare.df <- otu_genus_rare.df[,names(otu_genus_rare.df) %in% c("taxonomy_genus", as.character(metadata.df$Index))]
+# Order the metadata.df by the index value
+metadata.df <- metadata.df[order(metadata.df$Index),]
 
 # Since we likely removed samples from the count matrix
 # in the main script, remove them from the metadata.df here
-samples_removed <- metadata.df$Index[!metadata.df$Index %in% colnames(otu_species_rare.m)]
+samples_removed <- metadata.df$Index[!metadata.df$Index %in% colnames(otu_rare.m)]
 metadata.df <- metadata.df[! metadata.df$Index %in% samples_removed,]
 
 # Order the metadata.df by the index value
@@ -97,6 +97,10 @@ metadata.df$Sampletype <- factor(metadata.df$Sampletype)
 metadata.df$Patient <- factor(metadata.df$Patient)
 metadata.df$Project <- factor(metadata.df$Project)
 
+# CLR transform the otu matrix. We don't use this for DESeq, but we can refer to it to get the 
+# CLR transformed counts for OTUs of interest if necessary
+# otu_clr.m <- clr(otu.m)
+
 
 # ---------------------------------------------------------------------------------------------------------
 # Perform differential abundance calculations at the OTU level and genus level, 
@@ -108,20 +112,24 @@ metadata.df$Project <- factor(metadata.df$Project)
 
 # Ensure names of the otu / genus count matrices match the order of the metadata.df!
 # Assumes number of samples in metadata.df and count data are the same
-all(names(otu_species_rare.m) == metadata.df$Index) # Should be 'True'
-all(colnames(otu_genus_rare.m) == rownames(metadata.df)) # Should be 'True'
+all(colnames(otu_rare.m) == metadata.df$Index) # Should be 'True'
+all(colnames(otu_rare.m) == rownames(metadata.df)) # Should be 'True'
+# all(names(otu_genus.m) == metadata.df$Sample) # Should be 'True'
 
-# dim(otu_genus_rare.m)
+# dim(otu_species_rare.m)
+# dim(otu_species_rare.m[which(apply(otu_species_rare.m, 1, max) >= 60),])
+# 
+# # dim(otu_genus_rare.m)
 # dim(otu_genus_rare.m[which(apply(otu_genus_rare.m, 1, max) >= 15),])
-
-dim(otu_genus_rare.m)
-temp <- t(t(otu_genus_rare.m)/colSums(otu_genus_rare.m))
-otu_genus_rare.m <- otu_genus_rare.m[which(apply(otu_genus_rare.m, 1, max) >= 75),]
-dim(otu_genus_rare.m)
-
-plot(density(colSums(temp[rownames(temp) %in% rownames(otu_genus_rare.m),])))
-rug(colSums(temp[rownames(temp) %in% rownames(otu_genus_rare.m),]))
-summary(colSums(temp[rownames(temp) %in% rownames(otu_genus_rare.m),]))
+# 
+# dim(otu_genus_rare.m)
+# temp <- t(t(otu_genus_rare.m)/colSums(otu_genus_rare.m))
+# otu_genus_rare.m <- otu_genus_rare.m[which(apply(otu_genus_rare.m, 1, max) >= 75),]
+# dim(otu_genus_rare.m)
+# 
+# plot(density(colSums(temp[rownames(temp) %in% rownames(otu_genus_rare.m),])))
+# rug(colSums(temp[rownames(temp) %in% rownames(otu_genus_rare.m),]))
+# summary(colSums(temp[rownames(temp) %in% rownames(otu_genus_rare.m),]))
 # boxplot(colSums(temp[rownames(temp) %in% rownames(otu_genus_rare.m),]))
 # Filter to only OTUs that have more than 15 reads in at least one sample
 # dim(otu.m)
@@ -145,12 +153,98 @@ metadata.df$Sampletype_AK <- factor(as.character(lapply(metadata.df$Sampletype, 
 
 metadata.df$Sampletype_pooled_cohort <- factor(paste0(metadata.df$Sampletype_pooled, "_", metadata.df$Project))
 
-
-if (!all(rownames(metadata.df) == colnames(otu_genus_rare.m))){
-  print("Colnames and metadata names don't match!!!")
-  break
+out <- data.frame()
+for (patient in unique(metadata.df$Patient)){
+  temp <- melt(summary(factor(metadata.df[metadata.df$Patient == patient,]$Sampletype_pooled)), value.name = "Count")
+  
+  print(temp)
+  temp$Lesion <- rownames(temp)
+  rownames(temp) <- NULL
+  # break
+  temp$Patient <- patient
+  out <- rbind(out, temp)
 }
+print(out,row.names = F)
 # ---------------------------------------------------------------------------------------------------------
+# OTU level, pooled sample
+run_per_patient_deseq <- function(my_otu_matrix, variable = "Sampletype_pooled",assign_tax = TRUE){
+  for (patient in unique(metadata.df$Patient)){
+  # my_otu_matrix <- otu_rare.m
+  # patient = "MST008"
+  # variable = "Sampletype_pooled"
+    patient_metadata.df <- metadata.df[metadata.df$Patient == patient,]
+    patient_samples.v <- as.character(patient_metadata.df$Index)
+    patient_sample_lesion_types.v <- factor(patient_metadata.df[,variable])
+    if (length(patient_samples.v) == 1 || length(unique(patient_sample_lesion_types.v)) == 1){
+      next
+    }
+    cat("patient:", patient, "\n")
+    print(melt(summary(patient_sample_lesion_types.v), value.name = "Count"))
+    patient_table.m <- my_otu_matrix[,patient_samples.v]
+    patient_table.m <- patient_table.m[which(apply(patient_table.m, 1, max) > 10),]
+    # Order the patient metadata
+    patient_table.m <- patient_table.m[,order(rownames(patient_metadata.df))]
+    patient_metadata.df <- patient_metadata.df[order(rownames(patient_metadata.df)),]
+    if (!all(rownames(patient_metadata.df) == colnames(patient_table.m))){
+      print("Colnames and metadata names don't match!!!")
+      break
+    }
+    # break
+    print(dim(patient_table.m))
+    if (max(apply(patient_table.m, 1, min)) == 0) {
+      patient_table.m = patient_table.m + 1
+    }
+    # print(colnames(patient_table.m))
+    # print(rownames(patient_metadata.df))
+    # print(summary(colnames(patient_table.m) == rownames(patient_metadata.df)))
+    dds <-DESeqDataSetFromMatrix(countData = patient_table.m,
+                                 colData = patient_metadata.df,
+                                 design = ~Sampletype_pooled)
+                                 #design = ~ [[variable]])
+    # geoMeans <- apply(counts(dds), 1, gm_mean)
+    dds <- estimateSizeFactors(dds)
+    # tryCatch
+    dds <- try(DESeq(dds, parallel = T))
+    if(inherits(dds, "try-error")) {
+      # print ("dasdasd")
+      next
+      }
+    # resultsNames(dds)
+    
+    sample_type_combinations_pooled <- combn(as.character(unique(patient_metadata.df[,variable])), 2)
+    for (i in 1:ncol(sample_type_combinations_pooled)){
+      group_1 <- as.character(sample_type_combinations_pooled[1,i])
+      group_2 <- as.character(sample_type_combinations_pooled[2,i])
+      print(paste0("processing : ", patient, "_", group_1, "_vs_", group_2))
+      resMFSource <- results(dds, contrast = c(variable,group_1,group_2), alpha=0.05, independentFiltering = F, cooksCutoff = F)
+      # #lfcShrink(dds)?
+      resMFSourceOrdered <- resMFSource[order(resMFSource$padj),]
+      if (assign_tax){
+        resMFSourceOrdered$taxonomy <- assign_taxonomy_to_otu(resMFSourceOrdered, otu_taxonomy_map.df)  
+      }
+
+      resMFSourceOrdered <- filter_and_sort_dds_results(resMFSourceOrdered)
+      # # Write the results to file
+      result_name <- paste0(patient, "_", group_1, "_vs_", group_2,"__",variable)
+      outfilename <- paste("Result_tables/DESeq_results/by_patient/", result_name, ".csv", sep= "")
+      write.csv(as.data.frame(resMFSourceOrdered),file=outfilename, quote = F)
+    }
+    # break
+  }
+}
+# summary(colnames(otu_rare.m) == rownames(metadata.df))
+run_per_patient_deseq(otu_rare.m,variable = "Sampletype_pooled", assign_tax = T)
+run_per_patient_deseq(otu_genus_rare.m,variable = "Sampletype_pooled",assign_tax = F)
+
+
+
+
+
+
+
+
+
+
 # Genus level
 dds <-DESeqDataSetFromMatrix(countData = otu_genus_rare.m,
                              colData = metadata.df,
@@ -163,8 +257,8 @@ geoMeans <- apply(counts(dds), 1, gm_mean)
 dds <- estimateSizeFactors(dds)
 dds <- DESeq(dds, parallel = T)
 # saveRDS(dds, file = paste0("Result_objects/DESeq_Sampletype_pooled_cohort_genus_DDS_", format(Sys.Date(), "%d%m%y"), ".RData"))
-# resultsNames(dds)
-# temp <- results(dds, contrast = c("Sampletype_pooled_cohort","NLC_immunocompromised","AK_immunocompromised"), alpha=0.05, independentFiltering = F, cooksCutoff = F)
+resultsNames(dds)
+temp <- results(dds, contrast = c("Sampletype_pooled_cohort","NLC_immunocompromised","AK_immunocompromised"), alpha=0.05, independentFiltering = F, cooksCutoff = F)
 
 sample_type_combinations_cohort_pooled <- combn(as.character(unique(metadata.df$Sampletype_pooled_cohort)), 2)
 for (i in 1:ncol(sample_type_combinations_cohort_pooled)){

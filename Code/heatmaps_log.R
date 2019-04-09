@@ -213,7 +213,7 @@ make_lesion_heatmap <- function(myheatmap,
   annotation_colours_patient <- unique(sample_annotations.df$Patient_colour)
   names(annotation_colours_patient) <- unique(sample_annotations.df$Patient)
   annotation_colours <- list(Lesion_type = annotation_colours_lesion, Patient = annotation_colours_patient)
-  
+  print(annotation_colours)
   annotation_breaks <- unlist(lapply(unique(sample_annotations.df[,"Lesion_type"]), function(x) { min(which(sample_annotations.df[,"Lesion_type"] == x))})) - 1
   
   

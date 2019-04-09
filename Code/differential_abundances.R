@@ -61,16 +61,16 @@ metadata.df <- metadata.df[metadata.df$Sampletype %in% c("C","AK_PL","IEC_PL","S
 
 otu.df <- otu.df[,names(otu.df) %in% c("OTU.ID", as.character(metadata.df$Index))]
 
-# Order the metadata.df by the index value
-metadata.df <- metadata.df[order(metadata.df$Index),]
 
-# Since we likely removed samples from the count matrix
 # in the main script, remove them from the metadata.df here
 samples_removed <- metadata.df$Index[!metadata.df$Index %in% names(otu.df)]
 metadata.df <- metadata.df[! metadata.df$Index %in% samples_removed,]
 
 # Order the metadata.df by the index value
 metadata.df <- metadata.df[order(metadata.df$Index),]
+
+# Rownames should match the sample columns in the otu table
+rownames(metadata.df) <- metadata.df$Index
 
 # For DESeq2, variables, i.e. discrete columns, should be factorised. 
 # DESeq2 may do this automatically but it is good to be explicit.
