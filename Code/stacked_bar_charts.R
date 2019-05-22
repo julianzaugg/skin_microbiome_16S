@@ -22,6 +22,8 @@ my_colour_pallete_32_distinct <- c("#ea7e00","#ca0074","#d1c69b","#474007","#bb0
 lesion_pallete_7 <- c("#8558d6","#6ee268","#d247ad","#c9d743","#d7453e","#59a237","#d78f2a")
 patient_pallete_45 <- c("#d64530","#585fb1","#795d97","#9e4773","#3f6921","#71692c","#a2b93c","#d571cc","#9b3e97","#33947a","#98ad66","#448a4e","#869ae0","#5ce7af","#e085a3","#dfdc87","#d19be2","#5cb735","#e38269","#3db6c0","#50b565","#50902c","#a98a2c","#dde84a","#db3d76","#5fe485","#7c8329","#b3e791","#6fe965","#5ebce9","#3c86c1","#2a6a45","#65b688","#6651d1","#af4ed3","#df872f","#56e4db","#737cea","#ac464b","#dd37b5","#995b2b","#daac6f","#92e2be","#a2e24b","#e0be3a")
 my_colour_pallete_10_distinct <- c("#8eec45","#0265e8","#f6a800","#bf6549","#486900","#c655a0","#00d1b6","#ff4431","#aeb85c","#7e7fc8")
+
+my_colour_pallete_12_soft <-c("#9E788F","#4C5B61","#678D58","#AD5233","#A0A083","#4D456A","#588578","#D0AC4C","#2A7BA0","#931621", "#c75a93", "#7c7731")
 # ------------------------------------------------------------------------------------------
 
 common_theme <- theme(
@@ -51,12 +53,14 @@ setwd("/Users/julianzaugg/Desktop/ACE/major_projects/skin_microbiome_16S")
 
 
 # Just load the combined metadata and abundance tables for simplicity
-# otu_data.df <- read.csv("Result_tables/other/OTU_counts_abundances_and_metadata.csv")
-genus_data.df <- read.csv("Result_tables/other/genus_counts_abundances_and_metadata.csv")
-family_data.df <- read.csv("Result_tables/other/family_counts_abundances_and_metadata.csv")
-order_data.df <- read.csv("Result_tables/other/order_counts_abundances_and_metadata.csv")
 class_data.df <- read.csv("Result_tables/other/class_counts_abundances_and_metadata.csv")
-phylum_data.df <- read.csv("Result_tables/other/phylum_counts_abundances_and_metadata.csv")
+
+# Remove negative samples
+class_data.df <- class_data.df[class_data.df$Sampletype != "negative",]
+
+# Just use IEC sep pooled labels
+class_data.df$Sampletype <- factor(class_data.df$Sampletype_pooled_IEC_sep)
+class_data.df$Sampletype_colour <- class_data.df$Sampletype_pooled_IEC_sep_colour
 
 
 # ------------------------------------------------------------------------------------------
@@ -65,37 +69,31 @@ generate_taxa_summary <- function(mydata, taxa_column, abundance_column= "Relati
   # Generate a summary table of each taxa for each group. Use this to filter to taxa of interest
   # For each taxa, count the :
   #   number of samples it is in
-  #   max and min abundance
+  #   max, min and summed abundance
   taxa_group_summary <-
     mydata %>% 
-    dplyr::select(taxa_column,  abundance_column) %>%
+    dplyr::select(taxa_column, abundance_column) %>%
     group_by_(taxa_column) %>% # use the _ form of the function to allow variables to be used
     dplyr::mutate(In_N_samples = n()) %>%
     
     dplyr::summarise(In_N_samples = max(In_N_samples),
                      Max_abundance = max(get(abundance_column)),
                      Min_abundance = min(get(abundance_column)),
+                     Mean_abundance = mean(get(abundance_column)),
                      Summed_abundance = sum(get(abundance_column))) %>%
-    arrange(desc(Max_abundance)) %>%
+    arrange(dplyr::desc(Max_abundance)) %>%
     group_by_(taxa_column) %>%
     as.data.frame()
   return(taxa_group_summary)
 }
 
-# Get taxonomy summary for each dataset
-# genus_taxa_summary.df <- generate_taxa_summary(genus_data.df,taxa_column = "taxonomy_genus", abundance_column = "Relative_abundance_rarified")
-# family_taxa_summary.df <- generate_taxa_summary(family_data.df,taxa_column = "taxonomy_family", abundance_column = "Relative_abundance_rarified")
-# order_taxa_summary.df <- generate_taxa_summary(order_data.df,taxa_column = "taxonomy_order", abundance_column = "Relative_abundance_rarified")
-# class_taxa_summary.df <- generate_taxa_summary(class_data.df,taxa_column = "taxonomy_class", abundance_column = "Relative_abundance_rarified")
-# phylum_taxa_summary.df <- generate_taxa_summary(phylum_data.df,taxa_column = "taxonomy_phylum", abundance_column = "Relative_abundance_rarified")
+get_top_taxa <- function(taxa_summary, my_top_n = 10){
+  taxa_column <- names(taxa_summary)[1]
+  # most_abundant_taxa <- taxa_summary %>% arrange(dplyr::desc(Summed_abundance)) %>% head(my_top_n) %>% select_(taxa_column) %>% .[[1]] %>% as.character()
+  most_abundant_taxa <- taxa_summary %>% arrange(dplyr::desc(Mean_abundance)) %>% head(my_top_n) %>% select_(taxa_column) %>% .[[1]] %>% as.character()
+  return(most_abundant_taxa)
+}
 
-genus_taxa_summary.df <- generate_taxa_summary(genus_data.df,taxa_column = "taxonomy_genus", abundance_column = "Read_count_rarified")
-family_taxa_summary.df <- generate_taxa_summary(family_data.df,taxa_column = "taxonomy_family", abundance_column = "Read_count_rarified")
-order_taxa_summary.df <- generate_taxa_summary(order_data.df,taxa_column = "taxonomy_order", abundance_column = "Read_count_rarified")
-class_taxa_summary.df <- generate_taxa_summary(class_data.df,taxa_column = "taxonomy_class", abundance_column = "Read_count_rarified")
-phylum_taxa_summary.df <- generate_taxa_summary(phylum_data.df,taxa_column = "taxonomy_phylum", abundance_column = "Read_count_rarified")
-# sum(class_data.df[class_data.df$taxonomy_class == "d__Bacteria;p__Firmicutes;c__Bacilli", "Relative_abundance_rarified"])
-# sum(phylum_data.df[phylum_data.df$taxonomy_phylum == "d__Bacteria;p__Actinobacteria", "Read_count_rarified"])
 
 # Function that takes the full abundance + metadata dataframe and the taxa summary dataframe, determines most abundant taxa and 
 # relabels the low(er) abundance taxa to "Other"
@@ -104,21 +102,130 @@ relabel_low_abundance_taxa <- function(mydata, taxa_summary, my_top_n = 10){
   taxa_column <- names(taxa_summary)[1]
   # Get the top_n taxa by the max abundance
   # most_abundant_taxa <- taxa_summary %>% arrange(desc(Max_abundance)) %>% head(my_top_n) %>% select_(taxa_column) %>% .[[1]] %>% as.character()
-  most_abundant_taxa <- taxa_summary %>% arrange(desc(Summed_abundance)) %>% head(my_top_n) %>% select_(taxa_column) %>% .[[1]] %>% as.character()
+  # most_abundant_taxa <- taxa_summary %>% arrange(dplyr::desc(Summed_abundance)) %>% head(my_top_n) %>% select_(taxa_column) %>% .[[1]] %>% as.character()
+  most_abundant_taxa <- taxa_summary %>% arrange(dplyr::desc(Mean_abundance)) %>% head(my_top_n) %>% select_(taxa_column) %>% .[[1]] %>% as.character()
   internal_data[,taxa_column] <- as.character(internal_data[,taxa_column])
   internal_data[!internal_data[,taxa_column] %in%  most_abundant_taxa, taxa_column] <- "Other"
   return(internal_data)
 }
 
+# Get taxonomy summary for the dataset
+class_taxa_summary.df <- generate_taxa_summary(class_data.df,taxa_column = "taxonomy_class", abundance_column = "Relative_abundance_rarified")
+
 # Relabel lower abundance taxa to "Other"
-class_data_processed.df <- relabel_low_abundance_taxa(class_data.df, class_taxa_summary.df, my_top_n =10)
+class_data_processed.df <- relabel_low_abundance_taxa(class_data.df, class_taxa_summary.df, my_top_n =12)
 
 # Count the number of samples for each patient and filter out patients that have too few samples
 samples_each_patient <- class_data_processed.df %>%
   group_by(Patient) %>%
   dplyr::summarise(Count = n_distinct(Sample)) %>%
   as.data.frame()
-class_data_processed.df <- class_data_processed.df[class_data_processed.df$Patient %in% as.character(samples_each_patient[samples_each_patient$Count > 5,"Patient"]),]
+class_data_processed.df <- class_data_processed.df[class_data_processed.df$Patient %in% as.character(samples_each_patient[samples_each_patient$Count >= 5,"Patient"]),]
+
+# Define the taxa colours to ensure consistency in each sub-plot
+top_taxa <- get_top_taxa(class_taxa_summary.df,12)
+
+# Assume "Other" is first
+# taxa_colours.l <- setNames(c("grey", my_colour_pallete_12_soft), unique(class_data_processed.df$taxonomy_class))
+
+
+# Create a bar plot for each variable, annotated by another variable
+create_stacked_bar_charts <- function(mydata, facet_variable, annotate_variable){
+  # Assume "Other" is first
+  taxa_colours.l <- setNames(c("grey", my_colour_pallete_12_soft), unique(mydata$taxonomy_class))
+  barplots.l <- list()
+  for (fv in unique(mydata[,facet_variable])){
+    data_subset <- subset(mydata, get(facet_variable) == fv)
+    # print(mydata)
+    # print(fc)
+    # print( unique(mydata[,facet_variable]))
+    data_subset[,annotate_variable] <- factor(data_subset[,annotate_variable], levels = sort(unique(as.character(data_subset[,annotate_variable]))))
+    data_subset <- data_subset[order(data_subset[, annotate_variable]),]
+    annotation_data <- unique(data_subset[,c("Sample", annotate_variable, paste0(annotate_variable,"_colour"))])
+    all_sample_colours <- annotation_data[,paste0(annotate_variable,"_colour")]
+    
+    variable_values <- unique(annotation_data[,annotate_variable])
+    variable_shapes <- setNames(rep(c(25,24,23,22,21),length(variable_values))[1:length(variable_values)],variable_values)
+    all_sample_shapes <- as.numeric(
+      lapply(
+        as.character(sort(annotation_data[,annotate_variable])),
+        function(x) variable_shapes[x][[1]]
+      )
+    )
+    
+    myplot <- ggplot(data_subset, aes(x = Sample, y = Relative_abundance_rarified, fill = taxonomy_class)) +
+      geom_bar(stat = "identity") +
+      scale_fill_manual(values = taxa_colours.l, name = "Taxonomy", guide = F) +
+      
+      ggtitle(fv) +
+      ylab(NULL) + xlab(NULL) +
+      theme(
+        axis.text.x=element_blank(), 
+        axis.ticks.x=element_blank(), 
+        axis.text.y=element_blank(), 
+        axis.ticks.y=element_blank(),
+        plot.margin=unit(c(0,0,0,0), "null"),
+        plot.title = element_text(hjust = 0.5, size =10),
+        panel.background=element_blank(),
+        panel.border=element_blank(),
+        axis.line = element_blank()) +
+      
+      # Add points to the bottom of each bar as defined by the annotate variable
+      annotate(geom='point', x = seq(1,length(unique(data_subset$Sample)), 1), y = -0.03, size=2,stroke= 0, shape = all_sample_shapes, color ="black", fill = all_sample_colours)
+    barplots.l[[as.character(fv)]] <- myplot # Store the plot
+  }
+  
+  # Create another plot to make the legend. Since this contains all samples, the legend will have all taxa. 
+  all_sample_plot <- ggplot(mydata, aes(x = Sample, y = Relative_abundance_rarified, fill = taxonomy_class)) +
+    geom_bar(stat = "identity") +
+    scale_fill_manual(values = c(my_colour_pallete_12_soft, "grey"), name = "Taxonomy")
+  
+  # Create another plot to make the legend for the lesion point.
+  colour_list <- unique(mydata[,c(annotate_variable,paste0(annotate_variable,"_colour"))])
+  colour_list <- setNames(as.character(colour_list[,2]), as.character(colour_list[,1]))
+  
+  all_sample_plot_for_colour <- ggplot(mydata, aes(x = Sample, y = Relative_abundance_rarified, fill = get(annotate_variable))) +
+    geom_point(aes(shape = get(annotate_variable)), color = "black", stroke = .1) +
+    scale_shape_manual(values = c(25,24,23), name = annotate_variable) +
+    scale_fill_manual(values = colour_list, name = annotate_variable)
+  
+  # Extract the legend
+  my_legend_taxa <- cowplot::get_legend(all_sample_plot + theme(legend.position = "right", 
+                                                                legend.text = element_text(size = 9),
+                                                                legend.title = element_text(size =10, face = "bold"),
+                                                                legend.justification = "center",
+                                                                plot.margin = unit(c(0, 0, 0, 0), "cm")))
+  my_legend_colour <- cowplot::get_legend(all_sample_plot_for_colour + theme(legend.position = "right", 
+                                                                             legend.text = element_text(size = 9),
+                                                                             legend.title = element_text(size =10, face = "bold"),
+                                                                             legend.justification = "center",
+                                                                             plot.margin = unit(c(0, 0, 0, 0), "cm")))
+  my_legend <- plot_grid(my_legend_taxa, my_legend_colour, ncol = 1,nrow = 4) 
+  
+  
+  # Make a grid of plots with the list of plots for both cohorts
+  grid_plot <- cowplot::plot_grid(plotlist = barplots.l,ncol = 2)
+  grid_plot <- plot_grid(grid_plot, my_legend, rel_widths = c(1,.4), ncol = 2)
+  return(grid_plot)
+}
+
+
+
+my_grid_plot <- create_stacked_bar_charts(mydata = subset(class_data_processed.df, Project == "immunocompetent"), facet_variable = "Patient", annotate_variable = "Sampletype_pooled")
+ggsave(my_grid_plot, filename = "Result_figures/abundance_analysis_plots/stacked_bar_charts.pdf", height = 50, width =70, units = "cm")
+
+my_grid_plot <- create_stacked_bar_charts(mydata = subset(class_data_processed.df, Project == "immunocompromised"), facet_variable = "Patient", annotate_variable = "Sampletype_pooled")
+ggsave(my_grid_plot, filename = "Result_figures/abundance_analysis_plots/stacked_bar_charts.pdf", height = 50, width =40, units = "cm")
+
+
+
+
+# temp <- class_data_processed.df
+# temp <- temp[temp$Patient == "MS004",]
+# temp[temp$Sample == "S8732_J318",]
+# temp[temp$Sample == "S8733_J318",]
+# temp[temp$Sample == "S8739_J318",]
+# temp[temp$Sample == "S8740_J318",]
 
 # Create a separate bar plot for each patient
 barplots.l <- list()
@@ -128,32 +235,28 @@ for (patient in unique(class_data_processed.df$Patient)){
   # Order by the lesion type
   patient_data$Sampletype <- factor(patient_data$Sampletype, levels = sort(unique(as.character(patient_data$Sampletype))))
   patient_data <- patient_data[order(patient_data$Sampletype),]
-  
-  # Set the lesion colours
-  # temp <- unique(patient_data[,c("Sample", "Sampletype")])
-  # variable_values <- factor(as.character(unique(temp$Sampletype)))
-  # variable_colours <- setNames(lesion_pallete_7[1:length(variable_values)], variable_values)
-  
+  # factor(type_data$DX_Groups, levels = sort(unique(as.character(type_data$DX_Groups))))
+
   temp <- unique(patient_data[,c("Sample", "Sampletype", "Sampletype_colour")])
   all_sample_colours <- temp$Sampletype_colour
-  
-  # all_sample_colours <- as.character(
-  #   lapply(
-  #     as.character(temp$Sampletype), 
-  #     function(x) variable_colours[x]
-  #   )
-  # )
-  
+
+  # Manually set the shapes
+  all_sample_shapes <- lapply(as.character(temp$Sampletype), function(x)ifelse(x == "AK", 25, 
+                                                                               ifelse(x == "IEC", 24, 
+                                                                                      ifelse(x == "NLC", 23, 22))))
+
   myplot <- ggplot(patient_data, aes(x = Sample, y = Relative_abundance_rarified, fill = taxonomy_class)) +
     geom_bar(stat = "identity") +
-    scale_fill_manual(values = c(my_colour_pallete_10_distinct, "grey"), name = "Taxonomy", guide = F) +
+    scale_fill_manual(values = taxa_colours.l, name = "Taxonomy", guide = F) +
+    # scale_fill_manual(values = taxa_colours.l, name = "Taxonomy") +
     ggtitle(patient) +
     # ylab("Relative abundance") +
     # xlab("Lesion type")
     ylab(NULL) + xlab(NULL) +
   theme(
     # text=element_text(family=font, size=fig_font_size),
-    axis.text.x=element_blank(), 
+    axis.text.x=element_blank(),
+    # axis.text.x=element_text(angle = 90, size = 6), 
     axis.ticks.x=element_blank(), 
     axis.text.y=element_blank(), 
     axis.ticks.y=element_blank(),
@@ -164,9 +267,11 @@ for (patient in unique(class_data_processed.df$Patient)){
     axis.line = element_blank()) +
     
     # Add points to the bottom of each bar indicating the lesion type
-    annotate(geom='point', x = seq(1,length(unique(patient_data$Sample)), 1), y = -0.03, size=.5, shape = 1, color = all_sample_colours)
+    # annotate(geom='point', x = seq(1,length(unique(patient_data$Sample)), 1), y = -0.03, size=.5, shape = 1, color = all_sample_colours)
+  annotate(geom='point', x = seq(1,length(unique(patient_data$Sample)), 1), y = -0.03, size=1,stroke= 0, shape = all_sample_shapes, color ="black", fill = all_sample_colours)
   barplots.l[[patient]] <- myplot # Store the plot
 }
+barplots.l$MS004
 # barplots.l$MS009
 
 # Remove patients with too few samples in each group
@@ -213,20 +318,26 @@ barplots.l <- barplots.l[!names(barplots.l) %in% c("MS014")]
 MST_plot_names <- sort(grep("MST", names(barplots.l), value = T))
 MS_plot_names <- sort(names(barplots.l)[!names(barplots.l) %in% MST_plot_names])
 
+
 # Create another plot to make the legend. Since this contains all samples, the legend will have all taxa. 
 all_sample_plot <- ggplot(class_data_processed.df, aes(x = Sample, y = Relative_abundance_rarified, fill = taxonomy_class)) +
   geom_bar(stat = "identity") +
-  scale_fill_manual(values = c(my_colour_pallete_10_distinct[1:10], "grey"), name = "Taxonomy") +
-  ggtitle(patient)
-
+  scale_fill_manual(values = c(my_colour_pallete_12_soft, "grey"), name = "Taxonomy")
 
 # Create another plot to make the legend for the lesion point.
 colour_list <- unique(class_data_processed.df[,c("Sampletype","Sampletype_colour")])
 colour_list <- setNames(as.character(colour_list[,2]), as.character(colour_list[,1]))
 
-all_sample_plot_for_lesion_colour <- ggplot(class_data_processed.df, aes(x = Sample, y = Relative_abundance_rarified, colour = Sampletype)) +
-  geom_point(shape = 1) +
-  scale_colour_manual(values = colour_list, name = "Lesion type")
+all_sample_plot_for_lesion_colour <- ggplot(class_data_processed.df, aes(x = Sample, y = Relative_abundance_rarified, fill = Sampletype)) +
+  geom_point(aes(shape = Sampletype), color = "black", stroke = .1) +
+  scale_shape_manual(values = c(25,24,23,22), name = "Lesion type") +
+  scale_fill_manual(values = colour_list, name = "Lesion type")
+
+# all_sample_plot_for_lesion_colour <- ggplot(class_data_processed.df, aes(x = Sample, y = Relative_abundance_rarified, fill = DX_Groups)) +
+#   geom_point(aes(shape = DX_Groups), color = "black", stroke = .1) +
+#   scale_shape_manual(values = c(25,24,23), name = "Disease state") +
+#   scale_fill_manual(values = colour_list, name = "Disease state")
+
 
 # Extract the legend
 my_legend_taxa <- cowplot::get_legend(all_sample_plot + theme(legend.position = "right", 
@@ -237,19 +348,20 @@ my_legend_taxa <- cowplot::get_legend(all_sample_plot + theme(legend.position = 
 my_legend_lesion <- cowplot::get_legend(all_sample_plot_for_lesion_colour + theme(legend.position = "right", 
                                                                           legend.text = element_text(size = 6),
                                                                           legend.title = element_text(size =7, face = "bold"),
-                                                                          legend.justification = "center"))
-my_legend <- plot_grid(my_legend_taxa, my_legend_lesion, ncol = 1,nrow = 2) 
+                                                                          legend.justification = "center",
+                                                                          plot.margin = unit(c(0, 0, 0, 0), "cm")))
+my_legend <- plot_grid(my_legend_taxa, my_legend_lesion, ncol = 1,nrow = 2)
   
 
-# Make a grid of plots with the list of plots for both cohorts
-grid_plot_competent <- cowplot::plot_grid(plotlist = barplots.l[MS_plot_names])
-grid_plot_competent <- plot_grid(grid_plot_competent, my_legend, rel_widths = c(1,.3), ncol = 2)
 
-ggsave(grid_plot_competent, filename = "Result_figures/stacked_bar_charts_immunocompetent.pdf", height = 20, width =40, units = "cm")
+# Make a grid of plots with the list of plots for both cohorts
+grid_plot_competent <- cowplot::plot_grid(plotlist = barplots.l[MS_plot_names],ncol =2)
+grid_plot_competent <- plot_grid(grid_plot_competent, my_legend, rel_widths = c(1,.4), ncol = 2)
+ggsave(grid_plot_competent, filename = "Result_figures/stacked_bar_charts_immunocompetent.pdf", height = 40, width =40, units = "cm")
 
 
 grid_plot_compromised <- cowplot::plot_grid(plotlist = barplots.l[MST_plot_names])
-grid_plot_compromised <- plot_grid(grid_plot_compromised, my_legend, rel_widths = c(1,.3), ncol = 2)
+grid_plot_compromised <- plot_grid(grid_plot_compromised, my_legend, rel_widths = c(1,.4), ncol = 2)
 ggsave(grid_plot_compromised, filename = "Result_figures/stacked_bar_charts_immunocompromised.pdf", height = 20, width =40, units = "cm")
 
 

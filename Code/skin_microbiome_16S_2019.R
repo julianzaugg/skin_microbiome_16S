@@ -29,17 +29,22 @@ library(reshape2)
 library(gplots)
 
 ####################################
-# Define various colour palletes
-my_colour_pallete <- c("#8dd3c7","#ffffb3","#bebada","#fb8072", "#80b1d3", "#fdb462","#b3de69","#fccde5","#d9d9d9","#bc80bd","#ccebc5", "#cc0000")
+# Define various colour palettes
+my_colour_palette <- c("#8dd3c7","#ffffb3","#bebada","#fb8072", "#80b1d3", "#fdb462","#b3de69","#fccde5","#d9d9d9","#bc80bd","#ccebc5", "#cc0000")
 # From http://tools.medialab.sciences-po.fr/iwanthue/
-my_colour_pallete_20 <- c("#66bd79","#a35bcf","#5bb643","#d14ea6","#a2b239","#5c6bcc","#dc892e","#5e93cd","#d64737","#49b6a8","#dc3c6e","#4f7e3c","#bd8cd5","#caab55","#914c88","#867230","#df82a2","#a65429","#ab4a5a","#e0896a")
-my_colour_pallete_20_distinct <- c("#0057b4","#7fff56","#d600bc","#d8d500","#e76eff","#019932","#9f8fff","#ffc730","#007fac","#a20019","#06fefd","#ff6782","#00774c","#e0c8ff","#717a00","#4b2952","#e2ed7d","#46321e","#ffbd76","#ffb4c6")
-my_colour_pallete_30_distinct <- c("#009348","#f579fe","#4fe16e","#b40085","#4d7e00","#4742b4","#f0c031","#016dd9","#d45200","#7499ff","#ef4d2d","#01c9c8","#f8394b","#88d7a6","#d20063","#c8cc5d","#882986","#fdb95d","#404f8f","#917300","#f3aefc","#5c5800","#ff75c3","#00674a","#ba001c","#979760","#8b354c","#ff875f","#943105","#cf9478")
-my_colour_pallete_206_distinct <- c("#cfefb4","#7d8b00","#a70079","#552155","#632900","#ffb173","#fbdcf2","#015a6a","#43fdf7","#ff443a","#008186","#3b8aff","#8b5fff","#ff9777","#4200a9","#85f6fd","#c96000","#36218a","#d28900","#0137d7","#30325b","#ff836b","#008b4f","#21ff9d","#00794d","#870052","#e9ec4b","#ce006b","#6e0044","#8a6500","#006971","#432e4b","#ca8dff","#f20059","#44ffe2","#00be5c","#a0d2ff","#1914ab","#4d284e","#59d7ff","#ab9aff","#0151d9","#1de740","#e24500","#9fc400","#610769","#0a4600","#1e365b","#018f3f","#b15fff","#009c5e","#005290","#506100","#f49aff","#0187c1","#ffb5f4","#daf100","#70081d","#ff9890","#c1baff","#ffbe5a","#1b3466","#ff2a7f","#ff5d3c","#e47800","#ac6bff","#1f6000","#006627","#4f4000","#dcd6ff","#ffd7c1","#ed2de4","#a50038","#a5a8ff","#0f2f7f","#b11700","#00e06b","#ffabb8","#015780","#82eaff","#1b2a88","#6f1600","#d3ef9c","#746e00","#01d851","#625300","#01d799","#96fd6c","#ff5ca1","#7b0017","#004c2b","#baf678","#f8aaff","#007c1b","#01a88a","#a71ed8","#fb8cff","#840079","#276d00","#556655","#02b0de","#c0efd7","#63193e","#8e9984","#017ac9","#ff925f","#ff63d7","#294100","#28baff","#5b2523","#35ab00","#69132e","#8a3b00","#a67700","#7fff6a","#002f96","#681a0b","#4d3003","#ff7de6","#0190d8","#a69700","#ff6282","#d3f266","#ffc4cf","#ffac3c","#d064ff","#d07aff","#c3005d","#9d0067","#0167c1","#8cfe82","#ffd68f","#8cfcaf","#f50096","#00c2a2","#aa5e00","#02c16d","#4e4bf6","#ffd962","#004793","#93d800","#462a58","#323a03","#4f9eff","#2b3a25","#2defff","#02edd6","#864e00","#ffc59f","#e7e9ab","#014cc4","#437bff","#00afba","#ff7d82","#8a1ed4","#ff48b3","#acf7ab","#005550","#7600a6","#bc0028","#00adab","#02dfbf","#ba004c","#004760","#ebc5ff","#0162d7","#9b3900","#5869ff","#ff6160","#87b6ff","#ff6796","#ff8422","#ff8440","#b500a8","#937fff","#0132bd","#f48e00","#1e8800","#462370","#3e3614","#9ca800","#efe5bf","#aeb6a0","#d9aaff","#d8ef89","#cec800","#ffb8b3","#4a2c42","#01715b","#b8ebff","#ff9ec0","#ff93ec","#ffe0aa","#65b300","#6a8b00","#f6e77c","#ff85c0","#5de522","#a5f6ca","#c70077","#5a4149","#a3b700","#ff63c4","#63fecd","#93f6e7","#01b4a4")
-my_colour_pallete_15 <- c("#77b642","#7166d9","#cfa240","#b351bb","#4fac7f","#d44891","#79843a","#c68ad4","#d15a2c","#5ba7d9","#ce4355","#6570ba","#b67249","#9b4a6f","#df8398")
-my_colour_pallete_32_distinct <- c("#ea7e00","#ca0074","#d1c69b","#474007","#bb00ad","#9c80ff","#be3300","#542e72","#00b9f5","#09436b","#8b0036","#9ac8e6","#ff1059","#959eff","#154a11","#0290f4","#ff7762","#7dbf00","#ff8194","#834c00","#006e73","#f9bb5d","#d6c943","#017229","#00d3a8","#732427","#36e191","#6a8200","#efb3ea","#3227bb","#ff90e1","#e92a12")
+my_colour_palette_20 <- c("#66bd79","#a35bcf","#5bb643","#d14ea6","#a2b239","#5c6bcc","#dc892e","#5e93cd","#d64737","#49b6a8","#dc3c6e","#4f7e3c","#bd8cd5","#caab55","#914c88","#867230","#df82a2","#a65429","#ab4a5a","#e0896a")
+my_colour_palette_20_distinct <- c("#0057b4","#7fff56","#d600bc","#d8d500","#e76eff","#019932","#9f8fff","#ffc730","#007fac","#a20019","#06fefd","#ff6782","#00774c","#e0c8ff","#717a00","#4b2952","#e2ed7d","#46321e","#ffbd76","#ffb4c6")
+my_colour_palette_30_distinct <- c("#009348","#f579fe","#4fe16e","#b40085","#4d7e00","#4742b4","#f0c031","#016dd9","#d45200","#7499ff","#ef4d2d","#01c9c8","#f8394b","#88d7a6","#d20063","#c8cc5d","#882986","#fdb95d","#404f8f","#917300","#f3aefc","#5c5800","#ff75c3","#00674a","#ba001c","#979760","#8b354c","#ff875f","#943105","#cf9478")
+my_colour_palette_206_distinct <- c("#cfefb4","#7d8b00","#a70079","#552155","#632900","#ffb173","#fbdcf2","#015a6a","#43fdf7","#ff443a","#008186","#3b8aff","#8b5fff","#ff9777","#4200a9","#85f6fd","#c96000","#36218a","#d28900","#0137d7","#30325b","#ff836b","#008b4f","#21ff9d","#00794d","#870052","#e9ec4b","#ce006b","#6e0044","#8a6500","#006971","#432e4b","#ca8dff","#f20059","#44ffe2","#00be5c","#a0d2ff","#1914ab","#4d284e","#59d7ff","#ab9aff","#0151d9","#1de740","#e24500","#9fc400","#610769","#0a4600","#1e365b","#018f3f","#b15fff","#009c5e","#005290","#506100","#f49aff","#0187c1","#ffb5f4","#daf100","#70081d","#ff9890","#c1baff","#ffbe5a","#1b3466","#ff2a7f","#ff5d3c","#e47800","#ac6bff","#1f6000","#006627","#4f4000","#dcd6ff","#ffd7c1","#ed2de4","#a50038","#a5a8ff","#0f2f7f","#b11700","#00e06b","#ffabb8","#015780","#82eaff","#1b2a88","#6f1600","#d3ef9c","#746e00","#01d851","#625300","#01d799","#96fd6c","#ff5ca1","#7b0017","#004c2b","#baf678","#f8aaff","#007c1b","#01a88a","#a71ed8","#fb8cff","#840079","#276d00","#556655","#02b0de","#c0efd7","#63193e","#8e9984","#017ac9","#ff925f","#ff63d7","#294100","#28baff","#5b2523","#35ab00","#69132e","#8a3b00","#a67700","#7fff6a","#002f96","#681a0b","#4d3003","#ff7de6","#0190d8","#a69700","#ff6282","#d3f266","#ffc4cf","#ffac3c","#d064ff","#d07aff","#c3005d","#9d0067","#0167c1","#8cfe82","#ffd68f","#8cfcaf","#f50096","#00c2a2","#aa5e00","#02c16d","#4e4bf6","#ffd962","#004793","#93d800","#462a58","#323a03","#4f9eff","#2b3a25","#2defff","#02edd6","#864e00","#ffc59f","#e7e9ab","#014cc4","#437bff","#00afba","#ff7d82","#8a1ed4","#ff48b3","#acf7ab","#005550","#7600a6","#bc0028","#00adab","#02dfbf","#ba004c","#004760","#ebc5ff","#0162d7","#9b3900","#5869ff","#ff6160","#87b6ff","#ff6796","#ff8422","#ff8440","#b500a8","#937fff","#0132bd","#f48e00","#1e8800","#462370","#3e3614","#9ca800","#efe5bf","#aeb6a0","#d9aaff","#d8ef89","#cec800","#ffb8b3","#4a2c42","#01715b","#b8ebff","#ff9ec0","#ff93ec","#ffe0aa","#65b300","#6a8b00","#f6e77c","#ff85c0","#5de522","#a5f6ca","#c70077","#5a4149","#a3b700","#ff63c4","#63fecd","#93f6e7","#01b4a4")
+my_colour_palette_15 <- c("#77b642","#7166d9","#cfa240","#b351bb","#4fac7f","#d44891","#79843a","#c68ad4","#d15a2c","#5ba7d9","#ce4355","#6570ba","#b67249","#9b4a6f","#df8398")
+my_colour_palette_32_distinct <- c("#ea7e00","#ca0074","#d1c69b","#474007","#bb00ad","#9c80ff","#be3300","#542e72","#00b9f5","#09436b","#8b0036","#9ac8e6","#ff1059","#959eff","#154a11","#0290f4","#ff7762","#7dbf00","#ff8194","#834c00","#006e73","#f9bb5d","#d6c943","#017229","#00d3a8","#732427","#36e191","#6a8200","#efb3ea","#3227bb","#ff90e1","#e92a12")
 
-lesion_pallete_10 <- c("#d4a33e","#5ca876","#687fc9","#ce5944","#51b2d0","#9b62c8","#d14a8e","#79b041","#bc759a","#9c7f45")
+# Patient
+patient_pallete_45 <- c("#d64530","#585fb1","#795d97","#9e4773","#3f6921","#71692c","#a2b93c","#d571cc","#9b3e97","#33947a","#98ad66","#448a4e","#869ae0","#5ce7af","#e085a3","#dfdc87","#d19be2","#5cb735","#e38269","#3db6c0","#50b565","#50902c","#a98a2c","#dde84a","#db3d76","#5fe485","#7c8329","#b3e791","#6fe965","#5ebce9","#3c86c1","#2a6a45","#65b688","#6651d1","#af4ed3","#df872f","#56e4db","#737cea","#ac464b","#dd37b5","#995b2b","#daac6f","#92e2be","#a2e24b","#e0be3a")
+# Lesion / Sampletype
+lesion_palette_10 <- c("#d4a33e","#5ca876","#687fc9","#ce5944","#51b2d0","#9b62c8","#d14a8e","#79b041","#bc759a","#9c7f45")
+# Cohort / Project
+project_pallet_2 <- c("#0043b8", "#990000")
 ####################################
 
 common_theme <- theme(
@@ -125,29 +130,52 @@ metadata.df$Sampletype_pooled_C_sep <- factor(as.character(lapply(metadata.df$Sa
 # We are currently only interested in a samples with the following lesion types. Filter the metadata to just those.
 metadata.df <- metadata.df[metadata.df$Sampletype %in% c("C","AK_PL","IEC_PL","SCC_PL","AK","IEC","SCC", "negative", "NLC"),]
 
+
+# ------------------------------------
+# Assign grouping to samples based on whether a patient has a SCC. Or if not, an AK/IEC. Or if not, control.
+metadata.df$Patient_grouping <- NA
+
+# samples/patients that have at least one NLC
+NLC_patients <- as.character(metadata.df[metadata.df$Sampletype_pooled == "NLC",]$Patient)
+# samples/patients that have at least one AK
+AK_patients <- as.character(metadata.df[metadata.df$Sampletype_pooled == "AK",]$Patient)
+# samples/patients that have at least one SCC
+SCC_patients <- as.character(metadata.df[metadata.df$Sampletype_pooled == "SCC",]$Patient)
+
+# AK patients not in SCC
+AK_patients <- AK_patients[!AK_patients %in% SCC_patients]
+# NLC patient not in AK or SCC
+NLC_patients <- NLC_patients[!NLC_patients %in% as.character(AK_patients, SCC_patients)]
+
+# Assign group, starting with NLC, then AK then SCC
+metadata.df[metadata.df$Patient %in% NLC_patients,"Patient_grouping"] <- "Normal"
+metadata.df[metadata.df$Patient %in% AK_patients,"Patient_grouping"] <- "Has_AK"
+metadata.df[metadata.df$Patient %in% SCC_patients,"Patient_grouping"] <- "Has_SCC"
+
+# ------------------------------------
+
 ##############################
 # Load and process the OTU table
-# project_otu_table <- read.csv("data/acepipe_immunocompromised/features_statistics.csv")
-project_otu_table <- read.csv("data/acepipe_immunocompromised_competent/features_statistics.csv")
+project_otu_table.df <- read.csv("data/acepipe_immunocompromised_competent/features_statistics.csv")
 
 # Fix name of first column
-names(project_otu_table)[1] <- "OTU.ID"
+names(project_otu_table.df)[1] <- "OTU.ID"
 
 # Fix names of r and b samples
-names(project_otu_table) <- gsub("R([1-4]_)","r\\1", names(project_otu_table))
-names(project_otu_table) <- gsub("B(_)","b\\1", names(project_otu_table))
+names(project_otu_table.df) <- gsub("R([1-4]_)","r\\1", names(project_otu_table.df))
+names(project_otu_table.df) <- gsub("B(_)","b\\1", names(project_otu_table.df))
 
 
 #Fix the some of the _J607 samples where read files did not have the r4 included. These are described in the metadata
 samples_to_fix <- as.character(metadata.df[!metadata.df$internal_name == "",]$internal_name)
 for (s2f in samples_to_fix){
   pattern <- paste("(",s2f,")", "(_J607)", sep ="")
-  names(project_otu_table) <- gsub(pattern, "\\1r4\\2", names(project_otu_table))
+  names(project_otu_table.df) <- gsub(pattern, "\\1r4\\2", names(project_otu_table.df))
 }
 
 # Get the sample ids from the OTU table
-sample_ids_original <- grep("R[0-9].*|S[AB][0-9].*|S[0-9].*", names(project_otu_table), value = T)
-sample_ids <- grep("R[0-9].*|S[AB][0-9].*|S[0-9].*", names(project_otu_table), value = T)
+sample_ids_original <- grep("R[0-9].*|S[AB][0-9].*|S[0-9].*", names(project_otu_table.df), value = T)
+sample_ids <- grep("R[0-9].*|S[AB][0-9].*|S[0-9].*", names(project_otu_table.df), value = T)
 
 # ------------------------------------------------------------------------------------------
 # The immunocompetent study from 2018 has repeat samples that should be combined.
@@ -172,52 +200,52 @@ for (sample in original_samples.v){
   sample_base <- gsub("_.*","",sample)
   if  (paste0(sample_base, 'b') %in% bases_repeat_samples.v){
     matching_repeat_sample <- grep(sample_base, repeat_samples.v, value = T)
-    project_otu_table[,sample] <- project_otu_table[,sample] + project_otu_table[,matching_repeat_sample]
+    project_otu_table.df[,sample] <- project_otu_table.df[,sample] + project_otu_table.df[,matching_repeat_sample]
   }
 }
 # And now remove all the repeat 'b' samples from the project table
-project_otu_table <- project_otu_table[,!colnames(project_otu_table) %in% repeat_samples.v]
+project_otu_table.df <- project_otu_table.df[,!colnames(project_otu_table.df) %in% repeat_samples.v]
 
 # Reassign the sample_ids 
-sample_ids <- grep("R[0-9].*|S[AB][0-9].*|S[0-9].*", names(project_otu_table), value = T)
+sample_ids <- grep("R[0-9].*|S[AB][0-9].*|S[0-9].*", names(project_otu_table.df), value = T)
 
 # ------------------------------------------------------------------------------------------
 # Results from the ACE amplicon pipeline `should' contain at least one observation/count in every row, however just to be sure
 # remove any rows containing all zeros. To do this, simply keep any row where there is any value not equal to zero.
-# project_otu_table[sample_ids] will return all columns with names matching the sample ids
+# project_otu_table.df[sample_ids] will return all columns with names matching the sample ids
 # The command below will take each row (MARGIN = 1) for the sample columns and check if any value is not zero.
-project_otu_table <- project_otu_table[apply(project_otu_table[sample_ids], MARGIN = 1, function(z) any(z!=0)),]
+project_otu_table.df <- project_otu_table.df[apply(project_otu_table.df[sample_ids], MARGIN = 1, function(z) any(z!=0)),]
 
 # Split the Taxon column into Domain, Phylum...Species
-project_otu_table <- separate(project_otu_table, "Taxon", into = c("Domain", "Phylum", "Class", "Order", "Family","Genus", "Species"), remove =F, sep = ";")
+project_otu_table.df <- separate(project_otu_table.df, "Taxon", into = c("Domain", "Phylum", "Class", "Order", "Family","Genus", "Species"), remove =F, sep = ";")
 
 # Splitting taxa strings that are not specified at certain taxa levels will produce NA entries at those levels. 
 # NA entries should be changed to "Unassigned"
-project_otu_table[is.na(project_otu_table)] <- "Unassigned"
+project_otu_table.df[is.na(project_otu_table.df)] <- "Unassigned"
 
 # Replace D_# at beginning of taxon rank string to corresponding taxa label, e.g. D_0 = d (domain) D_1 = p (phylum), etc.
-project_otu_table$Domain <- as.character(lapply(project_otu_table$Domain, FUN = function(x) gsub("D_0", "d", x)))
-project_otu_table$Phylum <- as.character(lapply(project_otu_table$Phylum, FUN = function(x) gsub("D_1", "p", x)))
-project_otu_table$Class <- as.character(lapply(project_otu_table$Class, FUN = function(x) gsub("D_2", "c", x)))
-project_otu_table$Order <- as.character(lapply(project_otu_table$Order, FUN = function(x) gsub("D_3", "o", x)))
-project_otu_table$Family <- as.character(lapply(project_otu_table$Family, FUN = function(x) gsub("D_4", "f", x)))
-project_otu_table$Genus <- as.character(lapply(project_otu_table$Genus, FUN = function(x) gsub("D_5", "g", x)))
-project_otu_table$Species <- as.character(lapply(project_otu_table$Species, FUN = function(x) gsub("D_6", "s", x)))
+project_otu_table.df$Domain <- as.character(lapply(project_otu_table.df$Domain, FUN = function(x) gsub("D_0", "d", x)))
+project_otu_table.df$Phylum <- as.character(lapply(project_otu_table.df$Phylum, FUN = function(x) gsub("D_1", "p", x)))
+project_otu_table.df$Class <- as.character(lapply(project_otu_table.df$Class, FUN = function(x) gsub("D_2", "c", x)))
+project_otu_table.df$Order <- as.character(lapply(project_otu_table.df$Order, FUN = function(x) gsub("D_3", "o", x)))
+project_otu_table.df$Family <- as.character(lapply(project_otu_table.df$Family, FUN = function(x) gsub("D_4", "f", x)))
+project_otu_table.df$Genus <- as.character(lapply(project_otu_table.df$Genus, FUN = function(x) gsub("D_5", "g", x)))
+project_otu_table.df$Species <- as.character(lapply(project_otu_table.df$Species, FUN = function(x) gsub("D_6", "s", x)))
 
 # Recreate the full taxonomy string with the 'prettier' taxa labels
-project_otu_table$taxonomy_species <- with(project_otu_table, paste(Domain, Phylum, Class, Order, Family, Genus, Species, sep =";"))
+project_otu_table.df$taxonomy_species <- with(project_otu_table.df, paste(Domain, Phylum, Class, Order, Family, Genus, Species, sep =";"))
 
 # Also create a taxonomy string up to the genus level, since species are very rarely characterised at the Specie level in amplicon data
-project_otu_table$taxonomy_genus <- with(project_otu_table, paste(Domain, Phylum, Class, Order, Family, Genus, sep =";"))
+project_otu_table.df$taxonomy_genus <- with(project_otu_table.df, paste(Domain, Phylum, Class, Order, Family, Genus, sep =";"))
 
 # And just for easier plotting later, create taxonomy strings for phylum, class, order and family levels
-project_otu_table$taxonomy_family <- with(project_otu_table, paste(Domain, Phylum, Class, Order, Family, sep =";"))
-project_otu_table$taxonomy_order <- with(project_otu_table, paste(Domain, Phylum, Class, Order, sep =";"))
-project_otu_table$taxonomy_class <- with(project_otu_table, paste(Domain, Phylum, Class, sep =";"))
-project_otu_table$taxonomy_phylum <- with(project_otu_table, paste(Domain, Phylum, sep =";"))
+project_otu_table.df$taxonomy_family <- with(project_otu_table.df, paste(Domain, Phylum, Class, Order, Family, sep =";"))
+project_otu_table.df$taxonomy_order <- with(project_otu_table.df, paste(Domain, Phylum, Class, Order, sep =";"))
+project_otu_table.df$taxonomy_class <- with(project_otu_table.df, paste(Domain, Phylum, Class, sep =";"))
+project_otu_table.df$taxonomy_phylum <- with(project_otu_table.df, paste(Domain, Phylum, sep =";"))
 
 # Store a version of the unfiltered project table
-project_otu_table_unfiltered <- project_otu_table
+project_otu_table_unfiltered.df <- project_otu_table.df
 
 # ------------------------------------------------------------------------------------------
 ## Now ensure the metadata and the OTU table matches
@@ -241,9 +269,9 @@ if ( length(missing_samples_metadata.v) == 0) {
 }
 
 # Remove samples from the project table that are not in the metadata
-dim(project_otu_table)
-project_otu_table <- project_otu_table[, ! colnames(project_otu_table) %in% missing_samples.v]
-dim(project_otu_table)
+dim(project_otu_table.df)
+project_otu_table.df <- project_otu_table.df[, ! colnames(project_otu_table.df) %in% missing_samples.v]
+dim(project_otu_table.df)
 
 # Remove samples in the metadata that are not in the project table, e.g. repeat samples that have been merged at this point
 metadata.df <- metadata.df[!metadata.df$Index %in% missing_samples_metadata.v,]
@@ -251,12 +279,12 @@ metadata.df <- metadata.df[!metadata.df$Index %in% missing_samples_metadata.v,]
 # Remove MS patient samples that were sequenced along with the immunocompromised samples
 MS_resequenced_samples <- metadata.df[grep("Sequenced during immunocompromised batch", metadata.df$Note),]$Index
 metadata.df <- metadata.df[!metadata.df$Index %in% MS_resequenced_samples,]
-project_otu_table <- project_otu_table[,!names(project_otu_table) %in% MS_resequenced_samples]
+project_otu_table.df <- project_otu_table.df[,!names(project_otu_table.df) %in% MS_resequenced_samples]
 
 # Remove any patients that are not immunocompromised (MST); remove immunocompetent (MS) patients
 # from OTU table and metadata
 # MS_patients <- unique(metadata.df[grepl("MS[0-9]", metadata.df$Patient),]$Index)
-# project_otu_table <- project_otu_table[,!colnames(project_otu_table) %in% MS_patients]
+# project_otu_table.df <- project_otu_table.df[,!colnames(project_otu_table.df) %in% MS_patients]
 # metadata.df <- metadata.df[!metadata.df$Index %in% MS_patients,]
 
 # ------------------------------------------------
@@ -265,48 +293,61 @@ project_otu_table <- project_otu_table[,!names(project_otu_table) %in% MS_resequ
 
 # For Sampletype
 sampletype_values <- factor(as.character(unique(metadata.df$Sampletype)))
-sampletype_colours <- setNames(lesion_pallete_10[1:length(sampletype_values)], sampletype_values)
+sampletype_colours <- setNames(lesion_palette_10[1:length(sampletype_values)], sampletype_values)
 
-all_sample_colours <- as.character(lapply(as.character(metadata.df$Sampletype), function(x) variable_colours[x]))
+all_sample_colours <- as.character(lapply(as.character(metadata.df$Sampletype), function(x) sampletype_colours[x]))
 metadata.df$Sampletype_colour <- all_sample_colours
 
-# For Sampletype_pooled. Can same Sampletype colours defined above
+# For Sampletype_pooled. Same Sampletype colours defined above
 all_sample_colours <- as.character(lapply(as.character(metadata.df$Sampletype_pooled), function(x) sampletype_colours[x]))
 metadata.df$Sampletype_pooled_colour <- all_sample_colours
 
-tail(metadata.df)
+# For Sampletype_pooled_IEC_sep Same Sampletype colours defined above
+all_sample_colours <- as.character(lapply(as.character(metadata.df$Sampletype_pooled_IEC_sep), function(x) sampletype_colours[x]))
+metadata.df$Sampletype_pooled_IEC_sep_colour <- all_sample_colours
+
+# For Cohort (Project)
+project_values <- factor(as.character(unique(metadata.df$Project)))
+project_colours <- setNames(project_pallet_2[1:length(project_values)], project_values)
+all_project_colours <- as.character(lapply(as.character(metadata.df$Project), function(x) project_colours[x]))
+metadata.df$Project_colour <- all_project_colours
+
+# For Patient
+patient_values <- factor(as.character(unique(metadata.df$Patient)))
+patient_colours <- setNames(patient_pallete_45[1:length(patient_values)], patient_values)
+all_patient_colours <- as.character(lapply(as.character(metadata.df$Patient), function(x) patient_colours[x]))
+metadata.df$Patient_colour <- all_patient_colours
+
+
 
 # ------------------------------------------------
 # ------------------------------------------------
-
-# Save the final filtered metadata use elsewhere
-write.table(metadata.df, file = "Result_tables/other/processed_metadata.csv", sep = ",", quote = F, row.names = F)
 
 # Reassign the sample ids 
-sample_ids <- grep("R[0-9].*|S[AB][0-9].*|S[0-9].*", names(project_otu_table), value = T)
+sample_ids <- grep("R[0-9].*|S[AB][0-9].*|S[0-9].*", names(project_otu_table.df), value = T)
 
 # ------------------------------------------------
 # ----------- Remove unwanted lineages -----------
 
 # Remove OTUs that are Unassigned
-# project_otu_table <- project_otu_table[project_otu_table$Taxon != "Unassigned",]
+# project_otu_table.df <- project_otu_table.df[project_otu_table.df$Taxon != "Unassigned",]
 
 # Discard anything not Bacterial or Fungal
-project_otu_table <- project_otu_table[grepl("D_0__Bacteria|D_3__Fungi", project_otu_table$Taxon),]
+project_otu_table.df <- project_otu_table.df[grepl("D_0__Bacteria|D_3__Fungi", project_otu_table.df$Taxon),]
 
 # Discard anything not Bacterial or Fungal or Unassigned
-# project_otu_table <- project_otu_table[grepl("D_0__Bacteria|D_3__Fungi|^Unassigned$", project_otu_table$Taxon),]
+# project_otu_table.df <- project_otu_table.df[grepl("D_0__Bacteria|D_3__Fungi|^Unassigned$", project_otu_table.df$Taxon),]
 
 # Discard anything not Bacterial
-# project_otu_table <- project_otu_table[grepl("D_0__Bacteria", project_otu_table$Taxon),]
+# project_otu_table.df <- project_otu_table.df[grepl("D_0__Bacteria", project_otu_table.df$Taxon),]
 # ------------------------------------------------
 
 # Remove old Taxon column
-project_otu_table$Taxon <- NULL
-project_otu_table_unfiltered$Taxon <- NULL
+project_otu_table.df$Taxon <- NULL
+project_otu_table_unfiltered.df$Taxon <- NULL
 
 # Store the OTUs and corresponding taxonomy information in a separate dataframe
-otu_taxonomy_map <- project_otu_table[c("OTU.ID",
+otu_taxonomy_map <- project_otu_table.df[c("OTU.ID",
                                         "Domain", 
                                         "Phylum", 
                                         "Class", 
@@ -326,6 +367,10 @@ otu_taxonomy_map <- project_otu_table[c("OTU.ID",
 write.table(otu_taxonomy_map, file = "Result_tables/other/otu_taxonomy_map.csv", sep = ",", quote = F, row.names = F)
 
 
+# Also save the unfiltered table, to avoid processing the original data table again 
+write.table(project_otu_table_unfiltered.df, file = "Result_tables/other/project_otu_table_unfiltered.csv", sep = ",", quote = F, row.names = F)
+
+
 # ---------------------------------------------------------------------------------------------------------------
 # ---------------------------------------------------------------------------------------------------------------
 # ---------------------------------------------------------------------------------------------------------------
@@ -334,8 +379,8 @@ write.table(otu_taxonomy_map, file = "Result_tables/other/otu_taxonomy_map.csv",
 # -----------------------------
 # -----------OTU LEVEL---------
 # Dataframe containing the counts for each OTU, for each sample
-otu.df <- project_otu_table[c("OTU.ID", sample_ids)]
-otu_unfiltered.df <- project_otu_table_unfiltered[c("OTU.ID", sample_ids)]
+otu.df <- project_otu_table.df[c("OTU.ID", sample_ids)]
+otu_unfiltered.df <- project_otu_table_unfiltered.df[c("OTU.ID", sample_ids)]
 
 ## Create a matrix version for ease of processing
 # For filtered OTU matrix
@@ -359,7 +404,7 @@ otu_rel.m[is.nan(otu_rel.m)] <- 0
 ############################################################
 ## TODO Calculate the fraction of human reads in each sample
 # Get human OTUs
-# human_OTUs <- project_otu_table_unfiltered[grep("Mammalia", project_otu_table_unfiltered$taxonomy_species),]$OTU.ID
+# human_OTUs <- project_otu_table_unfiltered.df[grep("Mammalia", project_otu_table_unfiltered.df$taxonomy_species),]$OTU.ID
 # # otu_unfiltered.m[which(rownames(otu_unfiltered.m) %in% human_OTUs),]
 # sample_fraction_human_reads <- 
 #   melt(colSums(otu_unfiltered.m[rownames(otu_unfiltered.m) %in% human_OTUs,]) / 
@@ -368,7 +413,7 @@ otu_rel.m[is.nan(otu_rel.m)] <- 0
 # 
 # myplot <- ggplot(sample_fraction_human_reads, aes(y= Fraction, x= Patient, fill = Patient)) +
 #   geom_boxplot() +
-#   scale_fill_manual(values = my_colour_pallete_32_distinct)+
+#   scale_fill_manual(values = my_colour_palette_32_distinct)+
 #   scale_y_continuous(limits = c(0,1), breaks = seq(0,1,.1)) +
 #   ylab("Human fraction") +
 #   xlab("Patient") +
@@ -378,7 +423,7 @@ otu_rel.m[is.nan(otu_rel.m)] <- 0
 # ggsave(plot = myplot, filename = "./Result_figures/exploratory_analysis/human_fraction_reads_boxplot.pdf", width=6, height=6)
 # 
 # ####
-# bacterial_fungal_OTUs <- project_otu_table_unfiltered[grep("d__Bacteria|Fungi", project_otu_table_unfiltered$taxonomy_species),]$OTU.ID
+# bacterial_fungal_OTUs <- project_otu_table_unfiltered.df[grep("d__Bacteria|Fungi", project_otu_table_unfiltered.df$taxonomy_species),]$OTU.ID
 # sample_fraction_bacterial_fungal_reads <- 
 #   melt(colSums(otu_unfiltered.m[rownames(otu_unfiltered.m) %in% bacterial_fungal_OTUs,]) / 
 #          colSums(otu_unfiltered.m),value.name = "Fraction")
@@ -387,7 +432,7 @@ otu_rel.m[is.nan(otu_rel.m)] <- 0
 # 
 # myplot <- ggplot(sample_fraction_bacterial_fungal_reads, aes(y= Fraction, x= Patient, fill = Patient)) +
 #   geom_boxplot() +
-#   scale_fill_manual(values = my_colour_pallete_32_distinct)+
+#   scale_fill_manual(values = my_colour_palette_32_distinct)+
 #   scale_y_continuous(limits = c(0,1), breaks = seq(0,1,.1)) +
 #   ylab("Bacterial and Fungal fraction") +
 #   xlab("Patient") +
@@ -397,7 +442,7 @@ otu_rel.m[is.nan(otu_rel.m)] <- 0
 # ggsave(plot = myplot, filename = "./Result_figures/exploratory_analysis/bacterial_fungal_fraction_reads_boxplot.pdf", width=6, height=6)
 # 
 # ###
-# fungal_OTUs <- project_otu_table_unfiltered[grep("Fungi", project_otu_table_unfiltered$taxonomy_species),]$OTU.ID
+# fungal_OTUs <- project_otu_table_unfiltered.df[grep("Fungi", project_otu_table_unfiltered.df$taxonomy_species),]$OTU.ID
 # sample_fraction_fungal_reads <- 
 #   melt(colSums(otu_unfiltered.m[rownames(otu_unfiltered.m) %in% fungal_OTUs,]) / 
 #          colSums(otu_unfiltered.m),value.name = "Fraction")
@@ -406,7 +451,7 @@ otu_rel.m[is.nan(otu_rel.m)] <- 0
 # 
 # myplot <- ggplot(sample_fraction_fungal_reads, aes(y= Fraction, x= Patient, fill = Patient)) +
 #   geom_boxplot() +
-#   scale_fill_manual(values = my_colour_pallete_32_distinct)+
+#   scale_fill_manual(values = my_colour_palette_32_distinct)+
 #   scale_y_continuous(limits = c(0,1), breaks = seq(0,1,.1)) +
 #   ylab("Fungal fraction") +
 #   xlab("Patient") +
@@ -417,7 +462,7 @@ otu_rel.m[is.nan(otu_rel.m)] <- 0
 # 
 # ###
 # 
-# bacterial_OTUs <- project_otu_table_unfiltered[grep("d__Bacteria", project_otu_table_unfiltered$taxonomy_species),]$OTU.ID
+# bacterial_OTUs <- project_otu_table_unfiltered.df[grep("d__Bacteria", project_otu_table_unfiltered.df$taxonomy_species),]$OTU.ID
 # sample_fraction_bacterial_reads <- 
 #   melt(colSums(otu_unfiltered.m[rownames(otu_unfiltered.m) %in% bacterial_OTUs,]) / 
 #          colSums(otu_unfiltered.m),value.name = "Fraction")
@@ -426,7 +471,7 @@ otu_rel.m[is.nan(otu_rel.m)] <- 0
 # 
 # myplot <- ggplot(sample_fraction_bacterial_reads, aes(y= Fraction, x= Patient, fill = Patient)) +
 #   geom_boxplot() +
-#   scale_fill_manual(values = my_colour_pallete_32_distinct)+
+#   scale_fill_manual(values = my_colour_palette_32_distinct)+
 #   scale_y_continuous(limits = c(0,1), breaks = seq(0,1,.1)) +
 #   ylab("Bacterial fraction") +
 #   xlab("Patient") +
@@ -437,7 +482,7 @@ otu_rel.m[is.nan(otu_rel.m)] <- 0
 # 
 # 
 # ###
-# Unassigned_OTUs <- project_otu_table_unfiltered[project_otu_table_unfiltered$Domain == "Unassigned",]$OTU.ID
+# Unassigned_OTUs <- project_otu_table_unfiltered.df[project_otu_table_unfiltered.df$Domain == "Unassigned",]$OTU.ID
 # 
 # sample_fraction_unassigned_reads <- 
 #   melt(colSums(otu_unfiltered.m[rownames(otu_unfiltered.m) %in% Unassigned_OTUs,]) / 
@@ -447,7 +492,7 @@ otu_rel.m[is.nan(otu_rel.m)] <- 0
 # 
 # myplot <- ggplot(sample_fraction_unassigned_reads, aes(y= Fraction, x= Patient, fill = Patient)) +
 #   geom_boxplot() +
-#   scale_fill_manual(values = my_colour_pallete_32_distinct)+
+#   scale_fill_manual(values = my_colour_palette_32_distinct)+
 #   scale_y_continuous(limits = c(0,1), breaks = seq(0,1,.1)) +
 #   ylab("Unassigned fraction") +
 #   xlab("Patient") +
@@ -466,10 +511,10 @@ filter_percentage = 0.0005
 otu_rel_low_abundance_otus.m <- otu_rel.m[apply(otu_rel.m[,sample_ids],1,function(z) all(z < filter_percentage)),]
 
 # TODO - Collect low abundance OTUs that will be filtered out at this stage
-otu_rel_low_abundance_otus.df <- as.data.frame(otu_rel_low_abundance_otus.m)
-# FIXME write.table(otu_rel_low_abundance_otus.df, file = "Result_tables/count_tables/low_abundance_OTUs.csv", sep = ",", quote = F, col.names = T, row.names = F)
+# FIXME write.table(as.data.frame(otu_rel_low_abundance_otus.m), file = "Result_tables/count_tables/low_abundance_OTUs.csv", sep = ",", quote = F, col.names = T, row.names = F)
 percent_removed_before_taxa_filtered <- round(dim(otu_rel_low_abundance_otus.m)[1]/length(rownames(otu_unfiltered.m)) * 100,2)
 percent_removed_after_taxa_filtered <- round(dim(otu_rel_low_abundance_otus.m)[1]/length(rownames(otu.m)) * 100,2)
+
 # percent_removed_before_taxa_filtered
 # percent_removed_after_taxa_filtered
 
@@ -490,15 +535,16 @@ otu_rel.m[is.nan(otu_rel.m)] <- 0
 # Also remove low abundance OTUs from the original OTU count matrix
 otu.m  <- otu.m[rownames(otu_rel.m),]
 
-############################################################
-### Keep only those OTUs from AK samples that have a higher mean relative abundance compared to the swab controls (C) or negatives
+# -------------------------------------------------------------------------------------------------------------------------------------
+# -------------------------------------------------------------------------------------------------------------------------------------
+# -------------------------------------------------------------------------------------------------------------------------------------
+# Keep only those OTUs from AK samples that have a higher mean relative abundance compared to the swab controls (C) or negatives
 
-# Note that in David's code for the 2018 paper, he first rarefied before calculating contaminants presence/absence
+# Note that in the code for the 2018 paper, samples were first capped to a maximum read depth (rrarefy, not true rarefy) 
+# before calculating contaminants presence/absence.
 # e.g. otu_rare_count.m <- t(rrarefy(x = t(otu_count_raw.m), sample = 2000))
-# I think this makes sense. Large differences in read depth between samples will make it harder to determine the 
-# true-positive contaminants from false-positive.
-otu_rare_count.m <- t(rrarefy(x = t(otu.m), sample=30000))
-# otu_rare_count.m <- t(rrarefy(x = t(otu.m), sample=2000))
+# Large differences in read depth between samples will make it harder to determine the true-positive contaminants from false-positive.
+otu_rare_count.m <- t(rrarefy(x = t(otu.m), sample=30000)) # Ensure this value is the same as used in the 'rarefy' section
 
 # Calculate the relative abundance on this rarefied table. Can use this to calculate the mean relative abundance of each OTU in different groups.
 # In theory, a contaminant will make up a larger percent of the abundance in the negative control.
@@ -519,14 +565,13 @@ not_negative_or_control_sample_ids <- as.character(metadata.df[!metadata.df$Samp
 # pooled_not_negative_sample_ids <- as.character(metadata.df[metadata.df$Sampletype %in% c("C","AK_PL","IEC_PL","SCC_PL","AK","IEC"),]$Index)
 pooled_not_negative_sample_ids <- as.character(metadata.df[metadata.df$Sampletype %in% c("C","NLC","AK_PL","IEC_PL","SCC_PL","AK","IEC"),]$Index)
 
-###
 # TODO - determine whether to include controls when comparing against negative samples
-
 contaminating_otus_from_mean_abundances <- rownames(otu_rare_rel.m[rowMeans(otu_rare_rel.m[,pooled_not_negative_sample_ids]) < rowMeans(otu_rare_rel.m[,negative_sample_ids]),])
 length(contaminating_otus_from_mean_abundances)
 
 ###
-# David's approach to identifying contaminants. It is the prevalence/frequency/abundance among sample type, rather than the mean relative abundance.
+# Approach to identifying contaminants used in 2018 paper. 
+# It is the prevalence/frequency/abundance among sample type, rather than the mean relative abundance.
 # Determine contaminating otus from prevalence differences between groups
 # This will calculate what percentage of samples in each group an OTU is present in
 otu_negative_sample_prevalences <- apply(otu_rare_count.m[,negative_sample_ids], 1, function(x) {length(which(x > 0))}) /length(negative_sample_ids)
@@ -536,6 +581,7 @@ contaminating_otus_from_prevalences <- names(otu_pooled_not_negative_sample_prev
 
 print(paste("There are", length(contaminating_otus_from_mean_abundances), "contaminating OTUs based on mean abundances"))
 print(paste("There are", length(contaminating_otus_from_prevalences), "contaminating OTUs based on prevalences"))
+
 
 # length(contaminating_otus_from_mean_abundances[contaminating_otus_from_mean_abundances %in% contaminating_otus_from_prevalences])
 # length(contaminating_otus_from_prevalences[contaminating_otus_from_prevalences %in% contaminating_otus_from_mean_abundances])
@@ -550,20 +596,19 @@ myplot <- ggplot(presences.df, aes(x =negative*100, y= not_negative*100)) +
   geom_point(aes(color=contaminant)) +
   # geom_point(aes(color=contaminant, shape = contaminant)) +
   #scale_shape_manual(values = c(1,4)) +
-  xlab("Percent of swab negative control samples OTU detected in") +
-  ylab("Percent of non-negative samples OTU detected in") +
+  xlab("Percent of swab negative control samples feature detected in") +
+  ylab("Percent of non-negative samples feature detected in") +
   # scale_x_continuous(breaks = seq(0,1,.25), limits = c(0,1.01)) +
   # scale_y_continuous(breaks = seq(0,1,.25), limits = c(0,1.01)) +
   scale_x_continuous(breaks = seq(0,100,25), limits = c(0,101)) +
   scale_y_continuous(breaks = seq(0,100,25), limits = c(0,101)) +
   common_theme
 ggsave(plot = myplot, filename = "./Result_figures/exploratory_analysis/contaminant_otus_scatter_plot.pdf", width=6, height=6)
-###
-# And filter. Either filter the contaminating otus calculating from prevalences or from mean abundances
-dim(otu_rel.m)
+
+
+# Filter the contaminating otus calculated from prevalences (or from mean abundances)
 # otu_rel.m <- otu_rel.m[!rownames(otu_rel.m) %in% contaminating_otus_from_mean_abundances,]
 otu_rel.m <- otu_rel.m[!rownames(otu_rel.m) %in% contaminating_otus_from_prevalences,]
-dim(otu_rel.m)
 
 # Re-normalise the matrix after filtering
 otu_rel.m <- t(t(otu_rel.m) / colSums(otu_rel.m))
@@ -583,21 +628,22 @@ dim(otu.m[apply(otu.m, 1, max) == 0,])
 # The might be many rows whos maximum is 0 at this point. Remove them.
 otu.m <- otu.m[apply(otu.m, 1, max) != 0,]
 
-##############################################################
-#         OPTIONAL - rarefying
+# -------------------------------------------------------------------------------------------------------------------------------------
+# -------------------------------------------------------------------------------------------------------------------------------------
+# -------------------------------------------------------------------------------------------------------------------------------------
+#         Rarefying
 
 # Note - For samples with a read count lower then the sample=# parameter, 
 # the rrarefy function in vegan will return the this sample with its existing read count.
 # Sample with counts higher than the sample parameter will be rarefied as normal and their counts will be capped at the sample parameter value
 
 # Normally samples with OTU counts lower than our desired threshold need to be removed if we want to rarefy.
-# This should have been performed at this point in normal circumstances. However, we are simply using rrarefy to cap the read depth so the fold difference
-# between the highest and lowest is not extreme.
+# Here we are simply using rrarefy to cap the read depth so the fold difference between the highest and lowest is not extreme.
 
 # Looking at rarefaction curve and the counts for each sample can be a good
-# way to determine a good minimum count threshold for samples
+# way to determine a good minimum/maximum count threshold for samples
 
-# Counts for each Sample
+# Counts for each sample
 column_sums <- colSums(otu.m)
 column_sums.df <- melt(column_sums[order(column_sums)])
 column_sums.df$sample <- rownames(column_sums.df)
@@ -628,9 +674,9 @@ myplot <- ggplot(column_sums.df, aes(x = value)) +
   theme(axis.text.x = element_text(angle = 90, vjust = .5))
 ggsave(plot = myplot, filename = "./Result_figures/exploratory_analysis/sample_read_depth_distribution_2.pdf", width=6, height=6)
 
-summary(column_sums.df$value)
-mean(column_sums.df$value)
-median(column_sums.df$value)
+# summary(column_sums.df$value)
+# mean(column_sums.df$value)
+# median(column_sums.df$value)
 #row_sums <- #rowSums(otu.m) # counts for OTUs
 
 # Rarefaction curve
@@ -649,7 +695,9 @@ otu_rare_count.m <- t(rrarefy(x = t(otu.m), sample=30000))
 
 # TODO - number of and fraction of OTUs that are removed from rarefying
 
-##############################################################
+# -------------------------------------------------------------------------------------------------------------------------------------
+# -------------------------------------------------------------------------------------------------------------------------------------
+# -------------------------------------------------------------------------------------------------------------------------------------
 
 # And re-calculate the abundances after filtering
 otu_rel.m <- t(t(otu.m)/ colSums(otu.m))
@@ -697,23 +745,26 @@ samples_retained <- colnames(otu.df)[2:length(colnames(otu.df))]
 samples_lost <- metadata.df$Index[!metadata.df$Index %in% samples_retained]
 print(paste(length(samples_retained), "samples retained"))
 print(paste(length(samples_lost), "samples lost"))
-write.table(metadata.df[metadata.df$Index %in% samples_lost,], file = "Result_tables/other/metadata_samples_removed.csv", sep = ",", quote = F, col.names = T, row.names = F)
 
+# Label those samples from the metadata.df that are not in the OTU table. A sample that has been filtered out
+# will generally not be of interest for the study, though we may wish to have the metadata at hand
+metadata.df$Sample_retained <- "no"
+metadata.df[metadata.df$Index %in% samples_retained,]$Sample_retained <- "yes"
+write.table(metadata.df[metadata.df$Sample_retained == "yes",], file = "Result_tables/other/processed_metadata.csv", sep = ",", quote = F, row.names = F)
+write.table(metadata.df[metadata.df$Sample_retained == "no",], file = "Result_tables/other/metadata_samples_removed.csv", sep = ",", quote = F, row.names = F)
 
-# ------------------------------------------------------------------------------------------------------------------------------
+# -------------------------------------------------------------------------------------------------------------------------------------
+# -------------------------------------------------------------------------------------------------------------------------------------
+# -------------------------------------------------------------------------------------------------------------------------------------
 # Above we processed the frequencies for each OTU to calculate the relative abundances.
 # However, we often want the abundances at not just the individual OTU level, but also different taxonomy levels.
 # For example, we may want to know the abundance of a particular Family.
 # Now we will generate the abundance tables at each taxonomy level from Phylum, Class, Order, Family and Genus
 
-# otu_metadata_merged.df
 otu_metadata_merged.df <- merge(otu.df, otu_taxonomy_map, by.x = "OTU.ID", by.y = "OTU.ID")
 
 # Do the same for the rarefied data
 otu_metadata_merged_rare.df <- merge(otu_rare.df, otu_taxonomy_map, by.x = "OTU.ID", by.y = "OTU.ID")
-
-dim(otu_metadata_merged.df)
-dim(otu_metadata_merged_rare.df)
 
 # We are then going to create and store the matrices for each taxonomy level containing the relative abundances. 
 otu_phylum_rel.m <- NULL
@@ -745,11 +796,7 @@ otu_family_rare.df <- NULL
 otu_genus_rare.df <- NULL
 otu_species_rare.df <- NULL
 
-# tail(names(otu_metadata_merged.df), n= 10)
-# otu_metadata_merged.df[c("taxonomy_species", sample_ids)]  %>% 
-#   group_by_(taxonomy_species) %>%
-#   dplyr::summarise_all(funs(sum)) %>%
-#   as.data.frame()
+
 
 # We use the 'full' taxonomy strings, e.g. taxonomy_genus, so that "Unassigned" or "Uncultured" from different lineages are kept separate!
 for (tax_string_level in c("taxonomy_species", "taxonomy_genus", "taxonomy_family", "taxonomy_class", "taxonomy_order", "taxonomy_phylum")){
@@ -873,7 +920,7 @@ write.table(m2df_tax_convert_save(otu_phylum_rel_rare.m, "taxonomy_phylum"), fil
 
 
 # ------------------------------------------------------------------------------------------------------------------------------
-# Finally create and save a dataframe, separately for each Phylum, Class, Order, Family,Genus,Species and OTU ,
+# Finally create and save a dataframe, separately for each Phylum, Class, Order, Family, Genus, Species and OTU,
 # containing the abundances/counts/log(counts, 10) in each sample, metadata and taxonomy information.
 
 # Include both the count, log(count), abundance, rarified count, log(rarified count) and rarified abundance.
@@ -1045,84 +1092,3 @@ write.table(order_combined, file = "Result_tables/other/order_counts_abundances_
 write.table(class_combined, file = "Result_tables/other/class_counts_abundances_and_metadata.csv", sep = ",", quote = F, col.names = T, row.names = F)
 write.table(phylum_combined, file = "Result_tables/other/phylum_counts_abundances_and_metadata.csv", sep = ",", quote = F, col.names = T, row.names = F)
 
-# temp2 <- otu_taxonomy_map[c("OTU.ID","Phylum", "Class", "Order", "Family", "Genus","Species")]
-# temp3 <- merge(temp, temp2, by.x = "OTU", by.y = "OTU.ID")
-# head(temp3)
-# # summary(unique(temp$Sample) %in% metadata.df$Index)
-# 
-# counts <- clean_df(otu.df)
-# rel_abundances <- as.data.frame(otu_rel.m)
-# rare_counts <- clean_df(otu_rare.df)
-# rel_rare_abundances <- as.data.frame(otu_rel_rare.m)
-# 
-# 
-# # dim(otu.df)
-# # dim(otu_rel.df)
-# # dim(otu_rare.df)
-# # dim(otu_rel_rare.df)
-# 
-# # Melt the count dataframe so there is an entry for each sample
-# temp_melt <- melt(temp,
-#                   measure.vars = sample_ids, 
-#                   variable.name = "Sample",
-#                   value.name = "Read_count")
-# 
-# 
-# # Remove entries where the count is zero
-# dim(temp_melt)
-# temp_melt <- temp_melt[temp_melt$Read_count > 0,]
-# dim(temp_melt)
-# 
-# # Get the corresponding abundance, rarified count and rarified abundance
-# unique(temp_melt[,1])
-# 
-# temp_melt <- merge(temp_melt, metadata.df, by.x = "Sample", by.y = "Index")
-# dim(temp_melt)
-# 
-# 
-# 
-# # Merge the dataframe with the metadata
-# otu_abundance_metadata.df <- merge(otu_abundance_metadata.df, metadata.df, by.x = "Sample", by.y = "Index")
-# # Merge the dataframe with the filter project_otu_table to get the taxonomy information and repseq
-# otu_abundance_metadata.df <- merge(otu_abundance_metadata.df, filtered_project_otu_table, by.x = "OTU.ID", by.y = "OTU.ID")
-# 
-# df2matrix(temp, 1)
-# 
-# # Take counts dataframe
-# merge(head(temp), metadata.df)
-# temp_melt <- melt(temp)
-# head(temp_melt)
-# 
-# merge(otu_abundance_metadata.df, metadata.df, by.x = "Sample", by.y = "Index")
-# 
-# # Take the project_otu_table and filter to those otus in the filtered dataframe
-# filtered_project_otu_table <- project_otu_table[project_otu_table$OTU.ID %in% rownames(otu_rel.m), ]
-# # Remove all sample columns
-# filtered_project_otu_table <- filtered_project_otu_table[!names(filtered_project_otu_table) %in% sample_ids_original]
-# # Remove unnecessary columns
-# filtered_project_otu_table$Confidence <- NULL
-# filtered_project_otu_table$Frequency <- NULL
-# # Copy the OTU abundance matrix and turn into a dataframe
-# otu_abundance_metadata.df <- as.data.frame(otu_rel.m)
-# # otu_abundance_metadata.df <- as.data.frame(otu.m)
-# # Make OTU.ID a column and remove rownames
-# otu_abundance_metadata.df$OTU.ID <- rownames(otu_abundance_metadata.df)
-# rownames(otu_abundance_metadata.df) <- NULL
-# # Fix the ordering. sample_ids was defined in the previous section and is simply the column names of otu_rel.m
-# otu_abundance_metadata.df <- otu_abundance_metadata.df[c("OTU.ID", sample_ids)]
-# # Melt the dataframe so there is an entry for each sample
-# otu_abundance_metadata.df <- melt(otu_abundance_metadata.df, measure.vars = sample_ids, 
-#                                   variable.name = "Sample", 
-#                                   value.name = "Relative_abundance")
-# # Remove entries where the abundance is zero
-# otu_abundance_metadata.df <- otu_abundance_metadata.df[otu_abundance_metadata.df$Relative_abundance > 0,]
-# # Merge the dataframe with the metadata
-# otu_abundance_metadata.df <- merge(otu_abundance_metadata.df, metadata.df, by.x = "Sample", by.y = "Index")
-# # Merge the dataframe with the filter project_otu_table to get the taxonomy information and repseq
-# otu_abundance_metadata.df <- merge(otu_abundance_metadata.df, filtered_project_otu_table, by.x = "OTU.ID", by.y = "OTU.ID")
-# # Save the dataframe
-# write.table(otu_abundance_metadata.df, file = "Result_tables/other/OTU_abundances_and_metadata.csv", sep = ",", quote = F, col.names = T, row.names = F)
-# 
-# # otu_abundance_metadata.df %>% group_by(Sampletype) %>% 
-# # dplyr::summarise(Count = sum(Relative_abundance)) %>% as.data.frame()
-# 

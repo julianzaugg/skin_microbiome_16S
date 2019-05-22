@@ -1,4 +1,10 @@
+# Perform differential abundance analysis 
+# - Comparing lesion types within patient
+# - Comparing the same lesion types between cohorts
+# - ?Compare patients that have a SCC / no SCC but have AK or IEC / or just Normal
+
 library(DESeq2)
+# library(BiocParallel)
 
 
 
@@ -23,6 +29,16 @@ clr = function(x, base=2){
   return(x)
 }
 
+matrix2df <- function(mymatrix, column_name){
+  out <- as.data.frame(mymatrix)
+  out_names <- colnames(out)
+  out$placeholder <- rownames(out)
+  rownames(out) <- NULL
+  names(out)[length(names(out))] <- column_name
+  out <- out[,c(column_name, out_names)]
+  return(out)
+}
+
 # For each rowname (OTU), get the corresponding taxonomy_species
 # Assumes "OTU.ID" and "taxonomy_species" columns in the provided map dataframe
 assign_taxonomy_to_otu <- function(otutable, taxon_map){
@@ -42,12 +58,30 @@ filter_and_sort_dds_results <- function(x, p_value_threshold = 0.05){
   return(filtered_table)
 }
 
+
+filter_matrix_rows <- function(my_matrix, row_max){
+  rows_before <- dim(my_matrix)[1]
+  rows_after <- dim(my_matrix[apply(my_matrix,1,max) >= row_max,])[1]
+  print(paste0("Rows before = ", rows_before))
+  print(paste0("Rows after = ", rows_after))
+  print(paste0("Lost % = ", round((rows_before-rows_after)/rows_before*100, 2), "%"))
+  return(my_matrix[apply(my_matrix,1,max) >= row_max,])
+}
+
 ############################################################
+
 # Set the working directory
-setwd("/Users/julianzaugg/Desktop/ACE/major_projects/skin_microbiome_16S")
+setwd("/Users/julianzaugg/Desktop/ACE/major_projects/skin_microbiome_16S/")
+
 
 # Load count table at the OTU level. These are the counts for OTUs that were above our abundance thresholds
-otu.df <- read.table("Result_tables/count_tables/OTU_counts_rarefied.csv", sep =",", header =T)
+otu_rare.m <- as.matrix(read.table("Result_tables/count_tables/OTU_counts_rarefied.csv", sep =",", header =T, row.names = 1))
+
+# Filter out features that do not have at # reads in at least one sample
+head(melt(sort(colSums(otu_rare.m))))
+otu_rare.m <- filter_matrix_rows(otu_rare.m,15)
+# dim(otu_rare.m[apply(otu_rare.m, 1, max) == 0,])
+head(melt(sort(colSums(otu_rare.m))))
 
 # Load the OTU - taxonomy mapping file
 otu_taxonomy_map.df <- read.csv("Result_tables/other/otu_taxonomy_map.csv", header = T)
@@ -58,12 +92,15 @@ metadata.df <- read.csv("Result_tables/other/processed_metadata.csv", sep =",", 
 # We are only interested in C,AK_PL,IEC_PL,SCC_PL,AK,IEC, NLC and SCC lesions. 
 metadata.df <- metadata.df[metadata.df$Sampletype %in% c("C","AK_PL","IEC_PL","SCC_PL","AK","IEC","SCC", "NLC"),]
 
+# Only keep columns (samples) in the metadata
+otu_rare.m <- otu_rare.m[,colnames(otu_rare.m) %in% as.character(metadata.df$Index)]
 
-otu.df <- otu.df[,names(otu.df) %in% c("OTU.ID", as.character(metadata.df$Index))]
+# Order the metadata.df by the index value
+metadata.df <- metadata.df[order(metadata.df$Index),]
 
-
+# Since we likely removed samples from the count matrix
 # in the main script, remove them from the metadata.df here
-samples_removed <- metadata.df$Index[!metadata.df$Index %in% names(otu.df)]
+samples_removed <- metadata.df$Index[!metadata.df$Index %in% colnames(otu_rare.m)]
 metadata.df <- metadata.df[! metadata.df$Index %in% samples_removed,]
 
 # Order the metadata.df by the index value
@@ -72,23 +109,23 @@ metadata.df <- metadata.df[order(metadata.df$Index),]
 # Rownames should match the sample columns in the otu table
 rownames(metadata.df) <- metadata.df$Index
 
-# For DESeq2, variables, i.e. discrete columns, should be factorised. 
-# DESeq2 may do this automatically but it is good to be explicit.
-metadata.df$Sampletype <- factor(metadata.df$Sampletype)
-metadata.df$Patient <- factor(metadata.df$Patient)
-metadata.df$Project <- factor(metadata.df$Project)
+# Order the otu_tables the same order as the metadata
+otu_rare.m <- otu_rare.m[,rownames(metadata.df)]
 
+dim(otu_rare.m)
+dim(metadata.df)
 
+# Ensure names of the otu / genus count matrices match the order of the metadata.df!
+# Assumes number of samples in metadata.df and count data are the same
+all(colnames(otu_rare.m) == metadata.df$Index) # Should be 'True'
+all(colnames(otu_rare.m) == rownames(metadata.df)) # Should be 'True'
 
-# Re-create the OTU matrix
-otu.m <- otu.df
-rownames(otu.m) <- otu.m$OTU.ID
-otu.m$OTU.ID <- NULL
-otu.m <- as.matrix(otu.m)
+### Create new variables where different lesions types have been grouped
+metadata.df$Sampletype_pooled_cohort <- factor(paste0(metadata.df$Sampletype_pooled, "_", metadata.df$Project))
 
-# CLR transform the otu matrix. We don't use this for DESeq, but we can refer to it to get the 
-# CLR transformed counts for OTUs of interest if necessary
-otu_clr.m <- clr(otu.m)
+# Factorise other variables
+metadata.df$Sampletype_pooled <- factor(metadata.df$Sampletype_pooled)
+# metadata.df[discrete_variables] <- lapply(metadata.df[discrete_variables], factor)
 
 
 # ---------------------------------------------------------------------------------------------------------
@@ -99,271 +136,290 @@ otu_clr.m <- clr(otu.m)
 # how the counts for each OTU/genus depend on the variables defined in the 'colData'. See help(DESeqDataSetFromMatrix) for more information.
 # The first column of the metadata.df ('colData') must match the ordering of the columns of the countData
 
-# Ensure names of the otu / genus count matrices match the order of the metadata.df!
-# Assumes number of samples in metadata.df and count data are the same
-all(names(otu.m) == metadata.df$Index) # Should be 'True'
-# all(names(otu_genus.m) == metadata.df$Sample) # Should be 'True'
+patient_lesion_counts <- data.frame()
+for (patient in unique(metadata.df$Patient)){
+  temp <- melt(summary(factor(metadata.df[metadata.df$Patient == patient,]$Sampletype_pooled)), value.name = "Count")
+  temp$Lesion <- rownames(temp)
+  rownames(temp) <- NULL
+  temp$Patient <- patient
+  patient_lesion_counts <- rbind(patient_lesion_counts, temp)
+}
+print(patient_lesion_counts,row.names = F)
 
-# Can order the columns of the count matrices by the order of the metadata.df as follows
-otu.m <- otu.m[,order(metadata.df$Index)]
 
-# Filter to only OTUs that have more than 15 reads in at least one sample
-dim(otu.m)
-otu.m <- otu.m[which(apply(otu.m, 1, max) >= 15),]
-dim(otu.m)
-# otu.m <- otu.m[which(apply(otu.m, 1, max) >= 30),]
-dim(otu.m)
-otu.m <- otu.m[which(apply(otu.m, 1, max) >= 150),]
-dim(otu.m)
-#150 / 30000 * 100
-# ---------------------------------------------------------------------------------------------------------
-### Create new variables where different lesions types have been grouped
+# Compare Sampletype_pooled within each patient (can use another lesion grouping)
+run_per_patient_deseq <- function(my_otu_matrix, variable = "Sampletype_pooled", my_levels = NULL){
 
-metadata.df$Sampletype_fixed <- factor(as.character(lapply(metadata.df$Sampletype, function(x)ifelse(x == "C", "NLC", as.character(x)))))
-# # SCC and all
-metadata.df$Sampletype_SCC <- factor(as.character(lapply(metadata.df$Sampletype, function(x)ifelse(x == "SCC", "SCC", "all"))))
-# # SCC+SCC_PL and all
-metadata.df$Sampletype_SCC_both <- factor(as.character(lapply(metadata.df$Sampletype, function(x)ifelse(x == "SCC" | x == "SCC_PL", "SCC", "all"))))
-# # AK and all
-metadata.df$Sampletype_AK <- factor(as.character(lapply(metadata.df$Sampletype, function(x)ifelse(x == "AK", "AK", "all"))))
+  all_patients_combined_results.df <- data.frame()
+  for (patient in unique(metadata.df$Patient)){ # for each patient
+    patient_combined_results.df <- data.frame()
+    patient_metadata.df <- metadata.df[metadata.df$Patient == patient,] # Get the patient metadata
+    patient_samples.v <- as.character(patient_metadata.df$Index) # Get the number of samples associated with the patient
+    patient_sample_lesion_types.v <- factor(patient_metadata.df[,variable]) # get the lesion types
+    
+    # If the number of samples is 1 or there is only one lesion type/group
+    if (length(patient_samples.v) == 1 || length(unique(patient_sample_lesion_types.v)) == 1){
+      next
+    }
+    print(melt(summary(patient_sample_lesion_types.v), value.name = "Count"))
+    
+    # Extract the samples counts specific to the patient
+    patient_feature_table.m <- my_otu_matrix[,patient_samples.v]
+    
+    # Can filter the features further if required
+    # patient_feature_table.m <- patient_feature_table.m[which(apply(patient_feature_table.m, 1, max) > 10),]
+    
+    # Order the patient feature table and the metadata to be the same
+    patient_feature_table.m <- patient_feature_table.m[,order(rownames(patient_metadata.df))]
+    patient_metadata.df <- patient_metadata.df[order(rownames(patient_metadata.df)),]
+    
+    # Refactor the variable column so that the levels are consistent
+    if (!is.null(my_levels)){
+      patient_metadata.df[,variable] <- factor(patient_metadata.df[,variable], levels = my_levels)
+    } else{
+      patient_metadata.df[,variable] <- factor(patient_metadata.df[,variable], levels = sort(unique(as.character(patient_metadata.df[,variable]))))  
+    }
+    
+    # If the column and rownames do not match, entries are missing
+    if (!all(rownames(patient_metadata.df) == colnames(patient_feature_table.m))){
+      print("Colnames and metadata names don't match!!!")
+      break
+    }
+    
+    # if (max(apply(patient_feature_table.m, 1, min)) == 0) {
+    #   patient_feature_table.m = patient_feature_table.m + 1
+    # }
+    
+    # Run DESeq
+    dds <-DESeqDataSetFromMatrix(countData = patient_feature_table.m, colData = patient_metadata.df, design = as.formula(paste0("~",variable)))
+    geoMeans <- apply(counts(dds), 1, gm_mean)
+    dds <- estimateSizeFactors(dds, geoMeans = geoMeans)
+    dds <- try(DESeq(dds, test = "Wald", fitType = "parametric", parallel = T))
+    
+    if(inherits(dds, "try-error")) {
+      next
+    }
+    
+    # Get the lesion/sampletype combinations
+    # sample_type_combinations <- combn(as.character(unique(patient_metadata.df[,variable])), 2)
+    # Sort to be consistent between patients
+    # sample_type_combinations <- combn(sort(unique(as.character(patient_metadata.df[,variable]))),2)
+    if (!is.null(my_levels)){
+      my_levels_filtered <- unique(my_levels[my_levels %in% patient_sample_lesion_types.v])
+      sample_type_combinations <- combn(rev(my_levels_filtered), 2)
+    }else{
+      sample_type_combinations <- combn(sort(unique(as.character(patient_metadata.df[,variable]))),2)
+    }
+    print(sample_type_combinations)
+    for (i in 1:ncol(sample_type_combinations)){
+      # Set group 1 and group 2
+      group_1 <- as.character(sample_type_combinations[1,i])
+      group_2 <- as.character(sample_type_combinations[2,i])
+      
+      # Get the number of samples in each group
+      n_group_1 <- dim(subset(patient_metadata.df, get(variable) == group_1))[1]
+      n_group_2 <- dim(subset(patient_metadata.df, get(variable) == group_2))[1]
+      
+      print(paste0("processing : ", patient, "_", group_1, "_vs_", group_2))
+      
+      # Get the results from contrasting these groups
+      resMFSource <- results(dds, contrast = c(variable,group_1,group_2), alpha=0.01, independentFiltering = F, cooksCutoff = F, parallel = T)
+      
+      resMFSource$Group_1 <- group_1
+      resMFSource$Group_2 <- group_2
+      resMFSource$Variable <- patient
+      resMFSource$N_Group_1 <- n_group_1
+      resMFSource$N_Group_2 <- n_group_2
+      
+      # Assign the taxonomy (good idea if looking at features)
+      resMFSource$taxonomy <- assign_taxonomy_to_otu(resMFSource, otu_taxonomy_map.df)  
+      
+      # Convert to dataframe
+      resMFSource <- matrix2df(resMFSource, "OTU")
+      
+      # Order the results by the adjusted p-value and filter out entries with p-values below threshold
+      resMFSourceOrdered <- filter_and_sort_dds_results(resMFSource, 0.01)
+      
+      # Add the result to the combined dataframe for the patient
+      patient_combined_results.df <- rbind(patient_combined_results.df, resMFSourceOrdered)
+      all_patients_combined_results.df <- rbind(all_patients_combined_results.df, resMFSourceOrdered)
+    }
+    # # Write the results for the patient to file
+    result_name <- paste0(patient,"__",variable)
+    outfilename <- paste("Result_tables/DESeq_results/by_patient/", result_name, ".csv", sep= "")
+    write.csv(patient_combined_results.df, file=outfilename, quote = F, row.names = F)
+  }
+  # Write the results for all patients to file (assumes no errors and all patient results generated at the same time)
+  outfilename <- paste("Result_tables/DESeq_results/by_patient/patient__", variable, "_combined.csv", sep= "")
+  write.csv(all_patients_combined_results.df, file=outfilename, quote = F, row.names = F)
+}
+# temp <- filter_matrix_rows(otu_rare.m, 200)
+# run_per_patient_deseq(temp, "Sampletype_pooled", my_levels <- c("NLC", "AK", "SCC"))
+run_per_patient_deseq(otu_rare.m, "Sampletype_pooled", my_levels <- c("NLC", "AK", "SCC"))
 
-metadata.df$Sampletype_pooled_cohort <- factor(paste0(metadata.df$Sampletype_pooled, "_", metadata.df$Project))
 
-# # SCC_PL + C
-# metadata.df$Sampletype_SCCPL_C <- factor(as.character(lapply(as.character(metadata.df$Sampletype),function(x)ifelse(x == "SCC_PL" | x == "C", "SCCPL_C", x))))
+# Comparing the same lesion types between cohorts
+# Always compare compromised vs competent
+run_lesion_cohorts_deseq <- function(my_otu_matrix, variable = "Sampletype_pooled"){
+
+  all_combined_results.df <- data.frame()
+  for (lesion in unique(metadata.df[,variable])){
+    lesion_results.df <- data.frame()
+    lesion_metadata.df <- metadata.df[metadata.df[,variable] == lesion,]
+    
+    # Create column with the variable and the project (cohort)
+    variable_project_name <- paste0(variable,"_Project")
+    lesion_metadata.df[,variable_project_name] <- factor(with(lesion_metadata.df, paste0(get(variable), "_", Project)))
+    
+    lesion_samples.v <- as.character(lesion_metadata.df$Index) # Get the samples associated with the lesion type
+    lesion_cohorts.v <- factor(lesion_metadata.df$Project) # get the lesion cohorts
+
+    # If the number of samples is 1 or there is only one cohort
+    if (length(lesion_samples.v) == 1 || length(unique(lesion_cohorts.v)) == 1){
+      next
+    }
+    
+    # Extract the samples counts specific to the lesion
+    lesion_feature_table.m <- my_otu_matrix[,lesion_samples.v]
+    
+    # Can filter the features further if required
+    # lesion_feature_table.m <- lesion_feature_table.m[which(apply(lesion_feature_table.m, 1, max) > 10),]
+    
+    # Order the feature table and the metadata to be the same
+    lesion_feature_table.m <- lesion_feature_table.m[,order(rownames(lesion_metadata.df))]
+    lesion_metadata.df <- lesion_metadata.df[order(rownames(lesion_metadata.df)),]
+    
+    
+    # Since we know the cohorts we are processing, and we know we are processing one lesion type at a time,
+    # make it so we only compare immunocompromised to immunocompetent
+    my_levels <- c(paste0(lesion, "_immunocompromised"), paste0(lesion, "_immunocompetent"))
+    sample_type_combinations <- combn(rev(my_levels), 2)
+    # print(my_levels)
+    # print(sample_type_combinations)
+    # return()
+    # Refactor the variable + project column so that the levels are consistent
+    lesion_metadata.df[,variable_project_name] <- factor(lesion_metadata.df[,variable_project_name], levels = my_levels)  
+    
+    # If the column and rownames do not match, entries are missing
+    if (!all(rownames(lesion_metadata.df) == colnames(lesion_feature_table.m))){
+      print("Colnames and metadata names don't match!!!")
+      break
+    }
+    
+    # print(my_levels)
+    # print(lesion_metadata.df[,variable_project_name])
+    # Run DESeq
+    dds <-DESeqDataSetFromMatrix(countData = lesion_feature_table.m, colData = lesion_metadata.df, design = as.formula(paste0("~",variable_project_name)))
+    geoMeans <- apply(counts(dds), 1, gm_mean)
+    dds <- estimateSizeFactors(dds, geoMeans = geoMeans)
+    dds <- try(DESeq(dds, test = "Wald", fitType = "parametric", parallel = T))
+
+    if(inherits(dds, "try-error")) {
+      next
+    }
+
+    # sample_type_combinations <- combn(rev(my_levels), 2)
+    sample_type_combinations <- combn(my_levels, 2)
+    
+    for (i in 1:ncol(sample_type_combinations)){
+      # Set group 1 and group 2
+      group_1 <- as.character(sample_type_combinations[1,i])
+      group_2 <- as.character(sample_type_combinations[2,i])
+      
+      # Get the number of samples in each group
+      n_group_1 <- dim(subset(lesion_metadata.df, get(variable_project_name) == group_1))[1]
+      n_group_2 <- dim(subset(lesion_metadata.df, get(variable_project_name) == group_2))[1]
+      
+      group_1_meta <- subset(lesion_metadata.df, get(variable_project_name) == group_1)
+      group_2_meta <- subset(lesion_metadata.df, get(variable_project_name) == group_2)
+      n_patients_group_1 <- length(unique(group_1_meta$Patient))
+      n_patients_group_2 <- length(unique(group_2_meta$Patient))
+      
+      print(paste0("processing : ", lesion, "_", group_1, "_vs_", group_2))
+      
+      # Get the results from contrasting these groups
+      resMFSource <- results(dds, contrast = c(variable_project_name, group_1,group_2), alpha=0.01, independentFiltering = F, cooksCutoff = F, parallel = T)
+      
+      resMFSource$Group_1 <- group_1
+      resMFSource$Group_2 <- group_2
+      resMFSource$Variable <- lesion
+      resMFSource$N_Group_1 <- n_group_1
+      resMFSource$N_Group_2 <- n_group_2
+      resMFSource$N_patients_Group_1 <- n_patients_group_1
+      resMFSource$N_patients_Group_2 <- n_patients_group_2
+      
+      # Assign the taxonomy (good idea if looking at features)
+      resMFSource$taxonomy <- assign_taxonomy_to_otu(resMFSource, otu_taxonomy_map.df)  
+      
+      # Convert to dataframe
+      resMFSource <- matrix2df(resMFSource, "OTU")
+      
+      # Order the results by the adjusted p-value and filter out entries with p-values below threshold
+      resMFSourceOrdered <- filter_and_sort_dds_results(resMFSource, 0.01)
+      
+      # Add the result to the combined dataframe for the patient
+      lesion_results.df <- rbind(lesion_results.df, resMFSourceOrdered)
+      all_combined_results.df <- rbind(all_combined_results.df, resMFSourceOrdered)
+    }
+  # # Write the results for the lesion to file
+    result_name <- paste0(lesion,"__",variable)
+    outfilename <- paste("Result_tables/DESeq_results/by_lesion_cohort/", result_name, ".csv", sep= "")
+    write.csv(lesion_results.df, file=outfilename, quote = F, row.names = F)
+  }
+  # Write the results for all lesion+cohort to file (assumes no errors and all results generated at the same time)
+  outfilename <- paste("Result_tables/DESeq_results/by_lesion_cohort/lesion_cohort_combined.csv", sep= "")
+  write.csv(all_combined_results.df, file=outfilename, quote = F, row.names = F)
+}
+# temp <- filter_matrix_rows(otu_rare.m, 200)
+# run_lesion_cohorts_deseq(temp, "Sampletype_pooled")
+run_lesion_cohorts_deseq(otu_rare.m, "Sampletype_pooled")
+
+
+
+
+# ------------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------------
+# ----------------------------------- TESTING ----------------------------------------
+# MST016__Sampletype_pooled
+# patient_metadata.df <- metadata.df[metadata.df$Patient == "MST016",] # Get the patient metadata
+# patient_samples.v <- as.character(patient_metadata.df$Index) # Get the number of samples associated with the patient
+# patient_sample_lesion_types.v <- factor(patient_metadata.df[,"Sampletype_pooled"]) # get the lesion types
+# patient_feature_table.m <- otu_rare.m[,patient_samples.v]
+# patient_feature_table.m <- patient_feature_table.m[,order(rownames(patient_metadata.df))]
+# patient_metadata.df <- patient_metadata.df[order(rownames(patient_metadata.df)),]
 # 
+# patient_metadata.df$Sampletype_pooled <- factor(patient_metadata.df$Sampletype_pooled, levels = c("NLC", "AK", "SCC"))
+# # combn(unique(patient_metadata.df$Sampletype_pooled), 2, simplify = F)
+# combn(unique(patient_metadata.df$Sampletype_pooled), 2, simplify = T)
+# my_levels <- c("NLC", "AK", "SCC")
 # 
-# metadata.df$Sampletype_cohort <- factor(paste0(metadata.df$Sampletype, "_", metadata.df$Project))
-# metadata.df$Sampletype_pooled_C_sep_cohort <- factor(paste0(metadata.df$Sampletype_pooled_C_sep, "_", metadata.df$Project))
+# reference_level <- my_levels[1]
 # 
-# metadata.df$Sampletype_SCC_cohort <- factor(paste0(metadata.df$Sampletype_SCC, "_", metadata.df$Project))
-# metadata.df$Sampletype_SCC_both_cohort <- factor(paste0(metadata.df$Sampletype_SCC_both, "_", metadata.df$Project))
-# metadata.df$Sampletype_AK_cohort <- factor(paste0(metadata.df$Sampletype_SCC_both, "_", metadata.df$Project))
-# metadata.df$Sampletype_SCCPL_C_cohort <- factor(paste0(metadata.df$Sampletype_SCCPL_C, "_", metadata.df$Project))
-# ---------------------------------------------------------------------------------------------------------
-
-
-# https://github.com/joey711/phyloseq/issues/445
-# rs <- rowSums(counts(dds))
-# rmx <- apply(counts(dds), 1, max)
-# plot(rs+1, rmx/rs, log="x")
+# combn(rev(my_levels), 2)
+# 
+# for (i in 1:length(my_levels)){
+#   group_1 <- my_levels[i]
+#   for (j in 1:length(my_levels)){
+#     group_2 <- my_levels[j]
+#     if (group_1 == group_2){next}
+#     print(paste0(group_1, "_", group_2))
+#   }
+#   
+# }
+# 
+# # If levels provided, first is the reference and combinations will respect this
+# 
+# dds <-DESeqDataSetFromMatrix(countData = patient_feature_table.m, colData = patient_metadata.df, design = ~Sampletype_pooled)
 # geoMeans <- apply(counts(dds), 1, gm_mean)
+# dds <- estimateSizeFactors(dds, geoMeans = geoMeans)
+# dds <- try(DESeq(dds, test = "Wald", fitType = "parametric", parallel = T))
+# resMFSource <- results(dds, contrast = c("Sampletype_pooled","NLC","SCC"), alpha=0.01, independentFiltering = F, cooksCutoff = F, parallel = T)
+# resMFSource$Group_1 <- "NLC"
+# resMFSource$Group_2 <- "SCC"
+# resMFSource$Variable <- "MST016"
+# resMFSource$taxonomy <- assign_taxonomy_to_otu(resMFSource, otu_taxonomy_map.df)  
+# resMFSource <- matrix2df(resMFSource, "OTU")
+# resMFSourceOrdered <- filter_and_sort_dds_results(resMFSource, 0.01)
 
-# --------------------
-# FOR TESTING
-
-# Just to cut down on numbers for fasta script testing
-# dim(otu.m)
-# otu.m <- otu.m[which(apply(otu.m, 1, max) >= 1000),] # Just to cut down on numbers for quick script testing
-# otu.m <- otu.m[,base::sample(colnames(otu.m),replace = F,size =200)]
-# metadata.df <- metadata.df[metadata.df$Index %in% colnames(otu.m),]
-# dim(otu.m)
-
-# 
-# dds <-DESeqDataSetFromMatrix(countData = otu.m, 
-#                              colData = metadata.df,
-#                              design = ~ Sampletype_cohort)
-# geoMeans <- apply(counts(dds), 1, gm_mean)
-# dds <- estimateSizeFactors(dds, geoMeans = geoMeans) 
-# dds <- estimateSizeFactors(dds)
-# dds <- DESeq(dds) 
-# results(dds)
-# resultsNames(dds)
-# resMFSource <- results(dds, contrast = c("Sampletype_pooled_C_sep",group_1,group_2), alpha=0.05, independentFiltering = F, cooksCutoff = F)
-# --------------------
-
-
-
-# ---------------------------------------------------------------------------------------------------------
-# To compare specific groups, it is useful to set the levels of metadata.df. 
-# The first entry in levels is the reference. All other levels will be compared to this.
-# By default and for convenience, set the control group (C) as the reference.
-# We do have the option later to compare any of the groups regardless of setting the reference.
-# metadata.df$Sampletype <- relevel(metadata.df$Sampletype, ref = "C") # control as the reference
-metadata.df$Sampletype_fixed <- relevel(metadata.df$Sampletype_fixed, ref = "NLC") # control as the reference
-metadata.df$Sampletype_pooled_cohort <- relevel(metadata.df$Sampletype_pooled_cohort, ref = "NLC_immunocompetent") # control as the reference
-#metadata.df$Sampletype <- relevel(metadata.df$Sampletype, ref = "negative") # negative as the reference
-
-
-
-# Generate the results for the different comparisons using "contrast".
-# P-values produced by DESeq are adjusted for false-discovery-rate (FDR) using, by default, the Benjamin-Hochberg correction.
-# The alpha parameter controls the FDR threshold. Here a value FDR threhold of 0.05 is used, i.e. the proportion of false positives 
-# we expect amongst our differentially abundant otus/genera is less than 5%.
-
-
-# Create DESeq data set matrix. 
-dds <-DESeqDataSetFromMatrix(countData = otu.m,
-                             colData = metadata.df,
-                             design = ~ Sampletype_pooled_cohort)
-
-geoMeans <- apply(counts(dds), 1, gm_mean)
-
-# https://www.rdocumentation.org/packages/DESeq2/versions/1.12.3/topics/estimateSizeFactors
-dds <- estimateSizeFactors(dds, geoMeans = geoMeans) # Needed if zeros in every row
-# dds <- estimateSizeFactors(dds)
-# This may take awhile to run
-dds <- DESeq(dds, parallel = T)
-# saveRDS(dds, file = paste0("Result_objects/DESeq_Sampletype_pooled_cohort_DDS", format(Sys.Date(), "%d%m%y"), ".RData"))
-
-sample_type_combinations_cohort_pooled <- combn(as.character(unique(metadata.df$Sampletype_pooled_cohort)), 2)
-for (i in 1:ncol(sample_type_combinations_cohort_pooled)){
-  group_1 <- as.character(sample_type_combinations_cohort_pooled[1,i])
-  group_2 <- as.character(sample_type_combinations_cohort_pooled[2,i])
-  resMFSource <- results(dds, contrast = c("Sampletype_pooled_cohort",group_1,group_2), alpha=0.05, independentFiltering = F, cooksCutoff = F)
-  #lfcShrink(dds)?
-  resMFSourceOrdered <- resMFSource[order(resMFSource$padj),]
-  resMFSourceOrdered$taxonomy <- assign_taxonomy_to_otu(resMFSourceOrdered, otu_taxonomy_map.df)
-  resMFSourceOrdered <- filter_and_sort_dds_results(resMFSourceOrdered)
-  # Write the results to file
-  result_name <- paste(group_1, group_2, sep = "_vs_")
-  outfilename <- paste("Result_tables/DESeq_results/", result_name, "__pooled_cohort.csv", sep= "")
-  write.csv(as.data.frame(resMFSourceOrdered),file=outfilename, quote = F)
-}
-
-#########
-# Now pooled sample type, not accounting for cohort
-dds <-DESeqDataSetFromMatrix(countData = otu.m, 
-                             colData = metadata.df, 
-                             design = ~ Sampletype_pooled)
-
-dds <- estimateSizeFactors(dds)
-dds <- DESeq(dds)
-
-# Determine what are the pairwise combinations among the Sampletypes
-sample_type_combinations <- combn(as.character(unique(metadata.df$Sampletype_pooled)), 2)
-# Loop and compare each combination
-for (i in 1:ncol(sample_type_combinations)){
-  group_1 <- as.character(sample_type_combinations[1,i])
-  group_2 <- as.character(sample_type_combinations[2,i])
-  resMFSource <- results(dds, contrast = c("Sampletype_pooled",group_1,group_2), alpha=0.05, independentFiltering = F, cooksCutoff = F)
-  #lfcShrink(dds)?
-  resMFSourceOrdered <- resMFSource[order(resMFSource$padj),]
-  resMFSourceOrdered$taxonomy <- assign_taxonomy_to_otu(resMFSourceOrdered, otu_taxonomy_map.df)
-  resMFSourceOrdered <- filter_and_sort_dds_results(resMFSourceOrdered)
-  # Write the results to file
-  result_name <- paste(group_1, group_2, sep = "_vs_")
-  outfilename <- paste("Result_tables/DESeq_results/", result_name, "__pooled.csv", sep= "")
-  write.csv(as.data.frame(resMFSourceOrdered),file=outfilename, quote = F)
-}
-
-
-
-# ---------------------------------------------------------------------------------------------------------
-# Now normal sample type
-dds <-DESeqDataSetFromMatrix(countData = otu.m, 
-                             colData = metadata.df, 
-                             design = ~ Sampletype_fixed)
-
-dds <- estimateSizeFactors(dds)
-dds <- DESeq(dds)
-
-# Determine what are the pairwise combinations among the Sampletypes
-sample_type_combinations <- combn(as.character(unique(metadata.df$Sampletype_fixed)), 2)
-# Loop and compare each combination
-for (i in 1:ncol(sample_type_combinations)){
-  group_1 <- as.character(sample_type_combinations[1,i])
-  group_2 <- as.character(sample_type_combinations[2,i])
-  resMFSource <- results(dds, contrast = c("Sampletype",group_1,group_2), alpha=0.05, independentFiltering = F, cooksCutoff = F)
-  #lfcShrink(dds)?
-  resMFSourceOrdered <- resMFSource[order(resMFSource$padj),]
-  resMFSourceOrdered$taxonomy <- assign_taxonomy_to_otu(resMFSourceOrdered, otu_taxonomy_map.df)
-  resMFSourceOrdered <- filter_and_sort_dds_results(resMFSourceOrdered)
-  # Write the results to file
-  result_name <- paste(group_1, group_2, sep = "_vs_")
-  outfilename <- paste("Result_tables/DESeq_results/", result_name, ".csv", sep= "")
-  write.csv(as.data.frame(resMFSourceOrdered),file=outfilename, quote = F)
-  
-  # Frequency bar graph of adjusted p-values
-  # p_value_distribution <- ggplot(as.data.frame(resMFSourceOrdered), aes(x = padj)) + 
-  #   stat_bin(bins = 50, fill =  "white", colour = "black") + 
-  #   ylab("Frequency") +
-  #   xlab("Adjusted p-value") +
-  #   ggtitle() + 
-  #   common_theme
-}
-
-##############################
-### TESTING
-# p-value distribution
-# resMFSource <- results(dds, contrast = c("Sampletype","SCC","SCC_PL"), alpha=0.05, independentFiltering = F, cooksCutoff = F)
-# resMFSourceOrdered <- resMFSource[order(resMFSource$padj),]
-# resMFSourceOrdered$taxonomy <- assign_taxonomy_to_otu(resMFSourceOrdered, otu_taxonomy_map.df)
-# resMFSourceOrdered <- filter_and_sort_dds_results(resMFSourceOrdered)
-# plot(hist(resMFSourceOrdered$padj))
-# p_value_distribution <- ggplot(as.data.frame(resMFSourceOrdered), aes(x = padj)) + 
-#   stat_bin(bins = 50, fill =  "white", colour = "black") + 
-#   ylab("Frequency") +
-#   xlab("Adjusted p-value") +
-#   ggtitle() + 
-#   common_theme
-##############################
-# ---------------------------------------------------------------------------------------------------------
-# Compare SCC vs SCC_PL+C, SCC vs all, SCC+SCC_PL vs all, Compare AK vs all
-dds_SCCPL_C <-DESeqDataSetFromMatrix(countData = otu.m, colData = metadata.df, design = ~ Sampletype_SCCPL_C)
-dds_SCC <- DESeqDataSetFromMatrix(countData = otu.m, colData = metadata.df, design = ~ Sampletype_SCC)
-dds_SCC_SCCPL <- DESeqDataSetFromMatrix(countData = otu.m, colData = metadata.df, design = ~ Sampletype_SCC_both)
-dds_AK <- DESeqDataSetFromMatrix(countData = otu.m, colData = metadata.df, design = ~ Sampletype_AK)
-# dds_pooled <- DESeqDataSetFromMatrix(countData = otu.m, colData = metadata.df, design = ~ Sampletype_pooled)
-
-geoMeans <- apply(counts(dds_SCCPL_C), 1, gm_mean)
-#dds <- estimateSizeFactors(dds_SCCPL_C, geoMeans = geoMeans)
-dds_SCCPL_C <- estimateSizeFactors(dds_SCCPL_C)
-
-geoMeans <- apply(counts(dds_SCC), 1, gm_mean)
-#dds_SCC <- estimateSizeFactors(dds_SCC, geoMeans = geoMeans)
-dds_SCC <- estimateSizeFactors(dds_SCC)
-
-geoMeans <- apply(counts(dds_SCC_SCCPL), 1, gm_mean)
-#dds_SCCPL <- estimateSizeFactors(dds_SCC_SCCPL, geoMeans = geoMeans)
-dds_SCCPL <- estimateSizeFactors(dds_SCC_SCCPL)
-
-geoMeans <- apply(counts(dds_AK), 1, gm_mean)
-#dds_AK <- estimateSizeFactors(dds_AK, geoMeans = geoMeans)
-dds_AK <- estimateSizeFactors(dds_AK)
-
-# geoMeans <- apply(counts(dds_pooled), 1, gm_mean)
-#dds_AK <- estimateSizeFactors(dds_AK, geoMeans = geoMeans)
-# dds_pooled <- estimateSizeFactors(dds_pooled)
-
-# Calculate results
-# dds_SCCPL_C <- DESeq(dds_SCCPL_C, betaPrior = FALSE)
-# dds_SCC<-DESeq(dds_SCC, betaPrior = FALSE)
-# dds_SCCPL<-DESeq(dds_SCC_SCCPL, betaPrior = FALSE)
-# dds_AK<-DESeq(dds_AK, betaPrior = FALSE)
-dds_SCCPL_C <- DESeq(dds_SCCPL_C)
-dds_SCC<-DESeq(dds_SCC)
-dds_SCC_SCCPL<-DESeq(dds_SCC_SCCPL)
-dds_AK<-DESeq(dds_AK)
-# dds_pooled <- DESeq(dds_pooled)
-
-# Get results for each contrast
-res_SCCPL_C <- results(dds_SCCPL_C, contrast = c("Sampletype_SCCPL_C", "SCC","SCCPL_C"), alpha = 0.05, independentFiltering = F, cooksCutoff = F)
-res_SCC <- results(dds_SCC, contrast = c("Sampletype_SCC", "SCC", "all"),  alpha = 0.05, independentFiltering = F, cooksCutoff = F)
-res_SCC_SCCPL <- results(dds_SCC_SCCPL, contrast = c("Sampletype_SCC_both", "SCC", "all"), alpha = 0.05, independentFiltering = F, cooksCutoff = F)
-res_AK <- results(dds_AK, contrast = c("Sampletype_AK", "AK", "all"), alpha = 0.05, independentFiltering = F, cooksCutoff = F)
-# res_pooled <- results(dds_pooled, contrast = c("Sampletype_pooled", "AK", "all"), alpha = 0.05, independentFiltering = F, cooksCutoff = F)
-
-# Order the result tables
-res_SCCPL_C_Ordered <- res_SCCPL_C[order(res_SCCPL_C$padj),]
-res_SCC_Ordered <- res_SCC[order(res_SCC$padj),]
-res_SCC_SCCPL_Ordered <- res_SCC_SCCPL[order(res_SCC_SCCPL$padj),]
-res_AK_Ordered <- res_AK[order(res_AK$padj),]
-
-# Assign taxonomies
-res_SCCPL_C_Ordered$taxonomy <- assign_taxonomy_to_otu(res_SCCPL_C_Ordered, otu_taxonomy_map.df)
-res_SCC_Ordered$taxonomy <- assign_taxonomy_to_otu(res_SCC_Ordered, otu_taxonomy_map.df)
-res_SCC_SCCPL_Ordered$taxonomy <- assign_taxonomy_to_otu(res_SCC_SCCPL_Ordered, otu_taxonomy_map.df)
-res_AK_Ordered$taxonomy <- assign_taxonomy_to_otu(res_AK_Ordered, otu_taxonomy_map.df)
-
-# Filter result tables
-res_SCCPL_C_Ordered <- filter_and_sort_dds_results(res_SCCPL_C_Ordered)
-res_SCC_Ordered <- filter_and_sort_dds_results(res_SCC_Ordered)
-res_SCC_SCCPL_Ordered <- filter_and_sort_dds_results(res_SCC_SCCPL_Ordered)
-res_AK_Ordered <- filter_and_sort_dds_results(res_AK_Ordered)
-
-# Write the results to file
-write.csv(as.data.frame(res_SCCPL_C_Ordered),file="Result_tables/DESeq_results/SCC_vs_SCC_PL_C.csv", quote = F)
-write.csv(as.data.frame(res_SCC_Ordered),file="Result_tables/DESeq_results/SCC_vs_all.csv", quote = F)
-write.csv(as.data.frame(res_SCC_SCCPL_Ordered),file="Result_tables/DESeq_results/SCC_both_vs_all.csv", quote = F)
-write.csv(as.data.frame(res_AK_Ordered),file="Result_tables/DESeq_results/AK_vs_all.csv", quote = F)
+# ------------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------------
