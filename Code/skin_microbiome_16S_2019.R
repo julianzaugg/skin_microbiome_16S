@@ -108,11 +108,14 @@ dir.create(file.path("./Result_tables/DESeq_results/by_patient"), showWarnings =
 ###############################################################
 # Load the and process metadata
 
-# metadata.df <- read.table("data/metadata.tsv", header = T, sep = "\t")
 metadata.df <- read.table("data/metadata_immunocompromised_competent.tsv", header = T, sep = "\t")
+# Make empty cells NA
+metadata.df[metadata.df == ''] <- NA
 
 # Change SwabCo to negative as they are the same
 levels(metadata.df$Sampletype)[match("SwabCo",levels(metadata.df$Sampletype))] <- "negative"
+
+
 
 # Create new pooled lesion types variables
 pool_1 <- c("C","AK_PL","IEC_PL","SCC_PL", "NLC")
@@ -127,32 +130,35 @@ metadata.df$Sampletype_pooled_IEC_sep <- factor(as.character(lapply(metadata.df$
 metadata.df$Sampletype_pooled_C_sep <- factor(as.character(lapply(metadata.df$Sampletype, function(x) ifelse(x %in% pool_3, "NLC", 
                                                                                                              ifelse(x %in% pool_2, "AK", 
                                                                                                                     ifelse(x %in% c("C", "NLC"), "C",ifelse(x == "negative", "negative","SCC")))))))
-# We are currently only interested in a samples with the following lesion types. Filter the metadata to just those.
-metadata.df <- metadata.df[metadata.df$Sampletype %in% c("C","AK_PL","IEC_PL","SCC_PL","AK","IEC","SCC", "negative", "NLC"),]
+
 
 
 # ------------------------------------
 # Assign grouping to samples based on whether a patient has a SCC. Or if not, an AK/IEC. Or if not, control.
-metadata.df$Patient_grouping <- NA
-
-# samples/patients that have at least one NLC
-NLC_patients <- as.character(metadata.df[metadata.df$Sampletype_pooled == "NLC",]$Patient)
-# samples/patients that have at least one AK
-AK_patients <- as.character(metadata.df[metadata.df$Sampletype_pooled == "AK",]$Patient)
-# samples/patients that have at least one SCC
-SCC_patients <- as.character(metadata.df[metadata.df$Sampletype_pooled == "SCC",]$Patient)
-
-# AK patients not in SCC
-AK_patients <- AK_patients[!AK_patients %in% SCC_patients]
-# NLC patient not in AK or SCC
-NLC_patients <- NLC_patients[!NLC_patients %in% as.character(AK_patients, SCC_patients)]
-
-# Assign group, starting with NLC, then AK then SCC
-metadata.df[metadata.df$Patient %in% NLC_patients,"Patient_grouping"] <- "Normal"
-metadata.df[metadata.df$Patient %in% AK_patients,"Patient_grouping"] <- "Has_AK"
-metadata.df[metadata.df$Patient %in% SCC_patients,"Patient_grouping"] <- "Has_SCC"
+# metadata.df$Patient_grouping <- NA
+# 
+# # samples/patients that have at least one NLC
+# NLC_patients <- as.character(metadata.df[metadata.df$Sampletype_pooled == "NLC",]$Patient)
+# # samples/patients that have at least one AK
+# AK_patients <- as.character(metadata.df[metadata.df$Sampletype_pooled == "AK",]$Patient)
+# # samples/patients that have at least one SCC
+# SCC_patients <- as.character(metadata.df[metadata.df$Sampletype_pooled == "SCC",]$Patient)
+# 
+# # AK patients not in SCC
+# AK_patients <- AK_patients[!AK_patients %in% SCC_patients]
+# # NLC patient not in AK or SCC
+# NLC_patients <- NLC_patients[!NLC_patients %in% as.character(AK_patients, SCC_patients)]
+# 
+# # Assign group, starting with NLC, then AK then SCC
+# metadata.df[metadata.df$Patient %in% NLC_patients,"Patient_grouping"] <- "Normal"
+# metadata.df[metadata.df$Patient %in% AK_patients,"Patient_grouping"] <- "Has_AK"
+# metadata.df[metadata.df$Patient %in% SCC_patients,"Patient_grouping"] <- "Has_SCC"
 
 # ------------------------------------
+
+# We are currently only interested in a samples with the following lesion types. Filter the metadata to just those.
+metadata_unfiltered.df <- metadata.df
+metadata.df <- metadata.df[metadata.df$Sampletype %in% c("C","AK_PL","IEC_PL","SCC_PL","AK","IEC","SCC", "negative", "NLC"),]
 
 ##############################
 # Load and process the OTU table
@@ -167,7 +173,7 @@ names(project_otu_table.df) <- gsub("B(_)","b\\1", names(project_otu_table.df))
 
 
 #Fix the some of the _J607 samples where read files did not have the r4 included. These are described in the metadata
-samples_to_fix <- as.character(metadata.df[!metadata.df$internal_name == "",]$internal_name)
+samples_to_fix <- as.character(metadata.df[!metadata.df$Internal_name == "",]$Internal_name)
 for (s2f in samples_to_fix){
   pattern <- paste("(",s2f,")", "(_J607)", sep ="")
   names(project_otu_table.df) <- gsub(pattern, "\\1r4\\2", names(project_otu_table.df))
@@ -176,6 +182,8 @@ for (s2f in samples_to_fix){
 # Get the sample ids from the OTU table
 sample_ids_original <- grep("R[0-9].*|S[AB][0-9].*|S[0-9].*", names(project_otu_table.df), value = T)
 sample_ids <- grep("R[0-9].*|S[AB][0-9].*|S[0-9].*", names(project_otu_table.df), value = T)
+
+print(paste0("There are ", length(sample_ids_original), " samples in the data"))
 
 # ------------------------------------------------------------------------------------------
 # The immunocompetent study from 2018 has repeat samples that should be combined.
@@ -203,11 +211,16 @@ for (sample in original_samples.v){
     project_otu_table.df[,sample] <- project_otu_table.df[,sample] + project_otu_table.df[,matching_repeat_sample]
   }
 }
+
 # And now remove all the repeat 'b' samples from the project table
 project_otu_table.df <- project_otu_table.df[,!colnames(project_otu_table.df) %in% repeat_samples.v]
 
 # Reassign the sample_ids 
+n_samples_before <- length(sample_ids)
 sample_ids <- grep("R[0-9].*|S[AB][0-9].*|S[0-9].*", names(project_otu_table.df), value = T)
+# sample_ids_original <- grep("R[0-9].*|S[AB][0-9].*|S[0-9].*", names(project_otu_table.df), value = T)
+
+paste0("There are ", length(sample_ids), " samples in the data after consolidating immunocompetent samples. This is a loss of ", n_samples_before, "-", length(sample_ids)," = ", n_samples_before - length(sample_ids), " samples")
 
 # ------------------------------------------------------------------------------------------
 # Results from the ACE amplicon pipeline `should' contain at least one observation/count in every row, however just to be sure
@@ -258,9 +271,14 @@ if ( length(missing_samples.v) == 0) {
 } else {
   print("Samples missing from OTU table")
 }
+# summary(metadata_unfiltered.df[metadata_unfiltered.df$Index  %in% missing_samples.v,]$Sampletype)
+length(unique(grep("MST", metadata_unfiltered.df$Patient, value =T)))
+length(unique(metadata_unfiltered.df$Patient[!grepl("MST", metadata_unfiltered.df$Patient)]))
+length(unique(metadata.df$Patient[!grepl("MST", metadata.df$Patient)]))
 
-# Also the reverse, are there samples in the metadata missing from the data
+# Also the reverse, are there samples in the metadata missing from the data (possibly filtered earlier)
 missing_samples_metadata.v <- as.character(metadata.df$Index[!metadata.df$Index %in% sample_ids])
+# missing_samples_metadata.v <- as.character(metadata.df$Index[!metadata.df$Index %in% sample_ids_original])
 
 if ( length(missing_samples_metadata.v) == 0) {
   print("No samples missing")
@@ -270,17 +288,21 @@ if ( length(missing_samples_metadata.v) == 0) {
 
 # Remove samples from the project table that are not in the metadata
 dim(project_otu_table.df)
-project_otu_table.df <- project_otu_table.df[, ! colnames(project_otu_table.df) %in% missing_samples.v]
+project_otu_table.df <- project_otu_table.df[, !colnames(project_otu_table.df) %in% missing_samples.v]
 dim(project_otu_table.df)
 
 # Remove samples in the metadata that are not in the project table, e.g. repeat samples that have been merged at this point
+dim(metadata.df)
 metadata.df <- metadata.df[!metadata.df$Index %in% missing_samples_metadata.v,]
+dim(metadata.df)
 
 # Remove MS patient samples that were sequenced along with the immunocompromised samples
 MS_resequenced_samples <- metadata.df[grep("Sequenced during immunocompromised batch", metadata.df$Note),]$Index
 metadata.df <- metadata.df[!metadata.df$Index %in% MS_resequenced_samples,]
 project_otu_table.df <- project_otu_table.df[,!names(project_otu_table.df) %in% MS_resequenced_samples]
 
+dim(metadata.df)
+dim(project_otu_table.df)
 # Remove any patients that are not immunocompromised (MST); remove immunocompetent (MS) patients
 # from OTU table and metadata
 # MS_patients <- unique(metadata.df[grepl("MS[0-9]", metadata.df$Patient),]$Index)
@@ -313,11 +335,40 @@ all_project_colours <- as.character(lapply(as.character(metadata.df$Project), fu
 metadata.df$Project_colour <- all_project_colours
 
 # For Patient
-patient_values <- factor(as.character(unique(metadata.df$Patient)))
+patient_values <- as.character(unique(metadata.df$Patient))
+patient_values <- patient_values[!is.na(patient_values)]
 patient_colours <- setNames(patient_pallete_45[1:length(patient_values)], patient_values)
 all_patient_colours <- as.character(lapply(as.character(metadata.df$Patient), function(x) patient_colours[x]))
+# all_patient_colours <- as.character(lapply(as.character(metadata.df$Patient), function(x) ifelse(is.na(x),"black", patient_colours[x])))
 metadata.df$Patient_colour <- all_patient_colours
 
+# For Patient group
+patient_group_values <- as.character(unique(metadata.df$Patient_group))
+patient_group_values <- patient_group_values[!is.na(patient_group_values)]
+patient_group_colours <- setNames(lesion_palette_10[1:length(patient_group_values)], patient_group_values)
+all_patient_group_colours <- as.character(lapply(as.character(metadata.df$Patient_group), function(x) patient_group_colours[x]))
+metadata.df$Patient_group_colour <- all_patient_group_colours
+
+# For Gender
+gender_values <- as.character(unique(metadata.df$Gender))
+gender_values <- gender_values[!is.na(gender_values)]
+gender_colours <- setNames(lesion_palette_10[1:length(gender_values)], gender_values)
+all_gender_colours <- as.character(lapply(as.character(metadata.df$Gender), function(x) gender_colours[x]))
+metadata.df$Gender_colour <- all_gender_colours
+
+# For Number_of_meds
+n_meds_values <- as.character(unique(metadata.df$Number_of_meds))
+n_meds_values <- n_meds_values[!is.na(n_meds_values)]
+n_meds_colours <- setNames(lesion_palette_10[1:length(n_meds_values)], n_meds_values)
+all_n_meds_colours <- as.character(lapply(as.character(metadata.df$Number_of_meds), function(x) n_meds_colours[x]))
+metadata.df$Number_of_meds_colour <- all_n_meds_colours
+
+# For Fitzpatrick_skin_type
+fst_values <- as.character(unique(metadata.df$Fitzpatrick_skin_type))
+fst_values <- fst_values[!is.na(fst_values)]
+fst_colours <- setNames(my_colour_palette_20_distinct[1:length(fst_values)], fst_values)
+all_fst_colours <- as.character(lapply(as.character(metadata.df$Fitzpatrick_skin_type), function(x) fst_colours[x]))
+metadata.df$Fitzpatrick_skin_type_colour <- all_fst_colours
 
 
 # ------------------------------------------------
@@ -369,6 +420,103 @@ write.table(otu_taxonomy_map, file = "Result_tables/other/otu_taxonomy_map.csv",
 
 # Also save the unfiltered table, to avoid processing the original data table again 
 write.table(project_otu_table_unfiltered.df, file = "Result_tables/other/project_otu_table_unfiltered.csv", sep = ",", quote = F, row.names = F)
+
+
+
+# ---------------------------------------------------------------------------------------------------------------
+# Generate summaries of the metadata before we filter out samples based on read depth
+
+# Number of MST patients
+n_MST_patients <- length(unique(metadata.df$Patient[grepl("MST", metadata.df$Patient)]))
+# Number of MS patients
+n_MS_patients <- length(unique(metadata.df$Patient[!grepl("MST", metadata.df$Patient)]))
+# Number of MST samples
+n_MST_samples <- length(metadata.df[grepl("MST", metadata.df$Patient),]$Index)
+# Number of MS samples
+n_MS_samples <- length(metadata.df[!grepl("MST", metadata.df$Patient),]$Index)
+
+
+# Number of samples for each Sampletype
+per_sampletype <- metadata.df %>% 
+  group_by(Sampletype) %>%
+  summarise(Count = n()) %>%
+  mutate(Percent = round((Count/sum(Count))*100,2)) %>%
+  arrange(desc(Percent)) %>%
+  as.data.frame
+# per_sampletype <- per_sampletype[order(per_sampletype$Percent),]
+per_sampletype$Sampletype <- factor(per_sampletype$Sampletype, levels = per_sampletype$Sampletype)
+
+
+make_pie_graph <- function(mydata, my_colour_list = NULL){
+  # Assumes two columns, first is the category, second is count
+  # my_colour_list should be a named listed with the corresponding colours provided
+  internal_mydata <- mydata
+  variable <- names(mydata)[1]
+  # internal_mydata <- 
+  #   mydata %>%
+  #   arrange(desc(taxonomy_genus)) %>%
+  #   mutate(lab.ypos = cumsum(normalised_mean_abundance) - .5*normalised_mean_abundance)
+}
+
+
+# temp <- unique(metadata.df[,c("Sampletype", "Sampletype_colour")])
+# sampletype_colours <- setNames(temp$Sampletype_colour, temp$Sampletype)
+# ggplot(per_sampletype, aes(x ="", y = Count, fill = Sampletype)) +
+#   geom_bar(width = 1, stat = "identity", color = "white",size = .2) +
+#   coord_polar("y", start=0) +
+#   scale_fill_manual(values = sampletype_colours, name = "Genus") +
+#   # geom_text(aes(y = lab.ypos, label = Count), color = "white") +
+#   theme(axis.text = element_blank(),
+#         axis.line = element_blank(),
+#         axis.title = element_blank(),
+#         legend.text = element_text(size = 8),
+#         axis.ticks = element_blank(),
+#         plot.title = element_text(hjust = 0.5, size =8),
+#         plot.subtitle = element_text(size = 8, hjust = .5))
+
+# Number of samples for each Sampletype_pooled
+per_sampletype_pooled <- metadata.df %>% 
+  group_by(Sampletype_pooled) %>%
+  summarise(Count = n()) %>%
+  mutate(Percent = round((Count/sum(Count))*100,2)) %>%
+  arrange(desc(Percent)) %>%
+  as.data.frame
+
+# Number of samples for each Sampletype for each patient
+per_patient_sampletype <- metadata.df %>% 
+  group_by(Patient,Sampletype) %>%
+  summarise(Count = n()) %>%
+  mutate(Percent = round((Count/sum(Count))*100,2)) %>%
+  arrange(Patient, desc(Percent)) %>%
+  as.data.frame
+
+# Number of samples for each Sampletype_pooled for each patient
+per_patient_sampletype_pooled <- metadata.df %>% 
+  group_by(Patient,Sampletype_pooled) %>%
+  summarise(Count = n()) %>%
+  mutate(Percent = round((Count/sum(Count))*100,2)) %>%
+  arrange(Patient, desc(Percent)) %>%
+  as.data.frame
+
+
+# Number of samples for each Sampletype for each cohort
+per_cohort_sampletype <- metadata.df %>% 
+  group_by(Project,Sampletype) %>%
+  summarise(Count = n()) %>%
+  mutate(Percent = round((Count/sum(Count))*100,2)) %>%
+  arrange(Project, desc(Percent)) %>%
+  as.data.frame
+
+# Number of samples for each Sampletype_pooled for each cohort
+per_cohort_sampletype_pooled <- metadata.df %>% 
+  group_by(Project,Sampletype_pooled) %>%
+  summarise(Count = n()) %>%
+  mutate(Percent = round((Count/sum(Count))*100,2)) %>%
+  arrange(Project, desc(Percent)) %>%
+  as.data.frame
+
+write.csv(per_cohort_sampletype,"Result_tables/other/metadata_cohort_sampletype_counts.csv", row.names = F)
+write.csv(per_cohort_sampletype_pooled,"Result_tables/other/metadata_cohort_sampletype_pooled_counts.csv", row.names = F)
 
 
 # ---------------------------------------------------------------------------------------------------------------
@@ -563,10 +711,10 @@ not_negative_sample_ids <- as.character(metadata.df[metadata.df$Sampletype != "n
 # not_negative_or_control_sample_ids <- as.character(metadata.df[!metadata.df$Sampletype %in% c("negative", "C"),]$Index)
 not_negative_or_control_sample_ids <- as.character(metadata.df[!metadata.df$Sampletype %in% c("negative", "C","NLC"),]$Index)
 # pooled_not_negative_sample_ids <- as.character(metadata.df[metadata.df$Sampletype %in% c("C","AK_PL","IEC_PL","SCC_PL","AK","IEC"),]$Index)
-pooled_not_negative_sample_ids <- as.character(metadata.df[metadata.df$Sampletype %in% c("C","NLC","AK_PL","IEC_PL","SCC_PL","AK","IEC"),]$Index)
+# pooled_not_negative_sample_ids <- as.character(metadata.df[metadata.df$Sampletype %in% c("SCC","C","NLC","AK_PL","IEC_PL","SCC_PL","AK","IEC"),]$Index)
 
 # TODO - determine whether to include controls when comparing against negative samples
-contaminating_otus_from_mean_abundances <- rownames(otu_rare_rel.m[rowMeans(otu_rare_rel.m[,pooled_not_negative_sample_ids]) < rowMeans(otu_rare_rel.m[,negative_sample_ids]),])
+contaminating_otus_from_mean_abundances <- rownames(otu_rare_rel.m[rowMeans(otu_rare_rel.m[,not_negative_sample_ids]) < rowMeans(otu_rare_rel.m[,negative_sample_ids]),])
 length(contaminating_otus_from_mean_abundances)
 
 ###
@@ -575,9 +723,9 @@ length(contaminating_otus_from_mean_abundances)
 # Determine contaminating otus from prevalence differences between groups
 # This will calculate what percentage of samples in each group an OTU is present in
 otu_negative_sample_prevalences <- apply(otu_rare_count.m[,negative_sample_ids], 1, function(x) {length(which(x > 0))}) /length(negative_sample_ids)
-otu_pooled_not_negative_sample_prevalences <- apply(otu_rare_count.m[,pooled_not_negative_sample_ids], 1, function(x) {length(which(x > 0))}) /length(pooled_not_negative_sample_ids)
+otu_not_negative_sample_prevalences <- apply(otu_rare_count.m[,not_negative_sample_ids], 1, function(x) {length(which(x > 0))}) /length(not_negative_sample_ids)
 
-contaminating_otus_from_prevalences <- names(otu_pooled_not_negative_sample_prevalences[otu_pooled_not_negative_sample_prevalences < otu_negative_sample_prevalences])
+contaminating_otus_from_prevalences <- names(otu_not_negative_sample_prevalences[otu_not_negative_sample_prevalences < otu_negative_sample_prevalences])
 
 print(paste("There are", length(contaminating_otus_from_mean_abundances), "contaminating OTUs based on mean abundances"))
 print(paste("There are", length(contaminating_otus_from_prevalences), "contaminating OTUs based on prevalences"))
@@ -588,7 +736,7 @@ print(paste("There are", length(contaminating_otus_from_prevalences), "contamina
 
 # Plot the OTU detection fraction in negative controls vs pooled samples
 presences.df <- data.frame(row.names = rownames(otu_rare_count.m))
-presences.df$not_negative <- melt(otu_pooled_not_negative_sample_prevalences)$value
+presences.df$not_negative <- melt(otu_not_negative_sample_prevalences)$value
 presences.df$negative <- melt(otu_negative_sample_prevalences)$value
 presences.df[,'contaminant'] <- "No"
 presences.df[contaminating_otus_from_prevalences, 'contaminant'] <- "Yes" 

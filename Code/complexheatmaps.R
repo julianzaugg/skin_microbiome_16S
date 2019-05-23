@@ -653,7 +653,7 @@ make_heatmap(patient_deseq_heatmap_otu_rel_compromised.m,
              palette_choice = 'blue'
 )
 
-# mypallete = colorRampPalette(c("royalblue", "white", "red"))
+
 make_heatmap(patient_deseq_heatmap_otu_rel_competent.m, 
              subset(metadata.df, Project == "immunocompetent"),
              my_row_labels = row_labels_compromised.df,

@@ -86,6 +86,9 @@ metadata.df <- metadata.df[! metadata.df$Index %in% samples_removed,]
 metadata.df$Patient <- factor(metadata.df$Patient)
 metadata.df$Sampletype <- factor(metadata.df$Sampletype)
 metadata.df$Project <- factor(metadata.df$Project)
+metadata.df$Patient_group <- factor(metadata.df$Patient_group)
+metadata.df$Gender <- factor(metadata.df$Gender)
+metadata.df$Number_of_meds <- factor(metadata.df$Number_of_meds)
 
 # We are only interested in C,AK_PL,IEC_PL,SCC_PL,AK,IEC and SCC lesions. 
 # Remove samples for different lesion types (nasal,scar,scar_PL,KA,KA_PL,VV,VV_PL,SF,SF_PL,other,other_PL) from metadata and otu table
@@ -94,16 +97,6 @@ metadata.df <- metadata.df[metadata.df$Sampletype %in% c("C","AK_PL","IEC_PL","S
 # Remove samples from the OTU table that are not in the filtered metadata
 otu_rare.df <- otu_rare.df[,names(otu_rare.df) %in% c("OTU.ID", as.character(metadata.df$Index))]
 otu.df <- otu.df[,names(otu.df) %in% c("OTU.ID", as.character(metadata.df$Index))]
-
-# pool_1 <- c("C","AK_PL","IEC_PL","SCC_PL", "NLC")
-# pool_2 <- c("AK","IEC")
-# pool_3 <- c("AK_PL","IEC_PL","SCC_PL")
-# 
-# 
-# metadata.df$Sampletype_pooled <- factor(as.character(lapply(metadata.df$Sampletype, function(x) ifelse(x %in% pool_1, "NLC", ifelse(x %in% pool_2, "AK", "SCC")))))
-# metadata.df$Sampletype_pooled_C_sep <- factor(as.character(lapply(metadata.df$Sampletype, function(x) ifelse(x %in% pool_3, "NLC", 
-#                                                                                                              ifelse(x %in% pool_2, "AK", 
-#                                                                                                                     ifelse(x %in% c("C", "NLC"), "C","SCC"))))))
 
 # Order the metadata.df by the index value
 # metadata.df <- metadata.df[order(metadata.df$Index),]
@@ -562,6 +555,8 @@ generate_pca(temp, mymetadata = temp_metadata,
              variable_colours_available = T,
              filename = paste0("Result_figures/pcoa_dbrda_plots/both_cohorts_Project.pdf"))
 
+
+
 # Immunocompetent, all sample types
 metadata_immunocompetent.df <- subset(metadata.df, Project == "immunocompetent" & Sampletype != "negative")
 metadata_immunocompetent.df <- metadata_immunocompetent.df[order(rownames(metadata_immunocompetent.df)),]
@@ -650,6 +645,65 @@ generate_pca(m.pca_compromised, mymetadata = metadata_immunocompromised.df,
              variable_to_plot = "Patient", legend_cols = 1,
              variable_colours_available = T,
              filename = paste0("Result_figures/pcoa_dbrda_plots/immunocompromised_Patient.pdf"))
+
+generate_pca(m.pca_compromised, mymetadata = metadata_immunocompromised.df,
+             plot_height = 5, plot_width =5,
+             legend_x = -8, legend_y = 6,
+             point_size = .7, point_line_thickness = .3,point_alpha =.7,
+             legend_title = "Patient Group",
+             plot_title = "Immunocompromised, all lesion types",
+             limits = c(-7,7,-7,7),
+             include_legend = T,
+             plot_spiders = F,
+             plot_ellipses = F,
+             plot_hulls = F,
+             use_shapes = T,
+             ellipse_border_width = .5,
+             label_ellipse = F, ellipse_label_size = .5,
+             colour_palette = my_colour_palette_206_distinct,
+             variable_to_plot = "Patient_group", legend_cols = 1,
+             variable_colours_available = T,
+             filename = paste0("Result_figures/pcoa_dbrda_plots/immunocompromised_Patient_group.pdf"))
+
+generate_pca(m.pca_compromised, mymetadata = metadata_immunocompromised.df,
+             plot_height = 5, plot_width =5,
+             legend_x = -8, legend_y = 6,
+             point_size = .7, point_line_thickness = .3,point_alpha =.7,
+             legend_title = "Gender",
+             plot_title = "Immunocompromised, all lesion types",
+             limits = c(-7,7,-7,7),
+             include_legend = T,
+             plot_spiders = F,
+             plot_ellipses = F,
+             plot_hulls = F,
+             use_shapes = T,
+             ellipse_border_width = .5,
+             label_ellipse = F, ellipse_label_size = .5,
+             colour_palette = my_colour_palette_206_distinct,
+             variable_to_plot = "Gender", legend_cols = 1,
+             variable_colours_available = T,
+             filename = paste0("Result_figures/pcoa_dbrda_plots/immunocompromised_Gender.pdf"))
+
+
+generate_pca(m.pca_compromised, mymetadata = metadata_immunocompromised.df,
+             plot_height = 5, plot_width =5,
+             legend_x = -8, legend_y = 7,
+             point_size = .7, point_line_thickness = .3,point_alpha =.7,
+             legend_title = "Number of medications",
+             plot_title = "Immunocompromised, all lesion types",
+             limits = c(-7,7,-7,7),
+             include_legend = T,
+             plot_spiders = F,
+             plot_ellipses = F,
+             plot_hulls = F,
+             use_shapes = T,
+             ellipse_border_width = .5,
+             label_ellipse = F, ellipse_label_size = .5,
+             colour_palette = my_colour_palette_206_distinct,
+             variable_to_plot = "Number_of_meds", legend_cols = 1,
+             variable_colours_available = T,
+             filename = paste0("Result_figures/pcoa_dbrda_plots/immunocompromised_number_of_meds.pdf"))
+
 
 
 # Each lesion type, color by cohort and patient
@@ -830,6 +884,8 @@ otu_rare_clr_filtered_compromised.m <- otu_rare_clr_filtered_compromised.m[,rown
 permanova_results_immunocompromised <- run_permanova_custom(my_metadata = metadata_immunocompromised.df,
                      my_formula = as.formula(t(otu_rare_clr_filtered_compromised.m)~Patient+Sampletype_pooled+Patient:Sampletype_pooled))
 
+permanova_results_immunocompromised <- run_permanova_custom(my_metadata = metadata_immunocompromised.df,
+                                                            my_formula = as.formula("t(otu_rare_clr_filtered_compromised.m)~Patient+Sampletype_pooled+Gender+Patient_group + Number_of_meds"))
 
 # Immunocompetent, all sample types
 metadata_immunocompetent.df <- subset(metadata.df, Project == "immunocompetent" & Sampletype != "negative")
