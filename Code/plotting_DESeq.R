@@ -154,6 +154,18 @@ ggsave(filename = paste0("Result_figures/DESeq_plots/immunocompetent_by_patient_
        height = 12,
        units = "cm")
 
+# Number of meds
+temp <- read.csv("Result_tables/DESeq_results/immunocompromised_Number_of_meds.csv", header = T)
+myplot <- plot_genus_deseq(temp,facet_plot = T,
+                           limit_to = ".", title = "Immunocompromised\nDifferentially abundant features, number of medications",
+                           pallete = my_colour_pallete_20,include_grid = T) 
+myplot
+
+ggsave(filename = paste0("Result_figures/DESeq_plots/immunocompromised_Number_of_meds_DESeq.pdf"),
+       plot = myplot,
+       width = 10,
+       height = 12,
+       units = "cm")
 
 
 # ----------------------------------------------------------------------------------------------------

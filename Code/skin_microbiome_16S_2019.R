@@ -115,7 +115,8 @@ metadata.df[metadata.df == ''] <- NA
 # Change SwabCo to negative as they are the same
 levels(metadata.df$Sampletype)[match("SwabCo",levels(metadata.df$Sampletype))] <- "negative"
 
-
+# Make the index the rowname
+rownames(metadata.df) <- metadata.df$Index
 
 # Create new pooled lesion types variables
 pool_1 <- c("C","AK_PL","IEC_PL","SCC_PL", "NLC")
@@ -172,7 +173,7 @@ names(project_otu_table.df) <- gsub("R([1-4]_)","r\\1", names(project_otu_table.
 names(project_otu_table.df) <- gsub("B(_)","b\\1", names(project_otu_table.df))
 
 
-#Fix the some of the _J607 samples where read files did not have the r4 included. These are described in the metadata
+#Fix the _J607 samples where read files did not have the r4 included. These are described in the metadata
 samples_to_fix <- as.character(metadata.df[!metadata.df$Internal_name == "",]$Internal_name)
 for (s2f in samples_to_fix){
   pattern <- paste("(",s2f,")", "(_J607)", sep ="")
@@ -303,11 +304,6 @@ project_otu_table.df <- project_otu_table.df[,!names(project_otu_table.df) %in% 
 
 dim(metadata.df)
 dim(project_otu_table.df)
-# Remove any patients that are not immunocompromised (MST); remove immunocompetent (MS) patients
-# from OTU table and metadata
-# MS_patients <- unique(metadata.df[grepl("MS[0-9]", metadata.df$Patient),]$Index)
-# project_otu_table.df <- project_otu_table.df[,!colnames(project_otu_table.df) %in% MS_patients]
-# metadata.df <- metadata.df[!metadata.df$Index %in% MS_patients,]
 
 # ------------------------------------------------
 # ------------------------------------------------
@@ -423,101 +419,6 @@ write.table(project_otu_table_unfiltered.df, file = "Result_tables/other/project
 
 
 
-# ---------------------------------------------------------------------------------------------------------------
-# Generate summaries of the metadata before we filter out samples based on read depth
-
-# Number of MST patients
-n_MST_patients <- length(unique(metadata.df$Patient[grepl("MST", metadata.df$Patient)]))
-# Number of MS patients
-n_MS_patients <- length(unique(metadata.df$Patient[!grepl("MST", metadata.df$Patient)]))
-# Number of MST samples
-n_MST_samples <- length(metadata.df[grepl("MST", metadata.df$Patient),]$Index)
-# Number of MS samples
-n_MS_samples <- length(metadata.df[!grepl("MST", metadata.df$Patient),]$Index)
-
-
-# Number of samples for each Sampletype
-per_sampletype <- metadata.df %>% 
-  group_by(Sampletype) %>%
-  summarise(Count = n()) %>%
-  mutate(Percent = round((Count/sum(Count))*100,2)) %>%
-  arrange(desc(Percent)) %>%
-  as.data.frame
-# per_sampletype <- per_sampletype[order(per_sampletype$Percent),]
-per_sampletype$Sampletype <- factor(per_sampletype$Sampletype, levels = per_sampletype$Sampletype)
-
-
-make_pie_graph <- function(mydata, my_colour_list = NULL){
-  # Assumes two columns, first is the category, second is count
-  # my_colour_list should be a named listed with the corresponding colours provided
-  internal_mydata <- mydata
-  variable <- names(mydata)[1]
-  # internal_mydata <- 
-  #   mydata %>%
-  #   arrange(desc(taxonomy_genus)) %>%
-  #   mutate(lab.ypos = cumsum(normalised_mean_abundance) - .5*normalised_mean_abundance)
-}
-
-
-# temp <- unique(metadata.df[,c("Sampletype", "Sampletype_colour")])
-# sampletype_colours <- setNames(temp$Sampletype_colour, temp$Sampletype)
-# ggplot(per_sampletype, aes(x ="", y = Count, fill = Sampletype)) +
-#   geom_bar(width = 1, stat = "identity", color = "white",size = .2) +
-#   coord_polar("y", start=0) +
-#   scale_fill_manual(values = sampletype_colours, name = "Genus") +
-#   # geom_text(aes(y = lab.ypos, label = Count), color = "white") +
-#   theme(axis.text = element_blank(),
-#         axis.line = element_blank(),
-#         axis.title = element_blank(),
-#         legend.text = element_text(size = 8),
-#         axis.ticks = element_blank(),
-#         plot.title = element_text(hjust = 0.5, size =8),
-#         plot.subtitle = element_text(size = 8, hjust = .5))
-
-# Number of samples for each Sampletype_pooled
-per_sampletype_pooled <- metadata.df %>% 
-  group_by(Sampletype_pooled) %>%
-  summarise(Count = n()) %>%
-  mutate(Percent = round((Count/sum(Count))*100,2)) %>%
-  arrange(desc(Percent)) %>%
-  as.data.frame
-
-# Number of samples for each Sampletype for each patient
-per_patient_sampletype <- metadata.df %>% 
-  group_by(Patient,Sampletype) %>%
-  summarise(Count = n()) %>%
-  mutate(Percent = round((Count/sum(Count))*100,2)) %>%
-  arrange(Patient, desc(Percent)) %>%
-  as.data.frame
-
-# Number of samples for each Sampletype_pooled for each patient
-per_patient_sampletype_pooled <- metadata.df %>% 
-  group_by(Patient,Sampletype_pooled) %>%
-  summarise(Count = n()) %>%
-  mutate(Percent = round((Count/sum(Count))*100,2)) %>%
-  arrange(Patient, desc(Percent)) %>%
-  as.data.frame
-
-
-# Number of samples for each Sampletype for each cohort
-per_cohort_sampletype <- metadata.df %>% 
-  group_by(Project,Sampletype) %>%
-  summarise(Count = n()) %>%
-  mutate(Percent = round((Count/sum(Count))*100,2)) %>%
-  arrange(Project, desc(Percent)) %>%
-  as.data.frame
-
-# Number of samples for each Sampletype_pooled for each cohort
-per_cohort_sampletype_pooled <- metadata.df %>% 
-  group_by(Project,Sampletype_pooled) %>%
-  summarise(Count = n()) %>%
-  mutate(Percent = round((Count/sum(Count))*100,2)) %>%
-  arrange(Project, desc(Percent)) %>%
-  as.data.frame
-
-write.csv(per_cohort_sampletype,"Result_tables/other/metadata_cohort_sampletype_counts.csv", row.names = F)
-write.csv(per_cohort_sampletype_pooled,"Result_tables/other/metadata_cohort_sampletype_pooled_counts.csv", row.names = F)
-
 
 # ---------------------------------------------------------------------------------------------------------------
 # ---------------------------------------------------------------------------------------------------------------
@@ -545,9 +446,11 @@ otu_unfiltered.m <- as.matrix(otu_unfiltered.m)
 
 # Create relative abundance matrix from counts matrix
 otu_rel.m <- t(t(otu.m)/ colSums(otu.m))
+otu_unfiltered_rel.m <- t(t(otu_unfiltered.m) / colSums(otu_unfiltered.m))
 
 # Change nans to 0. Occurs when a sample has no hits at this point.
 otu_rel.m[is.nan(otu_rel.m)] <- 0
+otu_unfiltered_rel.m[is.nan(otu_unfiltered_rel.m)] <- 0
 
 ############################################################
 ## TODO Calculate the fraction of human reads in each sample
@@ -769,6 +672,8 @@ otu.m <- otu.m[rownames(otu_rel.m),]
 
 # Remove those samples with less than 5000 reads - used in previous paper
 # TODO - write to file those samples that are removed
+# colSums(otu.m) < 5000
+
 dim(otu.m)
 otu.m <- otu.m[,colSums(otu.m) >= 5000]
 dim(otu.m)
@@ -900,6 +805,220 @@ metadata.df$Sample_retained <- "no"
 metadata.df[metadata.df$Index %in% samples_retained,]$Sample_retained <- "yes"
 write.table(metadata.df[metadata.df$Sample_retained == "yes",], file = "Result_tables/other/processed_metadata.csv", sep = ",", quote = F, row.names = F)
 write.table(metadata.df[metadata.df$Sample_retained == "no",], file = "Result_tables/other/metadata_samples_removed.csv", sep = ",", quote = F, row.names = F)
+
+
+# -------------------------------------------------------------------------------------------------------------------------------------
+# -------------------------------------------------------------------------------------------------------------------------------------
+# -------------------------------------------------------------------------------------------------------------------------------------
+#                                                           METADATA AND READ SUMMARIES
+# Generate summaries of the metadata
+
+# Number of MST patients
+n_MST_patients <- length(unique(metadata.df$Patient[grepl("MST", metadata.df$Patient)]))
+# Number of MS patients
+n_MS_patients <- length(unique(metadata.df$Patient[!grepl("MST", metadata.df$Patient)]))
+# Number of MST samples
+n_MST_samples <- length(metadata.df[grepl("MST", metadata.df$Patient),]$Index)
+# Number of MS samples
+n_MS_samples <- length(metadata.df[!grepl("MST", metadata.df$Patient),]$Index)
+
+# Number of samples for each Sampletype
+per_sampletype <- metadata.df %>% 
+  group_by(Sampletype) %>%
+  summarise(Count = n()) %>%
+  mutate(Percent = round((Count/sum(Count))*100,2)) %>%
+  arrange(desc(Percent)) %>%
+  as.data.frame
+# per_sampletype <- per_sampletype[order(per_sampletype$Percent),]
+per_sampletype$Sampletype <- factor(per_sampletype$Sampletype, levels = per_sampletype$Sampletype)
+
+
+make_pie_graph <- function(mydata, my_colour_list = NULL){
+  # Assumes two columns, first is the category, second is count
+  # my_colour_list should be a named listed with the corresponding colours provided
+  internal_mydata <- mydata
+  variable <- names(mydata)[1]
+  # internal_mydata <- 
+  #   mydata %>%
+  #   arrange(desc(taxonomy_genus)) %>%
+  #   mutate(lab.ypos = cumsum(normalised_mean_abundance) - .5*normalised_mean_abundance)
+}
+
+
+# temp <- unique(metadata.df[,c("Sampletype", "Sampletype_colour")])
+# sampletype_colours <- setNames(temp$Sampletype_colour, temp$Sampletype)
+# ggplot(per_sampletype, aes(x ="", y = Count, fill = Sampletype)) +
+#   geom_bar(width = 1, stat = "identity", color = "white",size = .2) +
+#   coord_polar("y", start=0) +
+#   scale_fill_manual(values = sampletype_colours, name = "Genus") +
+#   # geom_text(aes(y = lab.ypos, label = Count), color = "white") +
+#   theme(axis.text = element_blank(),
+#         axis.line = element_blank(),
+#         axis.title = element_blank(),
+#         legend.text = element_text(size = 8),
+#         axis.ticks = element_blank(),
+#         plot.title = element_text(hjust = 0.5, size =8),
+#         plot.subtitle = element_text(size = 8, hjust = .5))
+
+# Number of samples for each Sampletype_pooled
+per_sampletype_pooled <- metadata.df %>% 
+  group_by(Sampletype_pooled) %>%
+  summarise(Count = n()) %>%
+  mutate(Percent = round((Count/sum(Count))*100,2)) %>%
+  arrange(desc(Percent)) %>%
+  as.data.frame
+
+# Number of samples for each Sampletype for each patient
+per_patient_sampletype <- metadata.df %>% 
+  group_by(Patient,Sampletype) %>%
+  summarise(Count = n()) %>%
+  mutate(Percent = round((Count/sum(Count))*100,2)) %>%
+  arrange(Patient, desc(Percent)) %>%
+  as.data.frame
+
+# Number of samples for each Sampletype_pooled for each patient
+per_patient_sampletype_pooled <- metadata.df %>% 
+  group_by(Patient,Sampletype_pooled) %>%
+  summarise(Count = n()) %>%
+  mutate(Percent = round((Count/sum(Count))*100,2)) %>%
+  arrange(Patient, desc(Percent)) %>%
+  as.data.frame
+
+
+# Number of samples for each Sampletype for each cohort
+per_cohort_sampletype <- metadata.df %>% 
+  group_by(Project,Sampletype) %>%
+  summarise(Count = n()) %>%
+  mutate(Percent = round((Count/sum(Count))*100,2)) %>%
+  arrange(Project, desc(Percent)) %>%
+  as.data.frame
+
+# Number of samples for each Sampletype_pooled for each cohort
+per_cohort_sampletype_pooled <- metadata.df %>% 
+  group_by(Project,Sampletype_pooled) %>%
+  summarise(Count = n()) %>%
+  mutate(Percent = round((Count/sum(Count))*100,2)) %>%
+  arrange(Project, desc(Percent)) %>%
+  as.data.frame
+
+write.csv(per_cohort_sampletype,"Result_tables/other/metadata_cohort_sampletype_counts.csv", row.names = F)
+write.csv(per_cohort_sampletype_pooled,"Result_tables/other/metadata_cohort_sampletype_pooled_counts.csv", row.names = F)
+
+
+
+# ------------------------------------
+#           Reads stats
+
+# Rarefied counts                 = otu_rare_count.m 
+# Rarefied relative abundances    = otu_rare_rel.m
+# Relative abundances             = otu_rel.m
+# Counts                          = otu.m
+# Unfiltered counts               = otu_unfiltered.m
+# Unfiltered relative abundances  = otu_unfiltered_rel.m
+
+# Only focus on those samples that have passed QC.
+samples_passing_QC <- colnames(otu.m)
+stats.df <- data.frame(Sample = samples_passing_QC)
+
+stats.df$Patient <- metadata.df[samples_passing_QC,"Patient"]
+stats.df$Sampletype <- metadata.df[samples_passing_QC,"Sampletype"]
+stats.df$Sampletype_pooled <- metadata.df[samples_passing_QC,"Sampletype_pooled"]
+
+stats.df[,"Original_read_counts"] <- colSums(otu_unfiltered.m[,samples_passing_QC])
+stats.df[,"Filtered_read_counts"] <- colSums(otu.m[,samples_passing_QC])
+stats.df[,"Filtered_rarefied_read_counts"] <- colSums(otu_rare_count.m[,samples_passing_QC])
+
+# Reads removed from filtering
+stats.df[,"Reads_removed_filtered"] <- stats.df[,"Original_read_counts"] - stats.df[,"Filtered_read_counts"]
+stats.df[,"Proportion_removed_filtered"] <- stats.df[,"Reads_removed_filtered"] / stats.df[,"Original_read_counts"]
+
+# Reads removed from filtering and rarefaction
+stats.df[,"Reads_removed_filtered_rarefied"] <- stats.df[,"Original_read_counts"] - stats.df[,"Filtered_rarefied_read_counts"]
+stats.df[,"Proportion_removed_filtered_rarefied"] <- stats.df[,"Reads_removed_filtered_rarefied"] / stats.df[,"Original_read_counts"]
+
+# ---------------------------------------------
+# Read counts and proportions original, unprocessed data. Summing each domain + unassigned should equal one
+
+# Proportion of reads that are mammal (generally human)
+stats.df[,"Mammal_read_count_original"] <- colSums(project_otu_table_unfiltered.df[grepl("Mammal", project_otu_table_unfiltered.df$taxonomy_species),samples_passing_QC])
+stats.df[,"Mammal_proportion_original"] <- stats.df[,"Mammal_read_count_original"] / stats.df[,"Original_read_counts"]
+
+# Proportion of reads that are fungal
+stats.df[,"Fungal_read_count_original"] <- colSums(project_otu_table_unfiltered.df[grepl("Fungi", project_otu_table_unfiltered.df$taxonomy_species),samples_passing_QC])
+stats.df[,"Fungal_proportion_original"] <- stats.df[,"Fungal_read_count_original"] / stats.df[,"Original_read_counts"]
+
+# Proportion of reads that are fungal
+stats.df[,"Bacterial_read_count_original"] <- colSums(project_otu_table_unfiltered.df[grepl("d__Bacteria", project_otu_table_unfiltered.df$Domain),samples_passing_QC])
+stats.df[,"Bacterial_proportion_original"] <- stats.df[,"Bacterial_read_count_original"] / stats.df[,"Original_read_counts"]
+
+# Proportion of reads that are Archaea
+stats.df[,"Archaeal_read_count_original"] <- colSums(project_otu_table_unfiltered.df[grepl("d__Archaea", project_otu_table_unfiltered.df$Domain),samples_passing_QC])
+stats.df[,"Archaeal_proportion_original"] <- stats.df[,"Archaeal_read_count_original"] / stats.df[,"Original_read_counts"]
+
+# Proportion of reads that are Eukaryota
+stats.df[,"Eukaryal_read_count_original"] <- colSums(project_otu_table_unfiltered.df[grepl("d__Eukaryota", project_otu_table_unfiltered.df$Domain),samples_passing_QC])
+stats.df[,"Eukaryal_proportion_original"] <- stats.df[,"Eukaryal_read_count_original"] / stats.df[,"Original_read_counts"]
+
+# Proportion of reads that are Unassigned a taxonomy
+stats.df[,"Unassigned_read_count_original"] <- colSums(project_otu_table_unfiltered.df[grepl("Unassigned", project_otu_table_unfiltered.df$Domain),samples_passing_QC])
+stats.df[,"Unassigned_proportion_original"] <- stats.df[,"Unassigned_read_count_original"] / stats.df[,"Original_read_counts"]
+
+# stats.df[,"Other_read_count_original"] <- colSums(project_otu_table_unfiltered.df[!grepl("d__Bacteria|d__Archaea|d__Eukaryota|Unassigned", project_otu_table_unfiltered.df$Domain),samples_passing_QC])
+# stats.df[,"Other_proportion_original"] <- stats.df[,"Other_read_count_original"] / stats.df[,"Original_read_counts"]
+
+# min(stats.df[,"Unassigned_proportion_original"] + stats.df[,"Archaeal_proportion_original"] + stats.df[,"Bacterial_proportion_original"]  + stats.df[,"Eukaryal_proportion_original"])
+
+# -------------------------------------
+# Read counts and proportions filtered data
+temp <- otu_taxonomy_map[otu_taxonomy_map$OTU.ID %in% rownames(otu.m),]
+bacterial_otus_filtered <- temp[temp$Domain == "d__Bacteria",]$OTU.ID
+fungal_otus_filtered <- temp[grepl("Fungi", temp$taxonomy_species),]$OTU.ID
+
+# Proportion of reads in the filtered data that are bacterial
+stats.df[,"Bacterial_read_count_filtered"] <- colSums(otu.m[which(rownames(otu.m) %in% bacterial_otus_filtered),samples_passing_QC])
+stats.df[,"Bacterial_proportion_filtered"] <- stats.df[,"Bacterial_read_count_filtered"] / stats.df[,"Filtered_read_counts"]
+
+# Proportion of reads in the filtered data that are Fungal
+stats.df[,"Fungal_read_count_filtered"] <- colSums(otu.m[which(rownames(otu.m) %in% fungal_otus_filtered),samples_passing_QC])
+stats.df[,"Fungal_proportion_filtered"] <- stats.df[,"Fungal_read_count_filtered"] / stats.df[,"Filtered_read_counts"]
+
+# -------------------------------------
+# Read counts and proportions filtered + rarefied data
+temp <- otu_taxonomy_map[otu_taxonomy_map$OTU.ID %in% rownames(otu_rare_count.m),]
+bacterial_otus_filtered_rarefied <- temp[temp$Domain == "d__Bacteria",]$OTU.ID
+fungal_otus_filtered_rarefied <- temp[grepl("Fungi", temp$taxonomy_species),]$OTU.ID
+
+# Proportion of reads in the filtered data that are bacterial
+stats.df[,"Bacterial_read_count_filtered_rarefied"] <- colSums(otu_rare_count.m[which(rownames(otu_rare_count.m) %in% bacterial_otus_filtered_rarefied),samples_passing_QC])
+stats.df[,"Bacterial_proportion_filtered_rarefied"] <- stats.df[,"Bacterial_read_count_filtered_rarefied"] / stats.df[,"Filtered_rarefied_read_counts"]
+
+# Proportion of reads in the filtered data that are Fungal
+stats.df[,"Fungal_read_count_filtered_rarefied"] <- colSums(otu_rare_count.m[which(rownames(otu_rare_count.m) %in% fungal_otus_filtered_rarefied),samples_passing_QC])
+stats.df[,"Fungal_proportion_filtered_rarefied"] <- stats.df[,"Fungal_read_count_filtered_rarefied"] / stats.df[,"Filtered_rarefied_read_counts"]
+
+# stats.df[,"Fungal_read_count_filtered"] <- colSums(project_otu_table.df[grepl("Fungi", project_otu_table.df$taxonomy_species),samples_passing_QC])
+# stats.df[,"Fungal_proportion_filtered"] <- stats.df[,"Fungal_read_count_filtered"] / stats.df[,"Filtered_read_counts"]
+# stats.df[,"Bacterial_read_count_filtered"] <- colSums(project_otu_table.df[grepl("d__Bacteria", project_otu_table.df$Domain),samples_passing_QC])
+# stats.df[,"Bacterial_proportion_filtered"] <- stats.df[,"Bacterial_read_count_filtered"] / stats.df[,"Filtered_read_counts"]
+
+
+stats.df[,"Features_total"] <- length(which(rowSums(otu_unfiltered.m[,samples_passing_QC]) > 0 ))
+stats.df[,"Features_original"] <- apply(otu_unfiltered.m[,samples_passing_QC], 2, function(x) { length(which(x > 0)) } )
+
+stats.df[,"Features_filtered"] <- apply(otu.m[,samples_passing_QC], 2, function(x) { length(which(x > 0)) } )
+stats.df[,"Features_filtered_rarefied"] <- apply(otu_rare_count.m[,samples_passing_QC], 2, function(x) { length(which(x > 0)) } )
+
+stats.df[,"Features_removed_filtered"] <- stats.df[,"Features_original"] - stats.df[,"Features_filtered"] 
+stats.df[,"Features_removed_filtered_rarefied"] <- stats.df[,"Features_original"] - stats.df[,"Features_filtered_rarefied"] 
+
+stats.df[,"Proportion_features_removed_filtered"] <- stats.df[,"Features_removed_filtered"] / stats.df[,"Features_original"]
+stats.df[,"Proportion_features_removed_filtered_rarefied"] <- stats.df[,"Features_removed_filtered_rarefied"] / stats.df[,"Features_original"]
+
+
+write.csv(stats.df, "Result_tables/other/QC_summary.csv", row.names = F, quote = F)
+
+
+
 
 # -------------------------------------------------------------------------------------------------------------------------------------
 # -------------------------------------------------------------------------------------------------------------------------------------

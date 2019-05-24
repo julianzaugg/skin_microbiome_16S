@@ -122,6 +122,7 @@ metadata.df <- metadata.df[rownames(metadata.df) %in% colnames(otu_rare.m),]
 metadata.df <- metadata.df[order(rownames(metadata.df)),]
 otu_rare.m <- otu_rare.m[,order(rownames(metadata.df))]
 otu.m <- otu.m[,order(rownames(metadata.df))]
+# colnames(otu_rare.m) == rownames(metadata.df)
 
 # Just get OTUs with more than counts of 15 (0.05 % if rarefied to 30,000)
 # Just get OTUs with more than counts of 3 (0.01 % if rarefied to 30,000)
@@ -556,7 +557,7 @@ generate_pca(temp, mymetadata = temp_metadata,
              filename = paste0("Result_figures/pcoa_dbrda_plots/both_cohorts_Project.pdf"))
 
 
-
+# ---------------------------------------------------------------------------------------------------------
 # Immunocompetent, all sample types
 metadata_immunocompetent.df <- subset(metadata.df, Project == "immunocompetent" & Sampletype != "negative")
 metadata_immunocompetent.df <- metadata_immunocompetent.df[order(rownames(metadata_immunocompetent.df)),]
@@ -600,7 +601,7 @@ generate_pca(m.pca_competent, mymetadata = metadata_immunocompetent.df,
              variable_colours_available = T,
              filename = paste0("Result_figures/pcoa_dbrda_plots/immunocompetent_Patient.pdf"))
 
-
+# ---------------------------------------------------------------------------------------------------------
 # Immunocompromised, all sample types
 metadata_immunocompromised.df <- subset(metadata.df, Project == "immunocompromised" & Sampletype != "negative")
 metadata_immunocompromised.df <- metadata_immunocompromised.df[order(rownames(metadata_immunocompromised.df)),]
@@ -704,6 +705,29 @@ generate_pca(m.pca_compromised, mymetadata = metadata_immunocompromised.df,
              variable_colours_available = T,
              filename = paste0("Result_figures/pcoa_dbrda_plots/immunocompromised_number_of_meds.pdf"))
 
+
+# Fitzpatrick_skin_type
+generate_pca(m.pca_compromised, mymetadata = metadata_immunocompromised.df,
+             plot_height = 5, plot_width =5,
+             legend_x = -8, legend_y = 7,
+             point_size = .7, point_line_thickness = .3,point_alpha =.7,
+             legend_title = "Fitzpatrick_skin_type",
+             plot_title = "Immunocompromised, all lesion types",
+             limits = c(-7,7,-7,7),
+             include_legend = T,
+             plot_spiders = F,
+             plot_ellipses = F,
+             plot_hulls = F,
+             use_shapes = T,
+             ellipse_border_width = .5,
+             label_ellipse = F, ellipse_label_size = .5,
+             colour_palette = my_colour_palette_206_distinct,
+             variable_to_plot = "Fitzpatrick_skin_type", legend_cols = 1,
+             variable_colours_available = T,
+             filename = paste0("Result_figures/pcoa_dbrda_plots/immunocompromised_fitzpatrick_skin_type.pdf"))
+
+
+# ---------------------------------------------------------------------------------------------------------
 
 
 # Each lesion type, color by cohort and patient
