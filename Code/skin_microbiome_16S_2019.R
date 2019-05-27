@@ -1190,7 +1190,7 @@ write.table(m2df_tax_convert_save(otu_phylum_rel_rare.m, "taxonomy_phylum"), fil
 # Finally create and save a dataframe, separately for each Phylum, Class, Order, Family, Genus, Species and OTU,
 # containing the abundances/counts/log(counts, 10) in each sample, metadata and taxonomy information.
 
-# Include both the count, log(count), abundance, rarified count, log(rarified count) and rarified abundance.
+# Include both the count, log(count), abundance, rarefied count, log(rarefied count) and rarefied abundance.
 
 # There should four tables at this point each level with the same entries, e.g.
 # Counts = otu.df
@@ -1234,15 +1234,15 @@ create_combined_dataframe <- function(counts_df, rel_mat, counts_rare, rel_rare_
   # Combine the datasets. Passing as.matrix(counts) captures the rownames as a column. This can be rename after
   combined_data <- cbind(melt(as.matrix(counts), variable.name = "sample", value.name = "Read_count"), 
                          melt(rel_abundances, value.name = "Relative_abundance")[,2, drop = F], 
-                         melt(rare_counts, value.name = "Read_count_rarified")[,2, drop = F],
-                         melt(rel_rare_abundances, value.name = "Relative_abundance_rarified")[,2, drop = F])
+                         melt(rare_counts, value.name = "Read_count_rarefied")[,2, drop = F],
+                         melt(rel_rare_abundances, value.name = "Relative_abundance_rarefied")[,2, drop = F])
   
   # Remove samples with a read count of zero
   combined_data <- combined_data[combined_data$Read_count > 0,]
   
   # Calculate logged read counts
   combined_data$Read_count_logged <- log(combined_data$Read_count, 10)
-  combined_data$Read_count_rarified_logged <- log(combined_data$Read_count_rarified, 10)
+  combined_data$Read_count_rarefied_logged <- log(combined_data$Read_count_rarefied, 10)
   
   # Fix the Var2 column
   names(combined_data)[2] <- "Sample"

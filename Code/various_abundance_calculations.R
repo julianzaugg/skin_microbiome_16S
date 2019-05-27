@@ -225,11 +225,6 @@ ggsave(plot = mean_relative_abundaunce_bar_graph, filename ="Result_figures/abun
 
 
 
-
-
-
-
-
 # ------------------------------------------------------------------------------------------------------------
 # Calculate the prevalences etc. of each taxa, not grouped
 

@@ -89,6 +89,7 @@ otu_taxonomy_map.df <- read.csv("Result_tables/other/otu_taxonomy_map.csv", head
 # Load the processed metadata
 metadata.df <- read.csv("Result_tables/other/processed_metadata.csv", sep =",", header = T)
 
+
 # We are only interested in C,AK_PL,IEC_PL,SCC_PL,AK,IEC, NLC and SCC lesions. 
 metadata.df <- metadata.df[metadata.df$Sampletype %in% c("C","AK_PL","IEC_PL","SCC_PL","AK","IEC","SCC", "NLC"),]
 
@@ -453,10 +454,91 @@ immunocompromised_otu_rare.m <- otu_rare.m[,rownames(immunocompromised_metadata.
 run_immunocompromised_n_meds_deseq(immunocompromised_otu_rare.m, immunocompromised_metadata.df)
 
 # Patient group
+run_immunocompromised_patient_group_deseq <- function(my_otu_matrix, my_metadata){
+  
+  internal_otu_matrix.m <- my_otu_matrix
+  internal_metadata.df <- my_metadata
+  # Ensure factored
+  internal_metadata.df$Number_of_meds <- factor(internal_metadata.df$Patient_group)
+  
+  
+  # Order the feature table and the metadata to be the same
+  internal_otu_matrix.m <- internal_otu_matrix.m[,order(rownames(internal_metadata.df))]
+  internal_metadata.df <- internal_metadata.df[order(rownames(internal_metadata.df)),]
+  
+  # If the column and rownames do not match, entries are missing
+  if (!all(rownames(internal_metadata.df) == colnames(internal_otu_matrix.m))){
+    print("Colnames and metadata names don't match!!!")
+    break
+  }
+  
+  # Run DESeq
+  dds <-DESeqDataSetFromMatrix(countData = internal_otu_matrix.m, colData = internal_metadata.df, design = ~Patient_group)
+  geoMeans <- apply(counts(dds), 1, gm_mean)
+  dds <- estimateSizeFactors(dds, geoMeans = geoMeans)
+  dds <- try(DESeq(dds, test = "Wald", fitType = "parametric", parallel = T))
+  
+  if(inherits(dds, "try-error")) {
+    next
+  }
+  
+  # Result dataframe
+  all_combined_results.df <- data.frame()
+  
+  my_levels <- c("Control", "AK", "SCC")
+  sample_type_combinations <- combn(rev(my_levels), 2)
 
+  for (i in 1:ncol(sample_type_combinations)){
+    # Set group 1 and group 2
+    group_1 <- as.character(sample_type_combinations[1,i])
+    group_2 <- as.character(sample_type_combinations[2,i])
+    
+    # Get the number of samples in each group
+    n_group_1 <- dim(subset(internal_metadata.df, Patient_group == group_1))[1]
+    n_group_2 <- dim(subset(internal_metadata.df, Patient_group == group_2))[1]
+    
+    print(paste0("processing : ", group_1, "_vs_", group_2))
+    
+    # Get the results from contrasting these groups
+    resMFSource <- results(dds, contrast = c("Patient_group",group_1,group_2), alpha=0.01, independentFiltering = F, cooksCutoff = F, parallel = T)
+    
+    group_1_meta <- subset(internal_metadata.df, Patient_group == group_1)
+    group_2_meta <- subset(internal_metadata.df, Patient_group == group_2)
+    n_patients_group_1 <- length(unique(group_1_meta$Patient))
+    n_patients_group_2 <- length(unique(group_2_meta$Patient))
+    
+    resMFSource$Group_1 <- group_1
+    resMFSource$Group_2 <- group_2
+    resMFSource$Variable <- "Patient_group"
+    resMFSource$N_Group_1 <- n_group_1
+    resMFSource$N_Group_2 <- n_group_2
+    resMFSource$N_patients_Group_1 <- n_patients_group_1
+    resMFSource$N_patients_Group_2 <- n_patients_group_2
+    
+    
+    
+    # Assign the taxonomy (good idea if looking at features)
+    resMFSource$Taxonomy <- assign_taxonomy_to_otu(resMFSource, otu_taxonomy_map.df)  
+    
+    # Convert to dataframe
+    resMFSource <- matrix2df(resMFSource, "OTU")
+    
+    # Order the results by the adjusted p-value and filter out entries with p-values below threshold
+    resMFSourceOrdered <- filter_and_sort_dds_results(resMFSource, 0.01)
+    
+    # Add the result to the combined dataframe for the patient
+    all_combined_results.df <- rbind(all_combined_results.df, resMFSourceOrdered)
+  }
+  # Write the results for all lesion+cohort to file (assumes no errors and all results generated at the same time)
+  outfilename <- paste("Result_tables/DESeq_results/immunocompromised_Patient_group.csv", sep= "")
+  write.csv(all_combined_results.df, file=outfilename, quote = F, row.names = F)
+  
+}
+immunocompromised_metadata.df <- metadata.df[metadata.df$Project == "immunocompromised",]
+immunocompromised_otu_rare.m <- otu_rare.m[,rownames(immunocompromised_metadata.df)]
 
-
-
+run_immunocompromised_patient_group_deseq(immunocompromised_otu_rare.m, immunocompromised_metadata.df)
+  
 
 
 # ------------------------------------------------------------------------------------
