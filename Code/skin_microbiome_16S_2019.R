@@ -310,7 +310,7 @@ dim(project_otu_table.df)
 # Assign unique colours for each discrete state, e.g. Sampletype
 
 # For Sampletype
-sampletype_values <- factor(as.character(unique(metadata.df$Sampletype)))
+sampletype_values <- sort(factor(as.character(unique(metadata.df$Sampletype)), levels = sort(unique(as.character(metadata.df$Sampletype)))))
 sampletype_colours <- setNames(lesion_palette_10[1:length(sampletype_values)], sampletype_values)
 
 all_sample_colours <- as.character(lapply(as.character(metadata.df$Sampletype), function(x) sampletype_colours[x]))
@@ -342,6 +342,10 @@ metadata.df$Patient_colour <- all_patient_colours
 patient_group_values <- as.character(unique(metadata.df$Patient_group))
 patient_group_values <- patient_group_values[!is.na(patient_group_values)]
 patient_group_colours <- setNames(lesion_palette_10[1:length(patient_group_values)], patient_group_values)
+# Manually set to match sampletype (since the groupings are similar)
+patient_group_colours["SCC"] <- sampletype_colours["SCC"]
+patient_group_colours["Control"] <- sampletype_colours["NLC"]
+patient_group_colours["AK"] <- sampletype_colours["AK"]
 all_patient_group_colours <- as.character(lapply(as.character(metadata.df$Patient_group), function(x) patient_group_colours[x]))
 metadata.df$Patient_group_colour <- all_patient_group_colours
 
@@ -362,7 +366,7 @@ metadata.df$Number_of_meds_colour <- all_n_meds_colours
 # For Fitzpatrick_skin_type
 fst_values <- as.character(unique(metadata.df$Fitzpatrick_skin_type))
 fst_values <- fst_values[!is.na(fst_values)]
-fst_colours <- setNames(my_colour_palette_20_distinct[1:length(fst_values)], fst_values)
+fst_colours <- setNames(lesion_palette_10[1:length(fst_values)], fst_values)
 all_fst_colours <- as.character(lapply(as.character(metadata.df$Fitzpatrick_skin_type), function(x) fst_colours[x]))
 metadata.df$Fitzpatrick_skin_type_colour <- all_fst_colours
 
@@ -734,7 +738,9 @@ ggsave(plot = myplot, filename = "./Result_figures/exploratory_analysis/sample_r
 
 # Rarefaction curve
 # rarecurve(t(otu.m[,colSums(otu.m) > 1]),step = 500, label = F,xlim = c(0,30000),sample = 30000)
-
+# temp <- t(rrarefy(t(otu.m[,colSums(otu.m) >= 5000]), 5000))
+# dim(temp)
+# summary(metadata.df[colnames(temp),]$Sampletype) - summary(metadata.df[colnames(otu_rare_count.m),]$Sampletype)
 # Generate a rarefied OTU count matrix
 # In the paper from 2018, a rarefaction maximum of 20,000 was used
 otu_rare_count.m <- t(rrarefy(x = t(otu.m), sample=30000))

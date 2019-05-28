@@ -153,8 +153,6 @@ otu_clr_filtered.m[which(otu_clr_filtered.m < 0)] <- 0
 # --------------------------------------------------------------------------------
 # --------------------------------------------------------------------------------
 # Ordination analysis
-
-
 generate_pca <- function(pca_object, mymetadata, variable_to_plot, colour_palette, limits = NULL, filename = NULL, include_legend = T, add_spider = F, add_ellipse = F,
                          point_alpha = 1, plot_width = 10, plot_height=10, point_size = 0.8, point_line_thickness = 1,
                          label_sites = F, label_species = F,
@@ -415,7 +413,7 @@ generate_pca <- function(pca_object, mymetadata, variable_to_plot, colour_palett
   }
   
   if (!is.null(plot_title)){
-    title(plot_title)  
+    title(main = plot_title)
   }
   
   if (include_legend){
@@ -610,6 +608,7 @@ otu_rare_clr_filtered_compromised.m <- otu_rare_clr_filtered_compromised.m[,rown
 
 m.pca_compromised <- rda(t(otu_rare_clr_filtered_compromised.m), data = metadata_immunocompromised.df)
 
+# Sampletype_pooled
 generate_pca(m.pca_compromised, mymetadata = metadata_immunocompromised.df,
              plot_height = 5, plot_width =5,
              legend_x = -8, legend_y = 7,
@@ -628,6 +627,7 @@ generate_pca(m.pca_compromised, mymetadata = metadata_immunocompromised.df,
              variable_colours_available = T,
              filename = paste0("Result_figures/pcoa_dbrda_plots/immunocompromised_Sampletype_pooled.pdf"))
 
+# Patient
 generate_pca(m.pca_compromised, mymetadata = metadata_immunocompromised.df,
              plot_height = 5, plot_width =5,
              legend_x = -6, legend_y = 4,
@@ -647,6 +647,7 @@ generate_pca(m.pca_compromised, mymetadata = metadata_immunocompromised.df,
              variable_colours_available = T,
              filename = paste0("Result_figures/pcoa_dbrda_plots/immunocompromised_Patient.pdf"))
 
+# Patient_group
 generate_pca(m.pca_compromised, mymetadata = metadata_immunocompromised.df,
              plot_height = 5, plot_width =5,
              legend_x = -8, legend_y = 6,
@@ -666,6 +667,7 @@ generate_pca(m.pca_compromised, mymetadata = metadata_immunocompromised.df,
              variable_colours_available = T,
              filename = paste0("Result_figures/pcoa_dbrda_plots/immunocompromised_Patient_group.pdf"))
 
+# Gender
 generate_pca(m.pca_compromised, mymetadata = metadata_immunocompromised.df,
              plot_height = 5, plot_width =5,
              legend_x = -8, legend_y = 6,
@@ -685,7 +687,7 @@ generate_pca(m.pca_compromised, mymetadata = metadata_immunocompromised.df,
              variable_colours_available = T,
              filename = paste0("Result_figures/pcoa_dbrda_plots/immunocompromised_Gender.pdf"))
 
-
+# Number_of_meds
 generate_pca(m.pca_compromised, mymetadata = metadata_immunocompromised.df,
              plot_height = 5, plot_width =5,
              legend_x = -8, legend_y = 7,
@@ -711,7 +713,7 @@ generate_pca(m.pca_compromised, mymetadata = metadata_immunocompromised.df,
              plot_height = 5, plot_width =5,
              legend_x = -8, legend_y = 7,
              point_size = .7, point_line_thickness = .3,point_alpha =.7,
-             legend_title = "Fitzpatrick_skin_type",
+             legend_title = "Fitzpatrick skin type",
              plot_title = "Immunocompromised, all lesion types",
              limits = c(-7,7,-7,7),
              include_legend = T,
@@ -804,33 +806,33 @@ for (cohort in unique(metadata.df$Project)){
     
   }
 }
-  
+
 # For each patient; all lesion types
-for (patient in unique(metadata.df$Patient)){
-  metadata_patient.df <- subset(metadata.df, Patient == patient)
-  metadata_patient.df <- metadata_patient.df[order(rownames(metadata_patient.df)),]
-  otu_rare_clr_patient.m <- otu_rare_clr_filtered.m[,colnames(otu_rare_clr_filtered.m) %in% rownames(metadata_patient.df)]
-  if (dim(metadata_patient.df)[1] <3) {next} 
-  m.pca_patient <- rda(t(otu_rare_clr_patient.m), data = metadata_patient.df)
-  generate_pca(m.pca_patient, mymetadata = metadata_patient.df,
-               plot_height = 5, plot_width =5,
-               legend_x = -15, legend_y = 10,
-               point_size = .7, point_line_thickness = .3,point_alpha =.7,
-               legend_title = "Lesion type",
-               include_legend = T,
-               plot_title = paste0("Patient : ", patient),
-               limits = c(-15,15,-15,15),
-               plot_hulls = F,
-               plot_spiders = F,
-               plot_ellipses = F,
-               use_shapes = T,
-               ellipse_border_width = .5,
-               label_ellipse = F, ellipse_label_size = .5,
-               colour_palette = my_colour_palette_206_distinct,
-               variable_to_plot = "Sampletype_pooled", legend_cols = 1,
-               variable_colours_available = T,
-               filename = paste0("Result_figures/pcoa_dbrda_plots/",patient,".pdf"))
-}
+# for (patient in unique(metadata.df$Patient)){
+#   metadata_patient.df <- subset(metadata.df, Patient == patient)
+#   metadata_patient.df <- metadata_patient.df[order(rownames(metadata_patient.df)),]
+#   otu_rare_clr_patient.m <- otu_rare_clr_filtered.m[,colnames(otu_rare_clr_filtered.m) %in% rownames(metadata_patient.df)]
+#   if (dim(metadata_patient.df)[1] <3) {next} 
+#   m.pca_patient <- rda(t(otu_rare_clr_patient.m), data = metadata_patient.df)
+#   generate_pca(m.pca_patient, mymetadata = metadata_patient.df,
+#                plot_height = 5, plot_width =5,
+#                legend_x = -15, legend_y = 10,
+#                point_size = .7, point_line_thickness = .3,point_alpha =.7,
+#                legend_title = "Lesion type",
+#                include_legend = T,
+#                plot_title = paste0("Patient : ", patient),
+#                limits = c(-15,15,-15,15),
+#                plot_hulls = F,
+#                plot_spiders = F,
+#                plot_ellipses = F,
+#                use_shapes = T,
+#                ellipse_border_width = .5,
+#                label_ellipse = F, ellipse_label_size = .5,
+#                colour_palette = my_colour_palette_206_distinct,
+#                variable_to_plot = "Sampletype_pooled", legend_cols = 1,
+#                variable_colours_available = T,
+#                filename = paste0("Result_figures/pcoa_dbrda_plots/",patient,".pdf"))
+# }
 
 # ------------------------------------------------------------------------
 # ------------------------------------------------------------------------

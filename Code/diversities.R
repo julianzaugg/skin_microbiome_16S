@@ -141,8 +141,10 @@ metadata.df <- metadata.df[!metadata.df$Sampletype == "negative",]
 # Set the Index to be the rowname
 rownames(metadata.df) <- metadata.df$Index
 
+# TODO - investigate using truely rarefied counts
 # Load the count matrices
 otu_rare.m <- as.matrix(read.csv("Result_tables/count_tables/OTU_counts_rarefied.csv", row.names =  1))
+otu.m <- as.matrix(read.csv("Result_tables/count_tables/OTU_counts.csv", row.names =  1))
 
 # Since we likely removed samples from the count matrix
 # in the main script, remove them from the metadata.df here
@@ -150,9 +152,12 @@ metadata.df <- metadata.df[rownames(metadata.df) %in%colnames(otu_rare.m),]
 
 # Remove samples that are not in the metadata.
 otu_rare.m <- otu_rare.m[,colnames(otu_rare.m) %in% rownames(metadata.df)]
+otu.m <- otu.m[,colnames(otu.m) %in% rownames(metadata.df)]
 
 # Calculate the diversity indicies
 # otu_shannon_diversity <- melt(diversity(t(otu.m)))
+
+otu_true_rare.m <- t(rrarefy(t(otu.m[,colSums(otu.m) >= 5000]), 5000))
 
 # Order the same as the metadata
 # otu_shannon_diversity <- otu_shannon_diversity[rownames(metadata.df),,drop =F]
@@ -169,12 +174,12 @@ discrete_variables <- c("Project","Patient","Sampletype", "Sampletype_pooled")
 otu_rare_phyloseq <- otu_table(otu_rare.m, taxa_are_rows=TRUE)
 
 
-# Estimate Chao1 richness
-otu_rare_chao1.df <- estimate_richness(otu_rare_phyloseq, measures = c("Chao1", "Simpson","Shannon"))
-otu_rare_chao1.df <- otu_rare_chao1.df[rownames(metadata.df),]
+# Estimate alpha diversities
+otu_rare_alpha.df <- estimate_richness(otu_rare_phyloseq, measures = c("Chao1", "Simpson","Shannon"))
+otu_rare_alpha.df <- otu_rare_alpha.df[rownames(metadata.df),]
 
 # Combine the metadata and the diversity metrics into a single dataframe
-full=cbind(metadata.df, otu_rare_chao1.df)
+full=cbind(metadata.df, otu_rare_alpha.df)
 
 
 # ------------------------------------------
