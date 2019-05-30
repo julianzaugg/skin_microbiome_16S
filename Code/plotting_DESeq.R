@@ -201,13 +201,23 @@ ggsave(filename = paste0("Result_figures/DESeq_plots/lesion_type_between_cohorts
 # ----------------------------------------------------------------------------------------------------
 immunocompromised_sampletype_pooled_otu_deseq <- read.csv("Result_tables/DESeq_results/immunocompromised_otu_sampletype_pooled.csv", header = T)
 immunocompromised_sampletype_pooled_genus_deseq <- read.csv("Result_tables/DESeq_results/immunocompromised_genus_sampletype_pooled.csv", header = T)
-myplot <- plot_genus_deseq(immunocompromised_sampletype_pooled_genus_deseq,facet_plot = T,
+
+myplot_otu <- plot_genus_deseq(immunocompromised_sampletype_pooled_otu_deseq,facet_plot = T,
                            limit_to = ".", title = "Immunocompromised\nDifferentially abundant features\nSampletype pooled",
                            pallete = my_colour_pallete_20,include_grid = T) 
-myplot
+
+myplot_genus <- plot_genus_deseq(immunocompromised_sampletype_pooled_genus_deseq,facet_plot = T,
+                               limit_to = ".", title = "Immunocompromised\nDifferentially abundant features\nSampletype pooled",
+                               pallete = my_colour_pallete_20,include_grid = T) 
 
 ggsave(filename = paste0("Result_figures/DESeq_plots/immunocompromised_sampletype_pooled_otu_DESeq.pdf"),
-       plot = myplot,
+       plot = myplot_otu,
+       width =8,
+       height = 12,
+       units = "cm")
+
+ggsave(filename = paste0("Result_figures/DESeq_plots/immunocompromised_sampletype_pooled_genus_DESeq.pdf"),
+       plot = myplot_genus,
        width = 10,
        height = 12,
        units = "cm")
@@ -313,9 +323,11 @@ genus_data.df <- read.csv("Result_tables/other/genus_counts_abundances_and_metad
 # deseq_merge_variable = "OTU",
 # data_merge_variable = "taxonomy_genus",
 # deseq_merge_variable = "Taxonomy",
-make_deseq_boxplots <- function(my_data, my_deseq_results, variable, taxonomy_level,
+# my_deseq_results
+make_deseq_boxplots <- function(my_data, variable, taxonomy_level,
                                 outlocation = "Result_figures/DESeq_plots/boxplots/",
-                                individual_plot_width = 10, individual_plot_height = 10){
+                                individual_plot_width = 10, individual_plot_height = 10,
+                                n_columns = 4){
   internal_data.df <- my_data
   # internal_data.df <- merge(internal_data.df, my_deseq_results, by.x = data_merge_variable, by.y =deseq_merge_variable, all.x = T)
   
@@ -413,7 +425,7 @@ make_deseq_boxplots <- function(my_data, my_deseq_results, variable, taxonomy_le
                                                                              legend.justification = "center",
                                                                              plot.margin = unit(c(0, 0, 0, 0), "cm")))
   
-  grid_plot <- cowplot::plot_grid(plotlist = plot_list, ncol = 4)
+  grid_plot <- cowplot::plot_grid(plotlist = plot_list, ncol = n_columns)
   grid_plot <- plot_grid(grid_plot, my_legend_colour, rel_widths = c(1,.4), ncol = 2)
   return(grid_plot)
 }
@@ -421,7 +433,6 @@ make_deseq_boxplots <- function(my_data, my_deseq_results, variable, taxonomy_le
 # Filter to immunocompromised
 genus_data_filtered.df <- genus_data.df[genus_data.df$Project == "immunocompromised",]
 otu_data_filtered.df <- otu_data.df[otu_data.df$Project == "immunocompromised",]
-# unique(genus_data_filtered.df[c("Patient_group", "Patient_group_colour", "Sampletype_pooled", "Sampletype_pooled_colour")])
 
 # Remove negative if present
 genus_data_filtered.df <- genus_data_filtered.df[genus_data_filtered.df$Sampletype != "negative",]
@@ -440,25 +451,22 @@ sampletype_pooled_otu_data_filtered.df <- otu_data_filtered.df[otu_data_filtered
 patient_group_genus_data_filtered.df <- genus_data_filtered.df[genus_data_filtered.df$taxonomy_genus %in% immunocompromised_patient_group_genus_deseq$Taxonomy,]
 patient_group_otu_data_filtered.df <- otu_data_filtered.df[otu_data_filtered.df$OTU.ID %in% immunocompromised_patient_group_otu_deseq$OTU,]
 
-# max value
 # sampletype_pooled_genus_data_filtered.df[sampletype_pooled_genus_data_filtered.df$Sample == "R1487_J1425",]
-temp <- subset(sampletype_pooled_genus_data_filtered.df, Genus == "g__Staphylococcus")
-ggplot(temp, aes(x = Sampletype_pooled, y = Read_count_logged)) +
-  geom_boxplot() +
-  geom_jitter()
+# temp <- subset(sampletype_pooled_genus_data_filtered.df, Genus == "g__Staphylococcus")
+# ggplot(temp, aes(x = Sampletype_pooled, y = Read_count_logged)) +
+  # geom_boxplot() +
+  # geom_jitter()
 
 grid_plot <- make_deseq_boxplots(my_data = sampletype_pooled_genus_data_filtered.df, 
-                    my_deseq_results = immunocompromised_sampletype_pooled_genus_deseq, 
+                    # my_deseq_results = immunocompromised_sampletype_pooled_genus_deseq, 
                     variable = "Sampletype_pooled", 
                     taxonomy_level = "Genus",
-                    # data_merge_variable = "taxonomy_genus",
-                    # deseq_merge_variable = "Taxonomy",
                     outlocation = "Result_figures/DESeq_plots/boxplots/sampletype_pooled_genus/")
 
 ggsave(plot = grid_plot,filename =  paste0("Result_figures/DESeq_plots/boxplots/all_genus_sampletype_pooled.pdf"), width = 30, height = 15, units = "cm")
 
 grid_plot <- make_deseq_boxplots(my_data = sampletype_pooled_otu_data_filtered.df, 
-                                 my_deseq_results = immunocompromised_sampletype_pooled_otu_deseq, 
+                                 # my_deseq_results = immunocompromised_sampletype_pooled_otu_deseq, 
                                  variable = "Sampletype_pooled", 
                                  taxonomy_level = "OTU",
                                  outlocation = "Result_figures/DESeq_plots/boxplots/sampletype_pooled_otu/")
@@ -466,7 +474,7 @@ grid_plot <- make_deseq_boxplots(my_data = sampletype_pooled_otu_data_filtered.d
 ggsave(plot = grid_plot,filename =  paste0("Result_figures/DESeq_plots/boxplots/all_otu_sampletype_pooled.pdf"), width = 30, height = 15, units = "cm")
 
 grid_plot <- make_deseq_boxplots(my_data = patient_group_genus_data_filtered.df, 
-                                 my_deseq_results = immunocompromised_sampletype_pooled_genus_deseq, 
+                                 # my_deseq_results = immunocompromised_sampletype_pooled_genus_deseq, 
                                  variable = "Patient_group", 
                                  taxonomy_level = "Genus",
                                  outlocation = "Result_figures/DESeq_plots/boxplots/patient_group_genus/")
@@ -474,11 +482,12 @@ grid_plot <- make_deseq_boxplots(my_data = patient_group_genus_data_filtered.df,
 ggsave(plot = grid_plot,filename =  paste0("Result_figures/DESeq_plots/boxplots/all_genus_patient_group.pdf"), width = 30, height = 15, units = "cm")
 
 grid_plot <- make_deseq_boxplots(my_data = patient_group_otu_data_filtered.df, 
-                                 my_deseq_results = immunocompromised_sampletype_pooled_otu_deseq, 
+                                 # my_deseq_results = immunocompromised_sampletype_pooled_otu_deseq, 
                                  variable = "Patient_group", 
                                  taxonomy_level = "OTU",
-                                 outlocation = "Result_figures/DESeq_plots/boxplots/patient_group_otu/")
+                                 outlocation = "Result_figures/DESeq_plots/boxplots/patient_group_otu/",
+                                 n_columns = 7)
 
-ggsave(plot = grid_plot,filename =  paste0("Result_figures/DESeq_plots/boxplots/all_otu_patient_group.pdf"), width = 30, height = 45, units = "cm")
+ggsave(plot = grid_plot,filename =  paste0("Result_figures/DESeq_plots/boxplots/all_otu_patient_group.pdf"), width = 70, height = 30, units = "cm")
 
 

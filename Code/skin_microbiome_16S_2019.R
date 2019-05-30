@@ -711,25 +711,26 @@ column_sums.df$sample <- factor(column_sums.df$sample, levels = column_sums.df$s
 myplot <- ggplot(column_sums.df, aes(x = sample, y = value)) + 
   geom_histogram(stat = "identity") +
   geom_hline(yintercept = 30000, color = 'red')+
-  geom_hline(yintercept = 20000, color = 'red')+
+  # geom_hline(yintercept = 20000, color = 'red')+
   geom_hline(yintercept = mean(column_sums.df$value), color = 'blue')+
   geom_hline(yintercept = median(column_sums.df$value), color = 'purple')+
   scale_y_continuous(breaks = seq(0,max(column_sums.df$value), 5000)) +
   xlab("Sample") +
   ylab("Read count") +
   common_theme +
-  theme(axis.text.x = element_text(angle = 90,vjust = .5))
-ggsave(plot = myplot, filename = "./Result_figures/exploratory_analysis/sample_read_depth_distribution.pdf", width=30, height=6)
+  theme(axis.text.x = element_text(angle = 90,vjust = .5, size = 3))
+ggsave(plot = myplot, filename = "./Result_figures/exploratory_analysis/sample_read_depth_distribution.pdf", width=100, height=15, units = "cm")
 
 myplot <- ggplot(column_sums.df, aes(x = value)) + 
   xlab("Read count") +
   ylab("Number of samples") +
   scale_x_continuous(breaks = seq(5000,max(column_sums.df$value), 5000)) +
-  scale_y_continuous(breaks = seq(0,50, 2)) +
+  scale_y_continuous(breaks = seq(0,length(column_sums.df$value), 5)) +
   geom_histogram(stat = "bin", bins = 60, colour = "black",fill = "grey") +
+  geom_vline(xintercept = 30000, color = 'red')+
   common_theme +
   theme(axis.text.x = element_text(angle = 90, vjust = .5))
-ggsave(plot = myplot, filename = "./Result_figures/exploratory_analysis/sample_read_depth_distribution_2.pdf", width=6, height=6)
+ggsave(plot = myplot, filename = "./Result_figures/exploratory_analysis/sample_read_depth_distribution_2.pdf", width=20, height=20, units = "cm")
 
 # summary(column_sums.df$value)
 # mean(column_sums.df$value)

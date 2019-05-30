@@ -85,6 +85,7 @@ metadata.df <- metadata.df[! metadata.df$Index %in% samples_removed,]
 # Factorise discrete columns
 metadata.df$Patient <- factor(metadata.df$Patient)
 metadata.df$Sampletype <- factor(metadata.df$Sampletype)
+metadata.df$Sampletype_pooled <- factor(metadata.df$Sampletype_pooled)
 metadata.df$Project <- factor(metadata.df$Project)
 metadata.df$Patient_group <- factor(metadata.df$Patient_group)
 metadata.df$Gender <- factor(metadata.df$Gender)
@@ -137,10 +138,12 @@ dim(otu_filtered.m)
 # CLR transform the otu matrix.
 otu_rare_clr_filtered.m <- clr(otu_rare_filtered.m)
 otu_clr_filtered.m <- clr(otu_filtered.m)
+otu_rare_clr_rel_filtered.m <- clr(t(t(otu_rare_filtered.m)/colSums(otu_rare_filtered.m)))
 
 # If there are negative values, assign them a value of zero
 otu_rare_clr_filtered.m[which(otu_rare_clr_filtered.m < 0)] <- 0
 otu_clr_filtered.m[which(otu_clr_filtered.m < 0)] <- 0
+otu_rare_clr_rel_filtered.m[which(otu_rare_clr_rel_filtered.m < 0)] <- 0
 
 # Determine which samples are missing metadata and remove them
 # variables_of_interest <- c("Sampletype", "Patient","Sampletype_pooled", "Project", "Sampletype_pooled_IEC_sep", "Sampletype_pooled_C_sep")
@@ -159,7 +162,7 @@ generate_pca <- function(pca_object, mymetadata, variable_to_plot, colour_palett
                          legend_x = NULL, legend_y = NULL, legend_x_offset = 0, legend_y_offset = 0,
                          plot_spiders = NULL, plot_ellipses = NULL,plot_hulls = NULL, legend_cols = 2, legend_title = NULL,
                          label_ellipse = F, ellipse_label_size = 0.5, ellipse_border_width = 1,variable_colours_available = F, 
-                         plot_title = NULL, use_shapes = F){
+                         plot_title = NULL, use_shapes = F, my_levels = NULL){
   pca.scores <- try(scores(pca_object, choices=c(1,2,3)))
   
   if(inherits(pca.scores, "try-error")) {
@@ -195,6 +198,16 @@ generate_pca <- function(pca_object, mymetadata, variable_to_plot, colour_palett
   metadata_ordered.df <- internal_metadata[order(rownames(internal_metadata)),]
   metadata_ordered.df <- metadata_ordered.df[order(metadata_ordered.df[[variable_to_plot]]),]
   
+  # ------------------------------------------------------------------------------------
+  # Ensure outcome variable is factored
+  # Refactor the variable column so that the levels are consistent
+  if (!is.null(my_levels)){
+    metadata_ordered.df[,variable_to_plot] <- factor(metadata_ordered.df[,variable_to_plot], levels = my_levels)
+  } else{
+    metadata_ordered.df[,variable_to_plot] <- factor(metadata_ordered.df[,variable_to_plot], levels = sort(unique(as.character(metadata_ordered.df[,variable_to_plot]))))  
+  }
+  # ------------------------------------------------------------------------------------
+  
   if (!is.null(filename)){
     pdf(filename, height=plot_height,width=plot_width)  
   }
@@ -212,7 +225,7 @@ generate_pca <- function(pca_object, mymetadata, variable_to_plot, colour_palett
   
   # Assign (unique) colours and shapes for each grouping variable
   # variable_values <- factor(sort(as.character(unique(metadata_ordered.df[[variable_to_plot]]))))
-  variable_values <- factor(as.character(unique(metadata_ordered.df[[variable_to_plot]])))
+  variable_values <- levels(metadata_ordered.df[[variable_to_plot]])
   
   # If variable colour column "variable_colour" in metadata, use colours from there
   if (variable_colours_available == T){
@@ -562,6 +575,9 @@ metadata_immunocompetent.df <- metadata_immunocompetent.df[order(rownames(metada
 otu_rare_clr_filtered_competent.m <- otu_rare_clr_filtered.m[,colnames(otu_rare_clr_filtered.m) %in% rownames(metadata_immunocompetent.df)]
 otu_rare_clr_filtered_competent.m <- otu_rare_clr_filtered_competent.m[,rownames(metadata_immunocompetent.df)]
 
+# otu_rare_clr_filtered_competent.m <- otu_rare_clr_rel_filtered.m[,colnames(otu_rare_clr_rel_filtered.m) %in% rownames(metadata_immunocompetent.df)]
+# otu_rare_clr_filtered_competent.m <- otu_rare_clr_rel_filtered_competent.m[,rownames(metadata_immunocompetent.df)]
+
 colnames(otu_rare_clr_filtered_competent.m)[!rownames(metadata_immunocompetent.df) == colnames(otu_rare_clr_filtered_competent.m)]
 
 m.pca_competent <- rda(t(otu_rare_clr_filtered_competent.m), data = metadata_immunocompetent.df)
@@ -580,6 +596,7 @@ generate_pca(m.pca_competent, mymetadata = metadata_immunocompetent.df,
              colour_palette = my_colour_palette_206_distinct,
              variable_to_plot = "Sampletype_pooled", legend_cols = 1,
              variable_colours_available = T,
+             my_levels = c("NLC", "AK", "SCC"),
              filename = paste0("Result_figures/pcoa_dbrda_plots/immunocompetent_Sampletype_pooled.pdf"))
 
 generate_pca(m.pca_competent, mymetadata = metadata_immunocompetent.df,
@@ -625,6 +642,7 @@ generate_pca(m.pca_compromised, mymetadata = metadata_immunocompromised.df,
              colour_palette = my_colour_palette_206_distinct,
              variable_to_plot = "Sampletype_pooled", legend_cols = 1,
              variable_colours_available = T,
+             my_levels = c("NLC", "AK", "SCC"),
              filename = paste0("Result_figures/pcoa_dbrda_plots/immunocompromised_Sampletype_pooled.pdf"))
 
 # Patient
