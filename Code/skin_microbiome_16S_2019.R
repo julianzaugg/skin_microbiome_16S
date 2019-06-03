@@ -377,6 +377,7 @@ metadata.df$Fitzpatrick_skin_type_colour <- all_fst_colours
 # Reassign the sample ids 
 sample_ids <- grep("R[0-9].*|S[AB][0-9].*|S[0-9].*", names(project_otu_table.df), value = T)
 
+
 # ------------------------------------------------
 # ----------- Remove unwanted lineages -----------
 
@@ -421,8 +422,10 @@ write.table(otu_taxonomy_map, file = "Result_tables/other/otu_taxonomy_map.csv",
 # Also save the unfiltered table, to avoid processing the original data table again 
 write.table(project_otu_table_unfiltered.df, file = "Result_tables/other/project_otu_table_unfiltered.csv", sep = ",", quote = F, row.names = F)
 
-
-
+# dim(metadata.df[metadata.df$Project == "immunocompromised",])
+# dim(metadata.df[metadata.df$Project == "immunocompetent",])
+# length(unique(metadata.df[metadata.df$Project == "immunocompromised",]$Patient))
+# length(unique(metadata.df[metadata.df$Project == "immunocompetent",]$Patient))
 
 # ---------------------------------------------------------------------------------------------------------------
 # ---------------------------------------------------------------------------------------------------------------
@@ -455,107 +458,6 @@ otu_unfiltered_rel.m <- t(t(otu_unfiltered.m) / colSums(otu_unfiltered.m))
 # Change nans to 0. Occurs when a sample has no hits at this point.
 otu_rel.m[is.nan(otu_rel.m)] <- 0
 otu_unfiltered_rel.m[is.nan(otu_unfiltered_rel.m)] <- 0
-
-############################################################
-## TODO Calculate the fraction of human reads in each sample
-# Get human OTUs
-# human_OTUs <- project_otu_table_unfiltered.df[grep("Mammalia", project_otu_table_unfiltered.df$taxonomy_species),]$OTU.ID
-# # otu_unfiltered.m[which(rownames(otu_unfiltered.m) %in% human_OTUs),]
-# sample_fraction_human_reads <- 
-#   melt(colSums(otu_unfiltered.m[rownames(otu_unfiltered.m) %in% human_OTUs,]) / 
-#          colSums(otu_unfiltered.m),value.name = "Fraction")
-# sample_fraction_human_reads$Patient <- unlist(lapply(rownames(sample_fraction_human_reads), function(x) metadata.df[metadata.df$Index == x,]$Patient))
-# 
-# myplot <- ggplot(sample_fraction_human_reads, aes(y= Fraction, x= Patient, fill = Patient)) +
-#   geom_boxplot() +
-#   scale_fill_manual(values = my_colour_palette_32_distinct)+
-#   scale_y_continuous(limits = c(0,1), breaks = seq(0,1,.1)) +
-#   ylab("Human fraction") +
-#   xlab("Patient") +
-#   coord_flip() +
-#   common_theme
-# myplot
-# ggsave(plot = myplot, filename = "./Result_figures/exploratory_analysis/human_fraction_reads_boxplot.pdf", width=6, height=6)
-# 
-# ####
-# bacterial_fungal_OTUs <- project_otu_table_unfiltered.df[grep("d__Bacteria|Fungi", project_otu_table_unfiltered.df$taxonomy_species),]$OTU.ID
-# sample_fraction_bacterial_fungal_reads <- 
-#   melt(colSums(otu_unfiltered.m[rownames(otu_unfiltered.m) %in% bacterial_fungal_OTUs,]) / 
-#          colSums(otu_unfiltered.m),value.name = "Fraction")
-# 
-# sample_fraction_bacterial_fungal_reads$Patient <- unlist(lapply(rownames(sample_fraction_bacterial_fungal_reads), function(x) metadata.df[metadata.df$Index == x,]$Patient))
-# 
-# myplot <- ggplot(sample_fraction_bacterial_fungal_reads, aes(y= Fraction, x= Patient, fill = Patient)) +
-#   geom_boxplot() +
-#   scale_fill_manual(values = my_colour_palette_32_distinct)+
-#   scale_y_continuous(limits = c(0,1), breaks = seq(0,1,.1)) +
-#   ylab("Bacterial and Fungal fraction") +
-#   xlab("Patient") +
-#   coord_flip() +
-#   common_theme
-# myplot
-# ggsave(plot = myplot, filename = "./Result_figures/exploratory_analysis/bacterial_fungal_fraction_reads_boxplot.pdf", width=6, height=6)
-# 
-# ###
-# fungal_OTUs <- project_otu_table_unfiltered.df[grep("Fungi", project_otu_table_unfiltered.df$taxonomy_species),]$OTU.ID
-# sample_fraction_fungal_reads <- 
-#   melt(colSums(otu_unfiltered.m[rownames(otu_unfiltered.m) %in% fungal_OTUs,]) / 
-#          colSums(otu_unfiltered.m),value.name = "Fraction")
-# 
-# sample_fraction_fungal_reads$Patient <- unlist(lapply(rownames(sample_fraction_fungal_reads), function(x) metadata.df[metadata.df$Index == x,]$Patient))
-# 
-# myplot <- ggplot(sample_fraction_fungal_reads, aes(y= Fraction, x= Patient, fill = Patient)) +
-#   geom_boxplot() +
-#   scale_fill_manual(values = my_colour_palette_32_distinct)+
-#   scale_y_continuous(limits = c(0,1), breaks = seq(0,1,.1)) +
-#   ylab("Fungal fraction") +
-#   xlab("Patient") +
-#   coord_flip() +
-#   common_theme
-# myplot
-# ggsave(plot = myplot, filename = "./Result_figures/exploratory_analysis/fungal_fraction_reads_boxplot.pdf", width=6, height=6)
-# 
-# ###
-# 
-# bacterial_OTUs <- project_otu_table_unfiltered.df[grep("d__Bacteria", project_otu_table_unfiltered.df$taxonomy_species),]$OTU.ID
-# sample_fraction_bacterial_reads <- 
-#   melt(colSums(otu_unfiltered.m[rownames(otu_unfiltered.m) %in% bacterial_OTUs,]) / 
-#          colSums(otu_unfiltered.m),value.name = "Fraction")
-# 
-# sample_fraction_bacterial_reads$Patient <- unlist(lapply(rownames(sample_fraction_bacterial_reads), function(x) metadata.df[metadata.df$Index == x,]$Patient))
-# 
-# myplot <- ggplot(sample_fraction_bacterial_reads, aes(y= Fraction, x= Patient, fill = Patient)) +
-#   geom_boxplot() +
-#   scale_fill_manual(values = my_colour_palette_32_distinct)+
-#   scale_y_continuous(limits = c(0,1), breaks = seq(0,1,.1)) +
-#   ylab("Bacterial fraction") +
-#   xlab("Patient") +
-#   coord_flip() +
-#   common_theme
-# myplot
-# ggsave(plot = myplot, filename = "./Result_figures/exploratory_analysis/bacterial_fraction_reads_boxplot.pdf", width=6, height=6)
-# 
-# 
-# ###
-# Unassigned_OTUs <- project_otu_table_unfiltered.df[project_otu_table_unfiltered.df$Domain == "Unassigned",]$OTU.ID
-# 
-# sample_fraction_unassigned_reads <- 
-#   melt(colSums(otu_unfiltered.m[rownames(otu_unfiltered.m) %in% Unassigned_OTUs,]) / 
-#          colSums(otu_unfiltered.m),value.name = "Fraction")
-# 
-# sample_fraction_unassigned_reads$Patient <- unlist(lapply(rownames(sample_fraction_unassigned_reads), function(x) metadata.df[metadata.df$Index == x,]$Patient))
-# 
-# myplot <- ggplot(sample_fraction_unassigned_reads, aes(y= Fraction, x= Patient, fill = Patient)) +
-#   geom_boxplot() +
-#   scale_fill_manual(values = my_colour_palette_32_distinct)+
-#   scale_y_continuous(limits = c(0,1), breaks = seq(0,1,.1)) +
-#   ylab("Unassigned fraction") +
-#   xlab("Patient") +
-#   coord_flip() +
-#   common_theme
-# myplot
-# ggsave(plot = myplot, filename = "./Result_figures/exploratory_analysis/unassigned_fraction_reads_boxplot.pdf", width=6, height=6)
-
 
 ############################################################
 # Filter those OTUs that are low abundance in all samples
@@ -842,7 +744,7 @@ per_sampletype$Sampletype <- factor(per_sampletype$Sampletype, levels = per_samp
 
 make_pie_graph <- function(mydata, my_colour_list = NULL){
   # Assumes two columns, first is the category, second is count
-  # my_colour_list should be a named listed with the corresponding colours provided
+  # my_colour_list should be a named list with the corresponding colours provided
   internal_mydata <- mydata
   variable <- names(mydata)[1]
   # internal_mydata <- 
@@ -928,6 +830,7 @@ samples_passing_QC <- colnames(otu.m)
 stats.df <- data.frame(Sample = samples_passing_QC)
 
 stats.df$Patient <- metadata.df[samples_passing_QC,"Patient"]
+stats.df$Project <- metadata.df[samples_passing_QC,"Project"]
 stats.df$Sampletype <- metadata.df[samples_passing_QC,"Sampletype"]
 stats.df$Sampletype_pooled <- metadata.df[samples_passing_QC,"Sampletype_pooled"]
 
@@ -937,11 +840,11 @@ stats.df[,"Filtered_rarefied_read_counts"] <- colSums(otu_rare_count.m[,samples_
 
 # Reads removed from filtering
 stats.df[,"Reads_removed_filtered"] <- stats.df[,"Original_read_counts"] - stats.df[,"Filtered_read_counts"]
-stats.df[,"Proportion_removed_filtered"] <- stats.df[,"Reads_removed_filtered"] / stats.df[,"Original_read_counts"]
+stats.df[,"Proportion_reads_removed_filtered"] <- stats.df[,"Reads_removed_filtered"] / stats.df[,"Original_read_counts"]
 
 # Reads removed from filtering and rarefaction
 stats.df[,"Reads_removed_filtered_rarefied"] <- stats.df[,"Original_read_counts"] - stats.df[,"Filtered_rarefied_read_counts"]
-stats.df[,"Proportion_removed_filtered_rarefied"] <- stats.df[,"Reads_removed_filtered_rarefied"] / stats.df[,"Original_read_counts"]
+stats.df[,"Proportion_reads_removed_filtered_rarefied"] <- stats.df[,"Reads_removed_filtered_rarefied"] / stats.df[,"Original_read_counts"]
 
 # ---------------------------------------------
 # Read counts and proportions original, unprocessed data. Summing each domain + unassigned should equal one

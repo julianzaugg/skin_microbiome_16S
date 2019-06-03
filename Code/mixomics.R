@@ -1,3 +1,6 @@
+# mixOmics
+# sPLS-DA selects the most discriminative OTUs/features that best characterise each group for a specific variable
+
 library(mixOmics)
 library(reshape2)
 
@@ -36,6 +39,7 @@ setwd("/Users/julianzaugg/Desktop/ACE/major_projects/skin_microbiome_16S/")
 
 # Load the OTU - taxonomy mapping file
 otu_taxonomy_map.df <- read.csv("Result_tables/other/otu_taxonomy_map.csv", header = T)
+rownames(otu_taxonomy_map.df) <- otu_taxonomy_map.df$OTU.ID
 
 # Load the processed metadata
 metadata.df <- read.csv("Result_tables/other/processed_metadata.csv", sep =",", header = T)
@@ -96,13 +100,13 @@ otu_rare.m <- otu_rare.m[,rownames(metadata.df)]
 
 # ------------------------------------------------------------------------
 # ------------------------------------------------------------------------
-# Compare variables in immunocompromised cohort
-
-run_mixomics <- function(my_otu_matrix, my_metadata, outcome_variable, my_levels = NULL, variable_colours_available = T, use_shapes = T){
+run_mixomics <- function(my_otu_matrix, my_metadata, outcome_variable, prefix = "", my_levels = NULL, variable_colours_available = T, use_shapes = T){
+  
+  # Assign internal data
   internal_otu_matrix.m <- my_otu_matrix
   internal_metadata.df <- my_metadata
   
-  # Order the feature table and the metadata to be the same
+  # Ensure the order of the feature table and the metadata are the same
   internal_otu_matrix.m <- internal_otu_matrix.m[,order(rownames(internal_metadata.df))]
   internal_metadata.df <- internal_metadata.df[order(rownames(internal_metadata.df)),]
   
@@ -123,8 +127,7 @@ run_mixomics <- function(my_otu_matrix, my_metadata, outcome_variable, my_levels
   # Number of features to test/keep
   list.keepX = c(c(5:10), seq(15, 50, 5), seq(60, 200, 10))
   
-  # This tests what number of OTUs and components to use to give us the best discriminatory power
-  # folds tells it how many samples to keep in each test group - this has to be less than the number of samples in the smallest group
+  # This tests what number of features and components to use to give the best discriminatory power
   tune.splsda.mydata <- tune.splsda(X=t(internal_otu_matrix.m), Y = outcome, 
                                    validation = 'Mfold', dist = 'max.dist', 
                                    measure = "BER", logratio = "CLR",
@@ -135,7 +138,8 @@ run_mixomics <- function(my_otu_matrix, my_metadata, outcome_variable, my_levels
   tune.splsda.mydata$choice.ncomp #what does mixomics think is the best number of components?
   tune.splsda.mydata$choice.keepX #what does mixomics think is the best number of OTUs?
   
-  pdf(paste0("Result_figures/mixomics/", outcome_variable, "__plsda_tune.pdf"), width=10, height=6)
+  # Save the plot describing the classification error
+  pdf(paste0("Result_figures/mixomics/",prefix, outcome_variable, "__plsda_tune.pdf"), width=10, height=6)
   plot(tune.splsda.mydata)
   dev.off()
   
@@ -149,13 +153,15 @@ run_mixomics <- function(my_otu_matrix, my_metadata, outcome_variable, my_levels
     ncomp=2
   }
   
-  select.keepX <- tune.splsda.mydata$choice.keepX[1:ncomp] # optimal number of variables/features to select
-  select.keepX
+  # Optimal number of variables/features to keep for each component
+  select.keepX <- tune.splsda.mydata$choice.keepX[1:ncomp]
   
   # Final model. Use settings from tuning (ncomp and select.keepX)
   splsda.mydata <- splsda(X=t(internal_otu_matrix.m), Y = outcome, logratio = "CLR",keepX = select.keepX,scale = TRUE, ncomp = ncomp)
 
   
+  # ------------------------------------------------------------------------------------
+  # Set up the colour and shape for variables for plotIndiv
   variable_values <- levels(internal_metadata.df[[outcome_variable]])
   
   # If variable colour column "variable_colour" in metadata, use colours from there
@@ -170,9 +176,9 @@ run_mixomics <- function(my_otu_matrix, my_metadata, outcome_variable, my_levels
   } else{
     variable_shapes <- setNames(rep(c(21),length(variable_values))[1:length(variable_values)],variable_values)  
   }
-  
-  #here is a plot with sample ids
-  pdf(paste0("Result_figures/mixomics/", outcome_variable, "__plotIndiv.pdf"), width=10, height=6)
+
+  # Plot the first two components
+  pdf(paste0("Result_figures/mixomics/",prefix, outcome_variable, "__plotIndiv_comp_1_2.pdf"), width=10, height=6)
   plotIndiv(splsda.mydata, comp = c(1,2), 
             group = outcome,
             ellipse = T, 
@@ -184,44 +190,113 @@ run_mixomics <- function(my_otu_matrix, my_metadata, outcome_variable, my_levels
             col.per.group = variable_colours)
   dev.off()
   
-  # test performance of final model. Do not include cpus = "" as this breaks.
+  # If there is a third component, plot it against 1 as well
+  if (ncomp > 3){
+    pdf(paste0("Result_figures/mixomics/",prefix, outcome_variable, "__plotIndiv_comp_1_3.pdf"), width=10, height=6)
+    plotIndiv(splsda.mydata, comp = c(1,3), 
+              group = outcome,
+              ellipse = T, 
+              legend = T,
+              ind.names = F,
+              title = 'sPLS-DA, comp 1 & 3',
+              pch = variable_shapes,
+              star = F,
+              col.per.group = variable_colours)
+    dev.off()
+  }
+  
+  
+  # ------------------------------------------------------------------------------------
+  
+  # Test performance of final model. Do not include cpus = "" as this breaks (potential bug?)
   perf.mydata <- perf(splsda.mydata, validation = "Mfold", folds = 5, dist = 'max.dist', nrepeat = 10, progressBar = FALSE)
+  
+  
+  # selectVar(splsda.mydata, comp = 1) = outputs the selected features and their coeffecients (loading vector)
+  # The absolute value of $value reflects the importance of a feature in the microbial signature. The 
+  # sign of the value (+/-) indicates positive or negative correlations between the features, relative the proportions of others.
+  
+  # We can combine the selected features with their stability measures from the performance testing
+  ind.match = match(selectVar(splsda.mydata, comp = 1)$name, names(perf.mydata$features$stable[[1]]))
+  # Extract the frequency of selection of those selected variables
+  # This tells us how many times each of the OTUs were picked up as discriminatory in each of the subtests mixomics dis
+  Freq = as.numeric(perf.mydata$features$stable[[1]][ind.match])
+  freqtable1 = data.frame(selectVar(splsda.mydata, comp = 1)$value, Freq)
+  # freqtable1
+  # ------------------------------------------------------------------------------------
   
   # Calculate the loadings for each component
   for (comp in 1:ncomp){
-    pdf(paste0("Result_tables/mixomics/", outcome_variable, "__","comp_", comp, ",loadings.splsda.waterfall.pdf"), width=10, height=10)
-    contrib = plotLoadings(splsda.mydata, contrib = 'max', method = 'median', comp = comp, size.title = 1, size.name = 0.5, 
-                           name.var =  paste(otus.pretty.taxonomy.v[colnames(data.patient)], colnames(data.patient)))
+    pdf(paste0("Result_figures/mixomics/",prefix, outcome_variable, "__","comp_", comp, "_loadings.splsda.waterfall.pdf"), width=10, height=10)
+    splsda.loadings <- plotLoadings(splsda.mydata, 
+                           contrib = 'max', 
+                           method = 'mean', 
+                           comp = comp, 
+                           size.title = 1, 
+                           size.name = 0.5,
+                           legend = T,
+                           legend.color = variable_colours)
     dev.off()
+    splsda.loadings[,"taxonomy_genus"] <- otu_taxonomy_map.df[rownames(splsda.loadings),]$taxonomy_genus
+    splsda.loadings[,"Genus"] <- otu_taxonomy_map.df[rownames(splsda.loadings),]$Genus
+    splsda.loadings[,'abs_importance'] <- abs(splsda.loadings[,"importance"])
+    splsda.loadings <- matrix2df(splsda.loadings, "OTU.ID")
+    write.csv(x = splsda.loadings, file = paste0("Result_tables/mixomics/",prefix, outcome_variable, "__", "comp_", comp, ".loadings.csv"), quote = F, row.names = F)
   }
-
 }
 
+
+# Compare variables in immunocompromised cohort
 immunocompromised_metadata.df <- metadata.df[metadata.df$Project == "immunocompromised",]
 immunocompromised_otu_rare.m <- otu_rare.m[,rownames(immunocompromised_metadata.df)]
 
 # Like DESeq, filter out features that do not have at # reads in at least one sample
 dim(immunocompromised_otu_rare.m)
-immunocompromised_otu_rare.m <- filter_matrix_rows(immunocompromised_otu_rare.m,50)
+immunocompromised_otu_rare.m <- filter_matrix_rows(immunocompromised_otu_rare.m,15)
 # Could use sum instead
 # immunocompromised_otu_rare.m <- immunocompromised_otu_rare.m[which(apply(X = immunocompromised_otu_rare.m, MARGIN = 1, FUN = sum) >= 30),]
 dim(immunocompromised_otu_rare.m)
 
-
+# Sampletype_pooled
 run_mixomics(my_otu_matrix = immunocompromised_otu_rare.m, 
-                     my_metadata = immunocompromised_metadata.df, 
-                     outcome_variable = "Sampletype_pooled",
-                     my_levels = c("NLC","AK","SCC"))
+             my_metadata = immunocompromised_metadata.df, 
+             prefix = "immunocompromised_",
+             use_shapes = T,
+             outcome_variable = "Sampletype_pooled",
+             my_levels = c("NLC","AK","SCC"))
+
+# Patient_group
+run_mixomics(my_otu_matrix = immunocompromised_otu_rare.m, 
+             my_metadata = immunocompromised_metadata.df, 
+             prefix = "immunocompromised_",
+             use_shapes = T,
+             outcome_variable = "Patient_group",
+             my_levels = c("Control","AK","SCC"))
+
+# Number_of_meds
+run_mixomics(my_otu_matrix = immunocompromised_otu_rare.m, 
+             my_metadata = immunocompromised_metadata.df, 
+             prefix = "immunocompromised_",
+             use_shapes = T,
+             outcome_variable = "Number_of_meds",
+             my_levels = c("1","2","3"))
 
 
-
+# Compare cohorts
+otu_rare_filtered.m <- filter_matrix_rows(otu_rare.m,15)
+run_mixomics(my_otu_matrix = otu_rare_filtered.m,
+             my_metadata = metadata.df,
+             prefix = "both_cohorts_",
+             use_shapes = T,
+             outcome_variable = "Project",
+             my_levels = c("immunocompetent","immunocompromised"))
 
 
 
 immunocompromised_otu_rare.m <- immunocompromised_otu_rare.m + 0.1
 
 # Number of features to test/keep
-list.keepX = c(c(5:10), seq(15, 50, 5), seq(60, 200, 10))
+list.keepX = c(c(5:10), seq(15, 50, 5), seq(60, 100, 10))
 
 
 # First we are going to test Sampletype_pooled
@@ -268,12 +343,12 @@ plot(perf.mydata)
 perf.mydata$error.rate #this tells us our error rate for classification
 perf.mydata$error.rate$BER
 
-# Here we match the selected variables to the stable features for each component
-for (comp in 1:ncomp){
-  
-}
 
+# selectVar(splsda.mydata, comp = 1) = outputs the selected features and their coeffecients (loading vector)
+# The absolute value of $value reflects the importance of a feature in the microbial signature. The 
+# sign of the value (+/-) indicates positive or negative correlations between the features, relative the proportions of others.
 
+# We can combine the selected features with their stability measures from the performance testing
 ind.match = match(selectVar(splsda.mydata, comp = 1)$name, names(perf.mydata$features$stable[[1]]))
 #extract the frequency of selection of those selected variables
 #this tells us how many times each of the OTUs were picked up as discriminatory in each of the subtests mixomics dis
@@ -282,11 +357,12 @@ freqtable1 = data.frame(selectVar(splsda.mydata, comp = 1)$value, Freq)
 freqtable1 # this is for component 1
 
 #generate loadings plot of selected OTUs
-temp <- plotLoadings(splsda.mydata, comp = 1, 
+splsda.loadings <- plotLoadings(splsda.mydata, comp = 1, 
              group = immunocompromised_metadata.df$Sampletype_pooled, 
              title = 'Loadings on comp 1', 
              contrib = 'max', 
-             method = 'mean')
+             method = 'mean',
+             ndisplay = 30)
 # TODO - can add additional data to loading dataframe
 # e.g. temp[,'taxonomy'] <- taxonomy.v[rownames(temp)]
 # Use the taxonomy map to determine the taxonomy string

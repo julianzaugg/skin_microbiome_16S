@@ -279,7 +279,7 @@ for (var in discrete_variables) {
 # Calculate the beta-diversity for each variable 
 # Centre-log transform the counts first and use a euclidean distance. This should be equivalent or superior to 
 # a bray curtis transform/distance used on counts. 
-# Normally we would use un-rarefied data, however since our data is not truly rarified, this should be ok.
+# It is unclear whether un-rarefied vs rarefied data should be used. Our data is partially rarefied, this should be ok.
 # As far as I can tell in the literature, the euclidean distance between CLR values is an appropriate beta diversity measure
 
 # beta_diversity_significances <- data.frame("Variable" = character(),
@@ -326,9 +326,8 @@ for (var in discrete_variables) {
 
 
 # Now that we have calculated the diversities for each sample, we can test if diversity distributions are significantly different between groups:
-# Sample types (sites)
-# Disease states
-# Disease states within the same sample type
+# Lesion types
+# Cohorts
 
 # Tests that can be used to compare multiple discrete groups include:
 # kruskal-wallis (non-parametric, data does not need to be normal, typically used for more than two groups)
@@ -375,10 +374,10 @@ write.csv(sample_type_comparison, file = "Result_tables/diversity_analysis/sampl
 
 # cohort vs cohort
 cohort_comparison <- data.frame("Group_1" = character(),
-                                   "Group_2" = character(),
-                                   "Shannon_p-value" = character(),
-                                   "Simpson_p-value" = character(),
-                                   "Chao1_p-value" = character())
+                                "Group_2" = character(),
+                                "Shannon_p-value" = character(),
+                                "Simpson_p-value" = character(),
+                                "Chao1_p-value" = character())
 
 cohort_combinations <- combn(as.character(unique(full$Project)), 2)
 for (i in 1:ncol(cohort_combinations)) {
