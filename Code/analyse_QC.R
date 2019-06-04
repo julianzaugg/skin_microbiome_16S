@@ -35,9 +35,18 @@ qc_results.df <- read.csv("Result_tables/other/QC_summary.csv")
 # Remove negative samples
 qc_results.df <- qc_results.df[!qc_results.df$Sampletype == "negative",]
 
-dim(qc_results.df)
-head(qc_results.df)
-dim(qc_results.df[!qc_results.df$Sampletype == "negative",])
+# length(qc_results.df$Patient[which(grepl("MST", qc_results.df$Patient))]) 
+# length(unique(qc_results.df$Patient[which(grepl("MST", qc_results.df$Patient))]))
+# length(qc_results.df$Patient[which(!grepl("MST", qc_results.df$Patient))])
+# length(unique(qc_results.df$Patient[which(!grepl("MST", qc_results.df$Patient))]))
+
+qc_results.df %>%
+  group_by(Project, Sampletype_pooled) %>%
+  summarise(N_patient = n_distinct(Patient), N_sample = n_distinct(Sample)) %>%
+  as.data.frame()
+
+#10 samples, 9 patients CORRECT
+# sort(subset(qc_results.df, Project == "immunocompromised" & Sampletype_pooled == "SCC")$Patient)
 
 
 # How many reads were lost from rarefaction and filtering

@@ -742,18 +742,6 @@ per_sampletype <- metadata.df %>%
 per_sampletype$Sampletype <- factor(per_sampletype$Sampletype, levels = per_sampletype$Sampletype)
 
 
-make_pie_graph <- function(mydata, my_colour_list = NULL){
-  # Assumes two columns, first is the category, second is count
-  # my_colour_list should be a named list with the corresponding colours provided
-  internal_mydata <- mydata
-  variable <- names(mydata)[1]
-  # internal_mydata <- 
-  #   mydata %>%
-  #   arrange(desc(taxonomy_genus)) %>%
-  #   mutate(lab.ypos = cumsum(normalised_mean_abundance) - .5*normalised_mean_abundance)
-}
-
-
 # temp <- unique(metadata.df[,c("Sampletype", "Sampletype_colour")])
 # sampletype_colours <- setNames(temp$Sampletype_colour, temp$Sampletype)
 # ggplot(per_sampletype, aes(x ="", y = Count, fill = Sampletype)) +
@@ -813,7 +801,49 @@ per_cohort_sampletype_pooled <- metadata.df %>%
 write.csv(per_cohort_sampletype,"Result_tables/other/metadata_cohort_sampletype_counts.csv", row.names = F)
 write.csv(per_cohort_sampletype_pooled,"Result_tables/other/metadata_cohort_sampletype_pooled_counts.csv", row.names = F)
 
+# Number of samples and patients for each Number_of_meds
+number_of_meds_summary.df <- 
+  metadata.df %>% 
+  filter(Project == "immunocompromised") %>%
+  group_by(Number_of_meds) %>%
+  summarise(N_patients = n_distinct(Patient), N_samples = n_distinct(Index)) %>%
+  as.data.frame()
 
+write.csv(number_of_meds_summary.df,"Result_tables/other/number_of_meds_summary.csv", row.names = F)
+
+# Number of samples and patients for each Fitzpatrick_skin_type
+fitzpatrick_skin_type_summary.df <- 
+  metadata.df %>% 
+  filter(Project == "immunocompromised") %>%
+  group_by(Fitzpatrick_skin_type) %>%
+  summarise(N_patients = n_distinct(Patient), N_samples = n_distinct(Index)) %>%
+  as.data.frame()
+
+write.csv(fitzpatrick_skin_type_summary.df,"Result_tables/other/Fitzpatrick_skin_type_summary.csv", row.names = F)
+
+# Number of samples and patients for each Patient_group
+patient_group_summary.df <-
+  metadata.df %>% 
+  filter(Project == "immunocompromised") %>%
+  group_by(Patient_group) %>%
+  summarise(N_patients = n_distinct(Patient), N_samples = n_distinct(Index)) %>%
+  as.data.frame()
+
+write.csv(patient_group_summary.df,"Result_tables/other/patient_group_summary.csv", row.names = F)
+
+# metadata.df %>% 
+#   filter(Project == "immunocompromised") %>%
+#   group_by(Sampletype_pooled) %>%
+#   summarise(N_patients = n_distinct(Patient), N_samples = n_distinct(Index)) %>%
+#   as.data.frame()
+# temp <- metadata.df %>% filter(Project == "immunocompromised")
+# a = sort(unique(subset(temp, Patient_group == "SCC")$Patient))
+# b = sort(unique(subset(temp, Sampletype_pooled == "SCC")$Patient))
+# a[!a %in% b]
+# b
+# unique(sort(subset(qc_results.df, Project == "immunocompromised" & Sampletype_pooled == "SCC")$Patient))
+# 
+# b %in% metadata.df[samples_passing_QC,]$Patient
 
 # ------------------------------------
 #           Reads stats
@@ -833,6 +863,7 @@ stats.df$Patient <- metadata.df[samples_passing_QC,"Patient"]
 stats.df$Project <- metadata.df[samples_passing_QC,"Project"]
 stats.df$Sampletype <- metadata.df[samples_passing_QC,"Sampletype"]
 stats.df$Sampletype_pooled <- metadata.df[samples_passing_QC,"Sampletype_pooled"]
+stats.df$Patient_group <- metadata.df[samples_passing_QC,"Patient_group"]
 
 stats.df[,"Original_read_counts"] <- colSums(otu_unfiltered.m[,samples_passing_QC])
 stats.df[,"Filtered_read_counts"] <- colSums(otu.m[,samples_passing_QC])

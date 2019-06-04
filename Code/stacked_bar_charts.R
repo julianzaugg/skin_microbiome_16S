@@ -59,13 +59,13 @@ class_data.df <- read.csv("Result_tables/other/class_counts_abundances_and_metad
 class_data.df <- class_data.df[class_data.df$Sampletype != "negative",]
 
 # Just use IEC sep pooled labels
-class_data.df$Sampletype <- factor(class_data.df$Sampletype_pooled_IEC_sep)
-class_data.df$Sampletype_colour <- class_data.df$Sampletype_pooled_IEC_sep_colour
+# class_data.df$Sampletype <- factor(class_data.df$Sampletype_pooled_IEC_sep)
+# class_data.df$Sampletype_colour <- class_data.df$Sampletype_pooled_IEC_sep_colour
 
 
 # ------------------------------------------------------------------------------------------
 
-generate_taxa_summary <- function(mydata, taxa_column, abundance_column= "Relative_abundance_rarified"){
+generate_taxa_summary <- function(mydata, taxa_column, abundance_column= "Relative_abundance_rarefied"){
   # Generate a summary table of each taxa for each group. Use this to filter to taxa of interest
   # For each taxa, count the :
   #   number of samples it is in
@@ -110,7 +110,7 @@ relabel_low_abundance_taxa <- function(mydata, taxa_summary, my_top_n = 10){
 }
 
 # Get taxonomy summary for the dataset
-class_taxa_summary.df <- generate_taxa_summary(class_data.df,taxa_column = "taxonomy_class", abundance_column = "Relative_abundance_rarified")
+class_taxa_summary.df <- generate_taxa_summary(class_data.df,taxa_column = "taxonomy_class", abundance_column = "Relative_abundance_rarefied")
 
 # Relabel lower abundance taxa to "Other"
 class_data_processed.df <- relabel_low_abundance_taxa(class_data.df, class_taxa_summary.df, my_top_n =12)
@@ -136,9 +136,6 @@ create_stacked_bar_charts <- function(mydata, facet_variable, annotate_variable)
   barplots.l <- list()
   for (fv in unique(mydata[,facet_variable])){
     data_subset <- subset(mydata, get(facet_variable) == fv)
-    # print(mydata)
-    # print(fc)
-    # print( unique(mydata[,facet_variable]))
     data_subset[,annotate_variable] <- factor(data_subset[,annotate_variable], levels = sort(unique(as.character(data_subset[,annotate_variable]))))
     data_subset <- data_subset[order(data_subset[, annotate_variable]),]
     annotation_data <- unique(data_subset[,c("Sample", annotate_variable, paste0(annotate_variable,"_colour"))])
@@ -152,8 +149,7 @@ create_stacked_bar_charts <- function(mydata, facet_variable, annotate_variable)
         function(x) variable_shapes[x][[1]]
       )
     )
-    
-    myplot <- ggplot(data_subset, aes(x = Sample, y = Relative_abundance_rarified, fill = taxonomy_class)) +
+    myplot <- ggplot(data_subset, aes(x = Sample, y = Relative_abundance_rarefied, fill = taxonomy_class)) +
       geom_bar(stat = "identity") +
       scale_fill_manual(values = taxa_colours.l, name = "Taxonomy", guide = F) +
       
@@ -176,7 +172,7 @@ create_stacked_bar_charts <- function(mydata, facet_variable, annotate_variable)
   }
   
   # Create another plot to make the legend. Since this contains all samples, the legend will have all taxa. 
-  all_sample_plot <- ggplot(mydata, aes(x = Sample, y = Relative_abundance_rarified, fill = taxonomy_class)) +
+  all_sample_plot <- ggplot(mydata, aes(x = Sample, y = Relative_abundance_rarefied, fill = taxonomy_class)) +
     geom_bar(stat = "identity") +
     scale_fill_manual(values = c(my_colour_pallete_12_soft, "grey"), name = "Taxonomy")
   
@@ -184,7 +180,7 @@ create_stacked_bar_charts <- function(mydata, facet_variable, annotate_variable)
   colour_list <- unique(mydata[,c(annotate_variable,paste0(annotate_variable,"_colour"))])
   colour_list <- setNames(as.character(colour_list[,2]), as.character(colour_list[,1]))
   
-  all_sample_plot_for_colour <- ggplot(mydata, aes(x = Sample, y = Relative_abundance_rarified, fill = get(annotate_variable))) +
+  all_sample_plot_for_colour <- ggplot(mydata, aes(x = Sample, y = Relative_abundance_rarefied, fill = get(annotate_variable))) +
     geom_point(aes(shape = get(annotate_variable)), color = "black", stroke = .1) +
     scale_shape_manual(values = c(25,24,23), name = annotate_variable) +
     scale_fill_manual(values = colour_list, name = annotate_variable)
@@ -212,10 +208,11 @@ create_stacked_bar_charts <- function(mydata, facet_variable, annotate_variable)
 
 
 my_grid_plot <- create_stacked_bar_charts(mydata = subset(class_data_processed.df, Project == "immunocompetent"), facet_variable = "Patient", annotate_variable = "Sampletype_pooled")
-ggsave(my_grid_plot, filename = "Result_figures/abundance_analysis_plots/stacked_bar_charts.pdf", height = 50, width =70, units = "cm")
+ggsave(my_grid_plot, filename = "Result_figures/abundance_analysis_plots/immunocompetent_stacked_bar_charts.pdf", height = 50, width =70, units = "cm")
 
 my_grid_plot <- create_stacked_bar_charts(mydata = subset(class_data_processed.df, Project == "immunocompromised"), facet_variable = "Patient", annotate_variable = "Sampletype_pooled")
-ggsave(my_grid_plot, filename = "Result_figures/abundance_analysis_plots/stacked_bar_charts.pdf", height = 50, width =40, units = "cm")
+ggsave(my_grid_plot, filename = "Result_figures/abundance_analysis_plots/immunocompromised_stacked_bar_charts.pdf", height = 50, width =40, units = "cm")
+
 
 
 
@@ -245,7 +242,7 @@ for (patient in unique(class_data_processed.df$Patient)){
                                                                                ifelse(x == "IEC", 24, 
                                                                                       ifelse(x == "NLC", 23, 22))))
 
-  myplot <- ggplot(patient_data, aes(x = Sample, y = Relative_abundance_rarified, fill = taxonomy_class)) +
+  myplot <- ggplot(patient_data, aes(x = Sample, y = Relative_abundance_rarefied, fill = taxonomy_class)) +
     geom_bar(stat = "identity") +
     scale_fill_manual(values = taxa_colours.l, name = "Taxonomy", guide = F) +
     # scale_fill_manual(values = taxa_colours.l, name = "Taxonomy") +
@@ -320,7 +317,7 @@ MS_plot_names <- sort(names(barplots.l)[!names(barplots.l) %in% MST_plot_names])
 
 
 # Create another plot to make the legend. Since this contains all samples, the legend will have all taxa. 
-all_sample_plot <- ggplot(class_data_processed.df, aes(x = Sample, y = Relative_abundance_rarified, fill = taxonomy_class)) +
+all_sample_plot <- ggplot(class_data_processed.df, aes(x = Sample, y = Relative_abundance_rarefied, fill = taxonomy_class)) +
   geom_bar(stat = "identity") +
   scale_fill_manual(values = c(my_colour_pallete_12_soft, "grey"), name = "Taxonomy")
 
@@ -328,12 +325,12 @@ all_sample_plot <- ggplot(class_data_processed.df, aes(x = Sample, y = Relative_
 colour_list <- unique(class_data_processed.df[,c("Sampletype","Sampletype_colour")])
 colour_list <- setNames(as.character(colour_list[,2]), as.character(colour_list[,1]))
 
-all_sample_plot_for_lesion_colour <- ggplot(class_data_processed.df, aes(x = Sample, y = Relative_abundance_rarified, fill = Sampletype)) +
+all_sample_plot_for_lesion_colour <- ggplot(class_data_processed.df, aes(x = Sample, y = Relative_abundance_rarefied, fill = Sampletype)) +
   geom_point(aes(shape = Sampletype), color = "black", stroke = .1) +
   scale_shape_manual(values = c(25,24,23,22), name = "Lesion type") +
   scale_fill_manual(values = colour_list, name = "Lesion type")
 
-# all_sample_plot_for_lesion_colour <- ggplot(class_data_processed.df, aes(x = Sample, y = Relative_abundance_rarified, fill = DX_Groups)) +
+# all_sample_plot_for_lesion_colour <- ggplot(class_data_processed.df, aes(x = Sample, y = Relative_abundance_rarefied, fill = DX_Groups)) +
 #   geom_point(aes(shape = DX_Groups), color = "black", stroke = .1) +
 #   scale_shape_manual(values = c(25,24,23), name = "Disease state") +
 #   scale_fill_manual(values = colour_list, name = "Disease state")

@@ -138,6 +138,12 @@ metadata.df <- read.csv("Result_tables/other/processed_metadata.csv", sep =",", 
 # Remove negative samples
 metadata.df <- metadata.df[!metadata.df$Sampletype == "negative",]
 
+# Set order of variables
+metadata.df$Sampletype_pooled <- factor(metadata.df$Sampletype_pooled, levels = c("NLC", "AK", "SCC"))
+metadata.df$Patient_group <- factor(metadata.df$Patient_group, levels = c("Control", "AK", "SCC"))
+metadata.df$Number_of_meds <- factor(metadata.df$Number_of_meds, levels = c("1", "2", "3"))
+metadata.df$Fitzpatrick_skin_type <- factor(metadata.df$Fitzpatrick_skin_type, levels = c("1", "2", "3", "4"))
+
 # Set the Index to be the rowname
 rownames(metadata.df) <- metadata.df$Index
 
@@ -167,8 +173,11 @@ otu_true_rare.m <- t(rrarefy(t(otu.m[,colSums(otu.m) >= 5000]), 5000))
 
 
 # Define the discrete variables
+# For both cohorts
 discrete_variables <- c("Project","Patient","Sampletype", "Sampletype_pooled")
-
+# For immunocompromised
+discrete_variables_immunocompromised <- c("Patient","Sampletype", "Sampletype_pooled", 
+                                          "Number_of_meds", "Patient_group", "Fitzpatrick_skin_type")
 
 # create phyloseq object
 otu_rare_phyloseq <- otu_table(otu_rare.m, taxa_are_rows=TRUE)
@@ -182,29 +191,126 @@ otu_rare_alpha.df <- otu_rare_alpha.df[rownames(metadata.df),]
 full=cbind(metadata.df, otu_rare_alpha.df)
 
 
+
 # ------------------------------------------
-# Generate plots
-# For each sample type
-myplot <- generate_diversity_boxplot(full, variable = "Sampletype_pooled",metric = "Chao1",variable_colours_available = T) + 
-  guides(fill = F, color = F) + 
-  # ggtitle("Chao1") +
-  facet_wrap(~Project)
-  # scale_y_continuous(limits = c(0,300), breaks = seq(0,300,50))
-ggsave(filename = paste0("Result_figures/diversity_analysis/sample_Type_Chao1.pdf"),myplot, width = 15, height = 8,units = "cm")
+# Generate plots based on diversity values and metadata
 
-myplot <- generate_diversity_boxplot(full, variable = "Sampletype_pooled",metric = "Shannon",variable_colours_available = T) + 
-  guides(fill = F, color = F) + 
-  # ggtitle("Shannon") +
-  scale_y_continuous(limits = c(0,6), breaks = seq(0,6,1))+
-  facet_wrap(~Project)
-ggsave(filename = paste0("Result_figures/diversity_analysis/sample_Type_Shannon.pdf"),myplot, width = 15, height = 8,units = "cm")
+generate_diversity_boxplot_2 <- function(mydata, variable, metric, variable_colours_available = T){
+  internal_data.df <- mydata[!is.na(mydata[variable]),]
+  variable_values <- factor(as.character(unique(internal_data.df[[variable]])))
+  if (variable_colours_available == T){
+    color_col_name <- paste0(variable, "_colour")
+    variable_colours <- setNames(as.character(unique(internal_data.df[[color_col_name]])), as.character(unique(internal_data.df[[variable]])))
+  } else{
+    variable_colours <- setNames(my_colour_pallete_206_distinct[1:length(variable_values)], variable_values)  
+  }
+  myplot <- ggplot(internal_data.df, aes(x = get(variable), y = get(metric))) +
+    geom_boxplot(outlier.shape = NA, aes(fill = get(variable))) +
+    scale_fill_manual(values = variable_colours, name = variable) +
+    geom_jitter(size=0.5, width = 0.10, height=0) +
+    guides(fill=FALSE) +
+    # scale_y_continuous(limits = c(0,4.5), breaks = seq(0,4.5,.5)) +
+    xlab("") +
+    ylab(metric)  +
+    common_theme +
+    theme(panel.border = element_blank(), 
+          panel.grid.major = element_blank(),
+          panel.grid.minor = element_blank(),
+          axis.line = element_line(colour = "black", size = 0.5),
+          panel.background = element_blank(),
+          strip.background = element_rect(fill = "white", colour = "white", size = 1),
+          strip.text = element_text(size = 6),
+          legend.key=element_blank(),
+          legend.direction="vertical",
+          legend.background = element_rect(colour ="white", size = .3),
+          legend.text.align = 0,
+          legend.title = element_text(size=10, face="bold"),
+          legend.title.align = 0.5,
+          legend.margin = margin(c(2,2,2,2)),
+          legend.key.height=unit(.4,"cm"),
+          legend.text = element_text(size = 8),
+          axis.text = element_text(size = 9, colour = "black"),
+          axis.title = element_text(size = 10,face = "bold"),
+          complete = F,
+          plot.title = element_text(size = 6))
+  myplot
+}
 
-myplot <- generate_diversity_boxplot(full, variable = "Sampletype_pooled",metric = "Simpson",variable_colours_available = T) + 
-  guides(fill = F, color = F) + 
-  # ggtitle("Simpson") +
-  scale_y_continuous(limits = c(0,1), breaks = seq(0,1,.2))+
-  facet_wrap(~Project)
-ggsave(filename = paste0("Result_figures/diversity_analysis/sample_Type_Simpson.pdf"),myplot, width = 15, height = 8,units = "cm")
+# For each cohort (Project)
+myplot <- generate_diversity_boxplot_2(full, "Project", "Chao1", variable_colours_available = T)
+ggsave(filename = paste0("Result_figures/diversity_analysis/Project_sampletype_pooled_Chao1.pdf"),myplot, width = 9, height = 8,units = "cm")
+myplot <- generate_diversity_boxplot_2(full, "Project", "Shannon", variable_colours_available = T)
+ggsave(filename = paste0("Result_figures/diversity_analysis/Project_sampletype_pooled_Shannon.pdf"),myplot, width = 9, height = 8,units = "cm")
+myplot <- generate_diversity_boxplot_2(full, "Project", "Simpson", variable_colours_available = T)
+ggsave(filename = paste0("Result_figures/diversity_analysis/Project_sampletype_pooled_Simpson.pdf"),myplot, width =9, height = 8,units = "cm")
+
+# For each Sampletype_pooled (cohorts combined)
+myplot <- generate_diversity_boxplot_2(full, "Sampletype_pooled", "Chao1", variable_colours_available = T)
+ggsave(filename = paste0("Result_figures/diversity_analysis/both_cohorts_sampletype_pooled_Chao1.pdf"),myplot, width = 8, height = 8,units = "cm")
+
+myplot <- generate_diversity_boxplot_2(full, "Sampletype_pooled", "Shannon", variable_colours_available = T)
+ggsave(filename = paste0("Result_figures/diversity_analysis/both_cohorts_sampletype_pooled_Shannon.pdf"),myplot, width = 8, height = 8,units = "cm")
+
+myplot <- generate_diversity_boxplot_2(full, "Sampletype_pooled", "Simpson", variable_colours_available = T)
+ggsave(filename = paste0("Result_figures/diversity_analysis/both_cohorts_sampletype_pooled_Simpson.pdf"),myplot, width = 8, height = 8,units = "cm")
+
+# For each Sampletype_pooled in each cohort
+myplot <- generate_diversity_boxplot_2(full, "Sampletype_pooled", "Chao1", variable_colours_available = T) +facet_wrap(~Project)
+ggsave(filename = paste0("Result_figures/diversity_analysis/sampletype_pooled_Chao1.pdf"),myplot, width = 11, height = 8,units = "cm")
+
+myplot <- generate_diversity_boxplot_2(full, "Sampletype_pooled", "Shannon", variable_colours_available = T) +facet_wrap(~Project)
+ggsave(filename = paste0("Result_figures/diversity_analysis/sampletype_pooled_Shannon.pdf"),myplot, width = 11, height = 8,units = "cm")
+
+myplot <- generate_diversity_boxplot_2(full, "Sampletype_pooled", "Simpson", variable_colours_available = T) +facet_wrap(~Project)
+ggsave(filename = paste0("Result_figures/diversity_analysis/sampletype_pooled_Simpson.pdf"),myplot, width = 11, height = 8,units = "cm")
+
+# For Patient_group
+myplot <- generate_diversity_boxplot_2(full, "Patient_group", "Chao1", variable_colours_available = T)# + labs(title = "Patient group")
+ggsave(filename = paste0("Result_figures/diversity_analysis/Patient_group_Chao1.pdf"),myplot, width = 8, height = 8,units = "cm")
+
+myplot <- generate_diversity_boxplot_2(full, "Patient_group", "Shannon", variable_colours_available = T)
+ggsave(filename = paste0("Result_figures/diversity_analysis/Patient_group_Shannon.pdf"),myplot, width = 8, height = 8,units = "cm")
+
+myplot <- generate_diversity_boxplot_2(full, "Patient_group", "Simpson", variable_colours_available = T)
+ggsave(filename = paste0("Result_figures/diversity_analysis/Patient_group_Simpson.pdf"),myplot, width = 8, height = 8,units = "cm")
+
+# For Number_of_meds
+myplot <- generate_diversity_boxplot_2(full, "Number_of_meds", "Chao1", variable_colours_available = T)
+ggsave(filename = paste0("Result_figures/diversity_analysis/Number_of_meds_Chao1.pdf"),myplot, width = 8, height = 8,units = "cm")
+
+myplot <- generate_diversity_boxplot_2(full, "Number_of_meds", "Shannon", variable_colours_available = T)
+ggsave(filename = paste0("Result_figures/diversity_analysis/Number_of_meds_Shannon.pdf"),myplot, width = 8, height = 8,units = "cm")
+
+myplot <- generate_diversity_boxplot_2(full, "Number_of_meds", "Simpson", variable_colours_available = T)
+ggsave(filename = paste0("Result_figures/diversity_analysis/Number_of_meds_Simpson.pdf"),myplot, width = 8, height = 8,units = "cm")
+
+# For Fitzpatrick_skin_type
+myplot <- generate_diversity_boxplot_2(full, "Fitzpatrick_skin_type", "Chao1", variable_colours_available = T)
+ggsave(filename = paste0("Result_figures/diversity_analysis/Fitzpatrick_skin_type_Chao1.pdf"),myplot, width = 8, height = 8,units = "cm")
+
+myplot <- generate_diversity_boxplot_2(full, "Fitzpatrick_skin_type", "Shannon", variable_colours_available = T)
+ggsave(filename = paste0("Result_figures/diversity_analysis/Fitzpatrick_skin_type_Shannon.pdf"),myplot, width = 8, height = 8,units = "cm")
+
+myplot <- generate_diversity_boxplot_2(full, "Fitzpatrick_skin_type", "Simpson", variable_colours_available = T)
+ggsave(filename = paste0("Result_figures/diversity_analysis/Fitzpatrick_skin_type_Simpson.pdf"),myplot, width = 8, height = 8,units = "cm")
+
+# ------------------------------------------------------------------------
+# Plot the Bacterial_load_CFU against the diversities
+# temp <- subset(full, Project == "immunocompromised" & Bacterial_load_CFU > 0)
+temp <- subset(full, Project == "immunocompromised")
+# ggplot(temp, aes(x = Sampletype_pooled, y = log(Bacterial_load_CFU, 10))) + 
+#   geom_boxplot(aes(fill = Sampletype_pooled)) +
+#   geom_jitter()
+
+ggplot(temp, aes(x = Chao1, y = log(Bacterial_load_CFU, 10))) +
+  geom_point() +
+  geom_smooth(method = "lm",se = F,na.rm = T, linetype = "dashed", color = "black") +
+  facet_wrap(~Patient_group)
+
+ggplot(temp, aes(x = Chao1, y = log(Bacterial_load_CFU))) +
+  geom_point() +
+  geom_smooth(method = "lm",se = F,na.rm = T) +
+  facet_wrap(~Sampletype_pooled)
 
 
 # ------------------------------------------
@@ -221,21 +327,21 @@ for (var in discrete_variables) {
       Shannon_Max=max(Shannon), 
       Shannon_Min=min(Shannon), 
       Shannon_Median=median(Shannon), 
-      Shannon_Std=sd(Shannon),
+      # Shannon_Std=sd(Shannon),
       
       Simpson_Mean=mean(Simpson), 
       Simpson_Max=max(Simpson), 
       Simpson_Min=min(Simpson), 
       Simpson_Median=median(Simpson), 
-      Simpson_Std=sd(Simpson),
+      # Simpson_Std=sd(Simpson),
       
       Chao1_Mean=mean(Chao1), 
       Chao1_Max=max(Chao1), 
       Chao1_Min=min(Chao1), 
       Chao1_Median=median(Chao1), 
-      Chao1_Std=sd(Chao1),
-      
-      N_samples=n()
+      # Chao1_Std=sd(Chao1),
+      N_patients=n_distinct(Patient),
+      N_samples=n_distinct(Index)
       ) %>% 
     as.data.frame()
   outfilename <- paste0("Result_tables/diversity_analysis/", var, "_diversity_summary.csv")
@@ -252,26 +358,28 @@ for (var in discrete_variables) {
       Shannon_Max=max(Shannon), 
       Shannon_Min=min(Shannon), 
       Shannon_Median=median(Shannon), 
-      Shannon_Std=sd(Shannon),
+      # Shannon_Std=sd(Shannon),
       
       Simpson_Mean=mean(Simpson), 
       Simpson_Max=max(Simpson), 
       Simpson_Min=min(Simpson), 
       Simpson_Median=median(Simpson), 
-      Simpson_Std=sd(Simpson),
+      # Simpson_Std=sd(Simpson),
       
       Chao1_Mean=mean(Chao1), 
       Chao1_Max=max(Chao1), 
       Chao1_Min=min(Chao1), 
       Chao1_Median=median(Chao1), 
-      Chao1_Std=sd(Chao1),
+      # Chao1_Std=sd(Chao1),
       
-      N_samples=n()
+      N_patients=n_distinct(Patient),
+      N_samples=n_distinct(Index)
     ) %>% 
     as.data.frame()
   outfilename <- paste0("Result_tables/diversity_analysis/", var, "_diversity_summary_within_cohort.csv")
   write.csv(x = diversity_summary, outfilename, row.names = F,quote = F)
 }
+
 
 # ------------------------------------------------------------------------------------------------------------------------------
 # Takes awhile to calculate, uncomment to run
