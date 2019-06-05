@@ -176,20 +176,24 @@ otu_true_rare.m <- t(rrarefy(t(otu.m[,colSums(otu.m) >= 5000]), 5000))
 # For both cohorts
 discrete_variables <- c("Project","Patient","Sampletype", "Sampletype_pooled")
 # For immunocompromised
-discrete_variables_immunocompromised <- c("Patient","Sampletype", "Sampletype_pooled", 
-                                          "Number_of_meds", "Patient_group", "Fitzpatrick_skin_type")
+discrete_variables_immunocompromised <- c("Number_of_meds", "Patient_group", "Fitzpatrick_skin_type")
 
 # create phyloseq object
 otu_rare_phyloseq <- otu_table(otu_rare.m, taxa_are_rows=TRUE)
 
+# Calculate number of unique features/OTUs per sample
+temp <- otu_rare.m
+temp[temp > 0] <- 1
+temp <- melt(colSums(temp))
+metadata.df$Number_of_features <- temp[rownames(metadata.df), ,]
 
 # Estimate alpha diversities
 otu_rare_alpha.df <- estimate_richness(otu_rare_phyloseq, measures = c("Chao1", "Simpson","Shannon"))
 otu_rare_alpha.df <- otu_rare_alpha.df[rownames(metadata.df),]
 
+
 # Combine the metadata and the diversity metrics into a single dataframe
 full=cbind(metadata.df, otu_rare_alpha.df)
-
 
 
 # ------------------------------------------
@@ -295,25 +299,152 @@ myplot <- generate_diversity_boxplot_2(full, "Fitzpatrick_skin_type", "Simpson",
 ggsave(filename = paste0("Result_figures/diversity_analysis/Fitzpatrick_skin_type_Simpson.pdf"),myplot, width = 8, height = 8,units = "cm")
 
 # ------------------------------------------------------------------------
+# ------------------------------------------------------------------------
 # Plot the Bacterial_load_CFU against the diversities
-# temp <- subset(full, Project == "immunocompromised" & Bacterial_load_CFU > 0)
-temp <- subset(full, Project == "immunocompromised")
-# ggplot(temp, aes(x = Sampletype_pooled, y = log(Bacterial_load_CFU, 10))) + 
-#   geom_boxplot(aes(fill = Sampletype_pooled)) +
-#   geom_jitter()
+plot_CFU <- function(mydata, variable_to_plot, metric, variable_colours_available = T, use_shapes = T){
+  internal_data.df <- mydata
+  internal_data.df[[variable_to_plot]] <- factor(internal_data.df[[variable_to_plot]])
+  variable_values <- levels(internal_data.df[[variable_to_plot]])
 
-ggplot(temp, aes(x = Chao1, y = log(Bacterial_load_CFU, 10))) +
-  geom_point() +
-  geom_smooth(method = "lm",se = F,na.rm = T, linetype = "dashed", color = "black") +
-  facet_wrap(~Patient_group)
+  # If variable colour column "variable_colour" in metadata, use colours from there
+  if (variable_colours_available == T){
+    colour_col_name <- paste0(variable_to_plot, "_colour")
+    variable_colours <- setNames(as.character(unique(internal_data.df[[colour_col_name]])), as.character(variable_values))
+  } else{
+    variable_colours <- setNames(colour_palette[1:length(variable_values)], variable_values)  
+  }
+  if (use_shapes == T){
+    variable_shapes <- setNames(rep(c(25,24,23,22,21),length(variable_values))[1:length(variable_values)],variable_values)
+  } else{
+    variable_shapes <- setNames(rep(c(21),length(variable_values))[1:length(variable_values)],variable_values)  
+  }
+  
+  correlations.df <- data.frame(row.names = unique(internal_data.df[,variable_to_plot]))
+  correlations.df[,variable_to_plot] <- rownames(correlations.df)
+  correlations.df$p_value_pearson <- NA
+  correlations.df$p_value_spearman <- NA
+  correlations.df$cor_value_pearson <- NA
+  correlations.df$cor_value_spearman <- NA
+  
+  for (group in unique(internal_data.df[,variable_to_plot])){
+    data_subset <- subset(internal_data.df, get(variable_to_plot) == group)
+    pearson_test <- with(data_subset, cor.test(Chao1, Bacterial_load_CFU,method = "pearson"))
+    spearman_test <- with(data_subset, cor.test(Chao1, Bacterial_load_CFU,method = "spearman", exact = F))
+    p_value_pearson <- round(pearson_test$p.value,4)
+    p_value_spearman <- round(spearman_test$p.value,4)
+    cor_value_pearson <- round(pearson_test$estimate,2)
+    cor_value_spearman <- round(spearman_test$estimate,2)
+    correlations.df[group,]$p_value_pearson <- p_value_pearson
+    correlations.df[group,]$p_value_spearman <- p_value_spearman
+    correlations.df[group,]$cor_value_pearson <- cor_value_pearson
+    correlations.df[group,]$cor_value_spearman <- cor_value_spearman
+  }
 
-ggplot(temp, aes(x = Chao1, y = log(Bacterial_load_CFU))) +
-  geom_point() +
-  geom_smooth(method = "lm",se = F,na.rm = T) +
-  facet_wrap(~Sampletype_pooled)
+  myplot <- ggplot(internal_data.df, aes(x = get(metric), y = log(Bacterial_load_CFU, 10))) +
+    geom_point(aes(shape = get(variable_to_plot), fill = get(variable_to_plot))) +
+    geom_smooth(method = "lm",se = F,na.rm = T, linetype = "dashed", color = "black", size = .5) +
+    geom_text(data= correlations.df,parse = T, aes(x = -Inf, y = Inf, label = paste0("rho==", cor_value_pearson, "*','~italic(p)==", p_value_pearson)), hjust=-0.2, vjust=1.2, size = 3) +
+    geom_text(data= correlations.df,parse = T, aes(x = -Inf, y = Inf, label = paste0("r[s]==", cor_value_spearman, "*','~italic(p)==", p_value_spearman)), hjust=-0.2, vjust=3.2, size = 3) +
+    scale_shape_manual(values = variable_shapes, name = variable_to_plot)+
+    scale_fill_manual(values = variable_colours, name = variable_to_plot) +
+    ylab(expression(paste(log[10]~"(Bacterial load CFU)"))) +
+    xlab(metric) +
+    facet_wrap(~get(variable_to_plot)) +
+    common_theme +
+    theme(strip.text = element_text(size = 10))
+  
+  myplot
+}
+  
+immunocompromised_data.df <- subset(full, Project == "immunocompromised")
+immunocompromised_data.df <- immunocompromised_data.df[!is.na(immunocompromised_data.df$Bacterial_load_CFU),]
+
+# data_subset <- subset(immunocompromised_data.df, Patient_group == "SCC")
+# plot_CFU(data_subset, variable_to_plot = "Patient_group", metric = "Chao1")
+
+# Patient_group, chao1
+for (group in unique(immunocompromised_data.df$Patient_group)){
+    data_subset <- subset(immunocompromised_data.df, Patient_group == group)
+    myplot <- plot_CFU(data_subset, variable_to_plot = "Patient_group", metric = "Chao1") + 
+      scale_y_continuous(limits = c(0,7), breaks = seq(0,7,1)) + theme(legend.position = "none")
+    ggsave(plot = myplot,
+           filename = paste0("Result_figures/diversity_analysis/", "Patient_group_",group, "__Chao1.pdf"),
+           width = 12,height = 10,units = "cm") 
+}
+
+# Patient_group, Shannon
+for (group in unique(immunocompromised_data.df$Patient_group)){
+  data_subset <- subset(immunocompromised_data.df, Patient_group == group)
+  myplot <- plot_CFU(data_subset, variable_to_plot = "Patient_group", metric = "Shannon") + 
+    scale_y_continuous(limits = c(0,7), breaks = seq(0,7,1)) + theme(legend.position = "none")
+  ggsave(plot = myplot,
+         filename = paste0("Result_figures/diversity_analysis/", "Patient_group_",group, "__Shannon.pdf"),
+         width = 12,height = 10,units = "cm") 
+}
+
+# Sampletype_pooled, chao1
+for (group in unique(immunocompromised_data.df$Sampletype_pooled)){
+  data_subset <- subset(immunocompromised_data.df, Sampletype_pooled == group)
+  myplot <- plot_CFU(data_subset, variable_to_plot = "Sampletype_pooled", metric = "Chao1") + 
+    scale_y_continuous(limits = c(0,7), breaks = seq(0,7,1)) + theme(legend.position = "none")
+  ggsave(plot = myplot,
+         filename = paste0("Result_figures/diversity_analysis/", "Sampletype_pooled_",group, "__Chao1.pdf"),
+         width = 12,height = 10,units = "cm") 
+}
+
+# Sampletype_pooled, Shannon
+for (group in unique(immunocompromised_data.df$Sampletype_pooled)){
+  data_subset <- subset(immunocompromised_data.df, Sampletype_pooled == group)
+  myplot <- plot_CFU(data_subset, variable_to_plot = "Sampletype_pooled", metric = "Shannon") + 
+    scale_y_continuous(limits = c(0,7), breaks = seq(0,7,1)) + theme(legend.position = "none")
+  ggsave(plot = myplot,
+         filename = paste0("Result_figures/diversity_analysis/", "Sampletype_pooled_",group, "__Shannon.pdf"),
+         width = 12,height = 10,units = "cm") 
+}
 
 
-# ------------------------------------------
+# Number_of_meds, chao1
+for (group in unique(immunocompromised_data.df$Number_of_meds)){
+  data_subset <- subset(immunocompromised_data.df, Number_of_meds == group)
+  myplot <- plot_CFU(data_subset, variable_to_plot = "Number_of_meds", metric = "Chao1") + 
+    scale_y_continuous(limits = c(0,7), breaks = seq(0,7,1)) + theme(legend.position = "none")
+  ggsave(plot = myplot,
+         filename = paste0("Result_figures/diversity_analysis/", "Number_of_meds_",group, "__Chao1.pdf"),
+         width = 12,height = 10,units = "cm") 
+}
+
+# Number_of_meds, Shannon
+for (group in unique(immunocompromised_data.df$Number_of_meds)){
+  data_subset <- subset(immunocompromised_data.df, Number_of_meds == group)
+  myplot <- plot_CFU(data_subset, variable_to_plot = "Number_of_meds", metric = "Shannon") + 
+    scale_y_continuous(limits = c(0,7), breaks = seq(0,7,1)) + theme(legend.position = "none")
+  ggsave(plot = myplot,
+         filename = paste0("Result_figures/diversity_analysis/", "Number_of_meds_", group, "__Shannon.pdf"),
+         width = 12,height = 10,units = "cm") 
+}
+
+# Fitzpatrick_skin_type, chao1
+for (group in unique(immunocompromised_data.df$Fitzpatrick_skin_type)){
+  data_subset <- subset(immunocompromised_data.df, Fitzpatrick_skin_type == group)
+  myplot <- plot_CFU(data_subset, variable_to_plot = "Fitzpatrick_skin_type", metric = "Chao1") + 
+    scale_y_continuous(limits = c(0,7), breaks = seq(0,7,1)) + theme(legend.position = "none")
+  ggsave(plot = myplot,
+         filename = paste0("Result_figures/diversity_analysis/", "Fitzpatrick_skin_type_",group, "__Chao1.pdf"),
+         width = 12,height = 10,units = "cm") 
+}
+# Fitzpatrick_skin_type, Shannon
+for (group in unique(immunocompromised_data.df$Fitzpatrick_skin_type)){
+  data_subset <- subset(immunocompromised_data.df, Fitzpatrick_skin_type == group)
+  myplot <- plot_CFU(data_subset, variable_to_plot = "Fitzpatrick_skin_type", metric = "Shannon") + 
+    scale_y_continuous(limits = c(0,7), breaks = seq(0,7,1)) + theme(legend.position = "none")
+  ggsave(plot = myplot,
+         filename = paste0("Result_figures/diversity_analysis/", "Fitzpatrick_skin_type_",group, "__Shannon.pdf"),
+         width = 12,height = 10,units = "cm") 
+}
+
+
+# ------------------------------------------------------------------------
+# ------------------------------------------------------------------------
 
 # Generate the diversity summary tables for each variable
 # For each discrete variable, calculate the diversity index mean, max, min, median and stdev
@@ -380,6 +511,36 @@ for (var in discrete_variables) {
   write.csv(x = diversity_summary, outfilename, row.names = F,quote = F)
 }
 
+# Repeat for immunocompromised specific variables
+immunocompromised_data.df <- subset(full, Project == "immunocompromised")
+for (var in discrete_variables_immunocompromised) {
+  diversity_summary <- immunocompromised_data.df %>% 
+    dplyr::group_by_(var) %>%
+    dplyr::summarise(
+      Shannon_Mean=mean(Shannon), 
+      Shannon_Max=max(Shannon), 
+      Shannon_Min=min(Shannon), 
+      Shannon_Median=median(Shannon), 
+      # Shannon_Std=sd(Shannon),
+      
+      Simpson_Mean=mean(Simpson), 
+      Simpson_Max=max(Simpson), 
+      Simpson_Min=min(Simpson), 
+      Simpson_Median=median(Simpson), 
+      # Simpson_Std=sd(Simpson),
+      
+      Chao1_Mean=mean(Chao1), 
+      Chao1_Max=max(Chao1), 
+      Chao1_Min=min(Chao1), 
+      Chao1_Median=median(Chao1), 
+      # Chao1_Std=sd(Chao1),
+      N_patients=n_distinct(Patient),
+      N_samples=n_distinct(Index)
+    ) %>% 
+    as.data.frame()
+  outfilename <- paste0("Result_tables/diversity_analysis/", var, "_diversity_summary.csv")
+  write.csv(x = diversity_summary, outfilename, row.names = F,quote = F)
+}
 
 # ------------------------------------------------------------------------------------------------------------------------------
 # Takes awhile to calculate, uncomment to run
@@ -431,11 +592,15 @@ for (var in discrete_variables) {
 
 # ------------------------------------------------------------------------------------------------------------------------------
 
-
-
 # Now that we have calculated the diversities for each sample, we can test if diversity distributions are significantly different between groups:
 # Lesion types
-# Cohorts
+# Cohort
+# 
+# And for immunocompromised
+# Patient_group (discrete)
+# Number_of_meds (discrete)
+# Fitzpatrick_skin_type (discrete)
+
 
 # Tests that can be used to compare multiple discrete groups include:
 # kruskal-wallis (non-parametric, data does not need to be normal, typically used for more than two groups)
@@ -449,6 +614,10 @@ for (var in discrete_variables) {
 
 # ----------------------------
 # Mann–Whitney U / Wilcox test
+
+# variable to compare groups, metric
+
+
 
 # Lesion type vs Lesion type
 sample_type_comparison <- data.frame("Group_1" = character(),
@@ -465,11 +634,11 @@ for (i in 1:ncol(sample_type_combinations)) {
   group_2_meta <- subset(full, Sampletype_pooled == group_2)
   
   # Test on the Shannon diversity
-  wilcox_shannon_test <- wilcox.test(group_1_meta$Shannon, group_2_meta$Shannon)
+  wilcox_shannon_test <- wilcox.test(group_1_meta$Shannon, group_2_meta$Shannon, exact = F)
   # Test on the Simpson diversity
-  wilcox_simpson_test <- wilcox.test(group_1_meta$Simpson, group_2_meta$Simpson)
+  wilcox_simpson_test <- wilcox.test(group_1_meta$Simpson, group_2_meta$Simpson, exact = F)
   # Test on the Chao1 diversity
-  wilcox_chao1_test <- wilcox.test(group_1_meta$Chao1, group_2_meta$Chao1)
+  wilcox_chao1_test <- wilcox.test(group_1_meta$Chao1, group_2_meta$Chao1, exact = F)
   
   sample_type_comparison <- rbind(sample_type_comparison, data.frame("Group_1" = group_1, 
                                                                      "Group_2" = group_2, 
@@ -495,11 +664,11 @@ for (i in 1:ncol(cohort_combinations)) {
   group_2_meta <- subset(full, Project == group_2)
   
   # Test on the Shannon diversity
-  wilcox_shannon_test <- wilcox.test(group_1_meta$Shannon, group_2_meta$Shannon)
+  wilcox_shannon_test <- wilcox.test(group_1_meta$Shannon, group_2_meta$Shannon, exact = F)
   # Test on the Simpson diversity
-  wilcox_simpson_test <- wilcox.test(group_1_meta$Simpson, group_2_meta$Simpson)
+  wilcox_simpson_test <- wilcox.test(group_1_meta$Simpson, group_2_meta$Simpson, exact = F)
   # Test on the Chao1 diversity
-  wilcox_chao1_test <- wilcox.test(group_1_meta$Chao1, group_2_meta$Chao1)
+  wilcox_chao1_test <- wilcox.test(group_1_meta$Chao1, group_2_meta$Chao1, exact = F)
   
   cohort_comparison <- rbind(cohort_comparison, data.frame("Group_1" = group_1, 
                                                                  "Group_2" = group_2, 
@@ -528,11 +697,11 @@ for (cohort in unique(full$Project)){
     group_2_meta <- subset(data_subset, Sampletype_pooled == group_2)
     
     # Test on the Shannon diversity
-    wilcox_shannon_test <- wilcox.test(group_1_meta$Shannon, group_2_meta$Shannon)
+    wilcox_shannon_test <- wilcox.test(group_1_meta$Shannon, group_2_meta$Shannon, exact = F)
     # Test on the Simpson diversity
-    wilcox_simpson_test <- wilcox.test(group_1_meta$Simpson, group_2_meta$Simpson)
+    wilcox_simpson_test <- wilcox.test(group_1_meta$Simpson, group_2_meta$Simpson, exact = F)
     # Test on the Chao1 diversity
-    wilcox_chao1_test <- wilcox.test(group_1_meta$Chao1, group_2_meta$Chao1)
+    wilcox_chao1_test <- wilcox.test(group_1_meta$Chao1, group_2_meta$Chao1, exact = F)
     
     cohort_sampletype_groups_comparison <- rbind(cohort_sampletype_groups_comparison, data.frame("Project" = cohort,
                                                                                            "Group_1" = group_1, 
@@ -561,11 +730,11 @@ for (i in 1:ncol(cohort_sampletype_combinations)) {
   group_2_meta <- subset(full, Project_Sampletype_pooled == group_2)
   
   # Test on the Shannon diversity
-  wilcox_shannon_test <- wilcox.test(group_1_meta$Shannon, group_2_meta$Shannon)
+  wilcox_shannon_test <- wilcox.test(group_1_meta$Shannon, group_2_meta$Shannon, exact = F)
   # Test on the Simpson diversity
-  wilcox_simpson_test <- wilcox.test(group_1_meta$Simpson, group_2_meta$Simpson)
+  wilcox_simpson_test <- wilcox.test(group_1_meta$Simpson, group_2_meta$Simpson, exact = F)
   # Test on the Chao1 diversity
-  wilcox_chao1_test <- wilcox.test(group_1_meta$Chao1, group_2_meta$Chao1)
+  wilcox_chao1_test <- wilcox.test(group_1_meta$Chao1, group_2_meta$Chao1, exact = F)
   
   cohort_sampletype_groups_comparison <- rbind(cohort_sampletype_groups_comparison, data.frame("Group_1" = group_1, 
                                                            "Group_2" = group_2, 
@@ -575,6 +744,7 @@ for (i in 1:ncol(cohort_sampletype_combinations)) {
   ))
 }
 write.csv(cohort_sampletype_groups_comparison, file = "Result_tables/diversity_analysis/cohort_sampletype_wilcox.csv", row.names = F, quote = F)
+
 
 
 
