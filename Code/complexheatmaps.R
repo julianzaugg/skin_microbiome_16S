@@ -96,6 +96,15 @@ otu_taxonomy_map.df <- read.csv("Result_tables/other/otu_taxonomy_map.csv", head
 # Remove samples for different lesion types (nasal,scar,scar_PL,KA,KA_PL,VV,VV_PL,SF,SF_PL,other,other_PL,negative) from metadata and otu table
 metadata.df <- metadata.df[metadata.df$Sampletype %in% c("C","AK_PL","IEC_PL","SCC_PL","AK","IEC","SCC", "NLC"),]
 
+# Factorise discrete columns
+metadata.df$Patient <- factor(metadata.df$Patient)
+metadata.df$Sampletype <- factor(metadata.df$Sampletype)
+metadata.df$Sampletype_pooled <- factor(metadata.df$Sampletype_pooled, levels = c("NLC", "AK","SCC"))
+metadata.df$Project <- factor(metadata.df$Project)
+metadata.df$Patient_group <- factor(metadata.df$Patient_group, levels = c("Control", "AK","SCC"))
+metadata.df$Gender <- factor(metadata.df$Gender)
+metadata.df$Number_of_meds <- factor(metadata.df$Number_of_meds, levels = c("1", "2","3"))
+
 
 # Load count matrices and covert to log space
 # otu_rare_log.m <- log_matrix(as.matrix(read.table(file = "Result_tables/count_tables/OTU_counts_rarefied.csv", sep = ",", header = T, row.names = 1)))
@@ -358,7 +367,7 @@ make_heatmap <- function(myheatmap_matrix,
 # Define the discrete variables
 # discrete_variables <- c("Patient","Sampletype","Sampletype_pooled","Sampletype_pooled_IEC_sep","Sampletype_pooled_C_sep")
 # discrete_variables <- c("Patient","Sampletype_pooled")
-discrete_variables <- c("Patient","Sampletype","Sampletype_pooled", "Project")
+discrete_variables <- c("Patient","Sampletype_pooled", "Project")
 
 heatmap_family_rel.m <- filter_heatmap_matrix(otu_family_rare_rel.m, row_max = 0.05, prevalence = 0.1)
 heatmap_genus_rel.m <- filter_heatmap_matrix(otu_genus_rare_rel.m, row_max = 0.05, prevalence = 0.1)
@@ -384,29 +393,31 @@ make_heatmap(heatmap_family_rel.m,
 )
 
 # family, immunocompromised
-discrete_variables <- c("Patient","Sampletype","Sampletype_pooled")
+discrete_variables <- c("Patient","Sampletype_pooled","Number_of_meds","Fitzpatrick_skin_type","Patient_group")
+
 make_heatmap(heatmap_family_rel.m, 
              subset(metadata.df, Project == "immunocompromised"),
              filename = paste0("Result_figures/heatmaps/family_relative_abundance_immunocompromised_clustered.pdf"),
              variables = discrete_variables,
              plot_height = 10,
              plot_width = 25,
-             cluster_columns = T,
+             cluster_columns = F,
              my_breaks = c(0, 0.001, 0.005,0.05, seq(.1,1,.1)),
              legend_title = "Relative abundance %",
-             palette_choice = 'blue'
+             palette_choice = 'purple'
 )
-
+# family, immunocompetent
+discrete_variables <- c("Patient","Sampletype_pooled")
 make_heatmap(heatmap_family_rel.m, 
              subset(metadata.df, Project == "immunocompetent"),
              filename = paste0("Result_figures/heatmaps/family_relative_abundance_immunocompetent_clustered.pdf"),
              variables = discrete_variables,
              plot_height = 10,
              plot_width = 100,
-             cluster_columns = T,
+             cluster_columns = F,
              my_breaks = c(0, 0.001, 0.005,0.05, seq(.1,1,.1)),
              legend_title = "Relative abundance %",
-             palette_choice = 'blue'
+             palette_choice = 'purple'
 )
 
 

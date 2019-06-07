@@ -195,6 +195,8 @@ otu_rare_alpha.df <- otu_rare_alpha.df[rownames(metadata.df),]
 # Combine the metadata and the diversity metrics into a single dataframe
 full=cbind(metadata.df, otu_rare_alpha.df)
 
+# Create combined variables
+full$Project_Sampletype_pooled <- with(full, paste0(Project, "_",Sampletype_pooled))
 
 # ------------------------------------------
 # Generate plots based on diversity values and metadata
@@ -242,11 +244,11 @@ generate_diversity_boxplot_2 <- function(mydata, variable, metric, variable_colo
 
 # For each cohort (Project)
 myplot <- generate_diversity_boxplot_2(full, "Project", "Chao1", variable_colours_available = T)
-ggsave(filename = paste0("Result_figures/diversity_analysis/Project_sampletype_pooled_Chao1.pdf"),myplot, width = 9, height = 8,units = "cm")
+ggsave(filename = paste0("Result_figures/diversity_analysis/Project_Chao1.pdf"),myplot, width = 9, height = 8,units = "cm")
 myplot <- generate_diversity_boxplot_2(full, "Project", "Shannon", variable_colours_available = T)
-ggsave(filename = paste0("Result_figures/diversity_analysis/Project_sampletype_pooled_Shannon.pdf"),myplot, width = 9, height = 8,units = "cm")
+ggsave(filename = paste0("Result_figures/diversity_analysis/Project_Shannon.pdf"),myplot, width = 9, height = 8,units = "cm")
 myplot <- generate_diversity_boxplot_2(full, "Project", "Simpson", variable_colours_available = T)
-ggsave(filename = paste0("Result_figures/diversity_analysis/Project_sampletype_pooled_Simpson.pdf"),myplot, width =9, height = 8,units = "cm")
+ggsave(filename = paste0("Result_figures/diversity_analysis/Project_Simpson.pdf"),myplot, width =9, height = 8,units = "cm")
 
 # For each Sampletype_pooled (cohorts combined)
 myplot <- generate_diversity_boxplot_2(full, "Sampletype_pooled", "Chao1", variable_colours_available = T)
@@ -616,6 +618,77 @@ for (var in discrete_variables_immunocompromised) {
 # Mann–Whitney U / Wilcox test
 
 # variable to compare groups, metric
+# Assumes there are Shannon, Chao1 and Simpson columns
+calculate_diversity_significance <- function(mydata, variable){
+  results.df <- data.frame("Group_1" = character(),
+                           "Group_2" = character(),
+                           "Shannon_p-value" = character(),
+                           "Simpson_p-value" = character(),
+                           "Chao1_p-value" = character())
+  group_combinations <- combn(as.character(unique(mydata[,variable])), 2)
+  for (i in 1:ncol(group_combinations)) {
+    group_1 <- group_combinations[1,i]
+    group_2 <- group_combinations[2,i]
+    group_1_meta <- subset(mydata, get(variable) == group_1)
+    group_2_meta <- subset(mydata, get(variable) == group_2)
+    
+    # Test on the Shannon diversity
+    wilcox_shannon_test <- wilcox.test(group_1_meta$Shannon, group_2_meta$Shannon, exact = F)
+    # Test on the Simpson diversity
+    wilcox_simpson_test <- wilcox.test(group_1_meta$Simpson, group_2_meta$Simpson, exact = F)
+    # Test on the Chao1 diversity
+    wilcox_chao1_test <- wilcox.test(group_1_meta$Chao1, group_2_meta$Chao1, exact = F)
+    results.df <- rbind(results.df, data.frame("Group_1" = group_1, 
+                                               "Group_2" = group_2, 
+                                               "Shannon_pvalue" = round(wilcox_shannon_test$p.value,6),
+                                               "Simpson_pvalue" = round(wilcox_simpson_test$p.value,6),
+                                               "Chao1_pvalue" = round(wilcox_chao1_test$p.value,6)
+                                               ))
+  }
+  results.df$Shannon_padj <- round(p.adjust(results.df$Shannon_pvalue,method = "BH"),6)
+  results.df$Simpson_padj <- round(p.adjust(results.df$Simpson_pvalue,method = "BH"),6)
+  results.df$Chao1_padj <- round(p.adjust(results.df$Chao1_pvalue,method = "BH"),6)
+  results.df
+}
+cohorts_diversity_significance.df <- calculate_diversity_significance(full, "Project")
+write.csv(cohorts_diversity_significance.df, file = "Result_tables/diversity_analysis/cohort_wilcox.csv", row.names = F, quote = F)
+
+
+sampletype_pooled_diversity_significance.df <- calculate_diversity_significance(full, "Sampletype_pooled")
+sampletype_pooled_diversity_significance.df
+write.csv(sampletype_pooled_diversity_significance.df, file = "Result_tables/diversity_analysis/sampletype_wilcox.csv", row.names = F, quote = F)
+
+both_cohorts_sampletype_pooled_diversity_significance.df <- calculate_diversity_significance(full, "Project_Sampletype_pooled")
+both_cohorts_sampletype_pooled_diversity_significance.df
+# pairwise.wilcox.test(full$Chao1, full$Project_Sampletype_pooled, p.adjust.method = "BH",paired = F)
+# both_cohorts_sampletype_pooled_diversity_significance.df$temp <- p.adjust(both_cohorts_sampletype_pooled_diversity_significance.df$Chao1_p.value,method = "BH")
+# pairwise.wilcox.test(full$Chao1, full$Project_Sampletype_pooled, p.adjust.method = "none",paired = F)
+write.csv(both_cohorts_sampletype_pooled_diversity_significance.df, file = "Result_tables/diversity_analysis/cohort_sampletype_wilcox.csv", row.names = F, quote = F)
+
+
+immunocompromised_data.df <- subset(full, Project == "immunocompromised")
+# immunocompromised_sampletype_pooled_diversity_significance.df <- calculate_diversity_significance(immunocompromised_data.df, "Sampletype_pooled")
+# write.csv(immunocompromised_sampletype_pooled_diversity_significance.df, file = "Result_tables/diversity_analysis/cohort_sampletype_wilcox.csv", row.names = F, quote = F)
+
+immunocompromised_patient_group_diversity_significance.df <- calculate_diversity_significance(immunocompromised_data.df, "Patient_group")
+write.csv(immunocompromised_patient_group_diversity_significance.df, file = "Result_tables/diversity_analysis/immunocompromised_patient_group_wilcox.csv", row.names = F, quote = F)
+
+immunocompromised_number_of_meds_diversity_significance.df <- calculate_diversity_significance(immunocompromised_data.df, "Number_of_meds")
+write.csv(immunocompromised_number_of_meds_diversity_significance.df, file = "Result_tables/diversity_analysis/immunocompromised_number_of_meds_wilcox.csv", row.names = F, quote = F)
+
+immunocompromised_skin_type_diversity_significance.df <- calculate_diversity_significance(immunocompromised_data.df, "Fitzpatrick_skin_type")
+write.csv(immunocompromised_skin_type_diversity_significance.df, file = "Result_tables/diversity_analysis/immunocompromised_fitzpatrick_skin_type_wilcox.csv", row.names = F, quote = F)
+
+
+
+
+
+
+
+
+
+
+
 
 
 

@@ -8,23 +8,49 @@ library(ggplot2)
 # install.packages("VennDiagram")
 library(VennDiagram)
 
-############################################################
-# Various colour palletes
-my_colour_pallete <- c("#8dd3c7","#ffffb3","#bebada","#fb8072", "#80b1d3", "#fdb462","#b3de69","#fccde5","#d9d9d9","#bc80bd","#ccebc5", "#cc0000")
+
+
+common_theme <- theme(
+  panel.border = element_blank(), 
+  panel.grid.major = element_blank(),
+  panel.grid.minor = element_blank(),
+  axis.line = element_line(colour = "black", size = 0.5),
+  panel.background = element_blank(),
+  strip.background = element_rect(fill = "white", colour = "white", size = 1),
+  strip.text = element_text(size = 6),
+  legend.key=element_blank(),
+  legend.direction="vertical",
+  legend.background = element_rect(colour ="white", size = .3),
+  legend.text.align = 0,
+  legend.title = element_text(size=10, face="bold"),
+  legend.title.align = 0.5,
+  legend.margin = margin(c(2,2,2,2)),
+  legend.key.height=unit(.4,"cm"),
+  legend.text = element_text(size = 8),
+  axis.text = element_text(size = 9, colour = "black"),
+  axis.title = element_text(size = 10,face = "bold"),
+  complete = F,
+  plot.title = element_text(size = 8))
+
+# ------------------------------------------------------------------------------------------
+# Various colour palettes
+my_colour_palette <- c("#8dd3c7","#ffffb3","#bebada","#fb8072", "#80b1d3", "#fdb462","#b3de69","#fccde5","#d9d9d9","#bc80bd","#ccebc5", "#cc0000")
 # From http://tools.medialab.sciences-po.fr/iwanthue/
-my_colour_pallete_20 <- c("#66bd79","#a35bcf","#5bb643","#d14ea6","#a2b239","#5c6bcc","#dc892e","#5e93cd","#d64737","#49b6a8","#dc3c6e","#4f7e3c","#bd8cd5","#caab55","#914c88","#867230","#df82a2","#a65429","#ab4a5a","#e0896a")
-my_colour_pallete_20_distinct <- c("#0057b4","#7fff56","#d600bc","#d8d500","#e76eff","#019932","#9f8fff","#ffc730","#007fac","#a20019","#06fefd","#ff6782","#00774c","#e0c8ff","#717a00","#4b2952","#e2ed7d","#46321e","#ffbd76","#ffb4c6")
-my_colour_pallete_30_distinct <- c("#009348","#f579fe","#4fe16e","#b40085","#4d7e00","#4742b4","#f0c031","#016dd9","#d45200","#7499ff","#ef4d2d","#01c9c8","#f8394b","#88d7a6","#d20063","#c8cc5d","#882986","#fdb95d","#404f8f","#917300","#f3aefc","#5c5800","#ff75c3","#00674a","#ba001c","#979760","#8b354c","#ff875f","#943105","#cf9478")
-my_colour_pallete_206_distinct <- c("#cfefb4","#7d8b00","#a70079","#552155","#632900","#ffb173","#fbdcf2","#015a6a","#43fdf7","#ff443a","#008186","#3b8aff","#8b5fff","#ff9777","#4200a9","#85f6fd","#c96000","#36218a","#d28900","#0137d7","#30325b","#ff836b","#008b4f","#21ff9d","#00794d","#870052","#e9ec4b","#ce006b","#6e0044","#8a6500","#006971","#432e4b","#ca8dff","#f20059","#44ffe2","#00be5c","#a0d2ff","#1914ab","#4d284e","#59d7ff","#ab9aff","#0151d9","#1de740","#e24500","#9fc400","#610769","#0a4600","#1e365b","#018f3f","#b15fff","#009c5e","#005290","#506100","#f49aff","#0187c1","#ffb5f4","#daf100","#70081d","#ff9890","#c1baff","#ffbe5a","#1b3466","#ff2a7f","#ff5d3c","#e47800","#ac6bff","#1f6000","#006627","#4f4000","#dcd6ff","#ffd7c1","#ed2de4","#a50038","#a5a8ff","#0f2f7f","#b11700","#00e06b","#ffabb8","#015780","#82eaff","#1b2a88","#6f1600","#d3ef9c","#746e00","#01d851","#625300","#01d799","#96fd6c","#ff5ca1","#7b0017","#004c2b","#baf678","#f8aaff","#007c1b","#01a88a","#a71ed8","#fb8cff","#840079","#276d00","#556655","#02b0de","#c0efd7","#63193e","#8e9984","#017ac9","#ff925f","#ff63d7","#294100","#28baff","#5b2523","#35ab00","#69132e","#8a3b00","#a67700","#7fff6a","#002f96","#681a0b","#4d3003","#ff7de6","#0190d8","#a69700","#ff6282","#d3f266","#ffc4cf","#ffac3c","#d064ff","#d07aff","#c3005d","#9d0067","#0167c1","#8cfe82","#ffd68f","#8cfcaf","#f50096","#00c2a2","#aa5e00","#02c16d","#4e4bf6","#ffd962","#004793","#93d800","#462a58","#323a03","#4f9eff","#2b3a25","#2defff","#02edd6","#864e00","#ffc59f","#e7e9ab","#014cc4","#437bff","#00afba","#ff7d82","#8a1ed4","#ff48b3","#acf7ab","#005550","#7600a6","#bc0028","#00adab","#02dfbf","#ba004c","#004760","#ebc5ff","#0162d7","#9b3900","#5869ff","#ff6160","#87b6ff","#ff6796","#ff8422","#ff8440","#b500a8","#937fff","#0132bd","#f48e00","#1e8800","#462370","#3e3614","#9ca800","#efe5bf","#aeb6a0","#d9aaff","#d8ef89","#cec800","#ffb8b3","#4a2c42","#01715b","#b8ebff","#ff9ec0","#ff93ec","#ffe0aa","#65b300","#6a8b00","#f6e77c","#ff85c0","#5de522","#a5f6ca","#c70077","#5a4149","#a3b700","#ff63c4","#63fecd","#93f6e7","#01b4a4")
-my_colour_pallete_15 <- c("#77b642","#7166d9","#cfa240","#b351bb","#4fac7f","#d44891","#79843a","#c68ad4","#d15a2c","#5ba7d9","#ce4355","#6570ba","#b67249","#9b4a6f","#df8398")
-my_colour_pallete_32_distinct <- c("#ea7e00","#ca0074","#d1c69b","#474007","#bb00ad","#9c80ff","#be3300","#542e72","#00b9f5","#09436b","#8b0036","#9ac8e6","#ff1059","#959eff","#154a11","#0290f4","#ff7762","#7dbf00","#ff8194","#834c00","#006e73","#f9bb5d","#d6c943","#017229","#00d3a8","#732427","#36e191","#6a8200","#efb3ea","#3227bb","#ff90e1","#e92a12")
-# lesion_pallete_7 <- c("#8558d6","#6ee268","#d247ad","#c9d743","#d7453e","#59a237","#d78f2a")
-# patient_pallete_45 <- c("#d64530","#585fb1","#795d97","#9e4773","#3f6921","#71692c","#a2b93c","#d571cc","#9b3e97","#33947a","#98ad66","#448a4e","#869ae0","#5ce7af","#e085a3","#dfdc87","#d19be2","#5cb735","#e38269","#3db6c0","#50b565","#50902c","#a98a2c","#dde84a","#db3d76","#5fe485","#7c8329","#b3e791","#6fe965","#5ebce9","#3c86c1","#2a6a45","#65b688","#6651d1","#af4ed3","#df872f","#56e4db","#737cea","#ac464b","#dd37b5","#995b2b","#daac6f","#92e2be","#a2e24b","#e0be3a")
-patient_pallete_270 <- c("#456c00","#77bbff","#75fb3f","#273300","#f5006f","#ac008b","#125700","#ffef77","#00278e","#3d005e","#d84100","#015686","#01289f","#ff8c4c","#0070b5","#8015cd","#feffd6","#02d8aa","#019cf4","#4f2f00","#bbffe9","#c52900","#1b002c","#a3ac00","#5d9200","#f29fff","#231500","#934cfc","#988a00","#002cbb","#ffeb36","#ffa758","#f1f9ff","#000045","#b4004b","#602900","#390048","#e6c400","#00ce3c","#ff7bd0","#8cff56","#e60051","#b89aff","#00474b","#d5fbff","#ff79c2","#1d0016","#00635d","#ff8e33","#992300","#ff6e91","#ffa081","#534a00","#61002d","#ffe1c1","#8c0072","#00405d","#89ffc6","#607500","#64ff6f","#002e52","#9b97ff","#b1ccff","#02c5cd","#5dffba","#beff45","#00112b","#b8ff74","#7f0027","#0074cd","#005c6f","#3f00af","#dd7900","#cced00","#77ffd6","#ffc5b5","#99ffb1","#01ea72","#f0ff88","#007f63","#abff9d","#391200","#003a74","#114b00","#0a0100","#ff5fff","#ffccfb","#00d6b7","#c7ff93","#1efa5a","#005437","#f6af00","#a60024","#ffb7e6","#ea0043","#c7ffbc","#72ab00","#789300","#585500","#c3ff14","#00f398","#ab4a00","#9b7600","#85e5ff","#006235","#130020","#006825","#ff735c","#007a7f","#02a3a4","#4856ff","#bf52ff","#00edbc","#a31bd6","#009642","#e93bee","#e400ae","#ffbdd2","#00cfc7","#f1ffaa","#009b7a","#dd00c9","#ff697d","#004a14","#ff72ac","#ff3d1f","#fffaa3","#5d0400","#027ba4","#01c774","#002655","#00941f","#0a32d7","#82acff","#ff8af3","#ff4165","#001104","#ffd6f2","#efebff","#aebc00","#3e0030","#c5abff","#00402e","#ff4bae","#0275f1","#be89ff","#ffd899","#00c765","#01b208","#97ffd4","#7e9fff","#00fde1","#0050c9","#ff8eb5","#c800cd","#005173","#ff2b95","#76ff7a","#ea0074","#001d70","#009856","#f100a8","#ba6b00","#0293df","#00462d","#ff6862","#f6ff65","#02bbda","#2c2200","#01a876","#e35a00","#e3000f","#ff819e","#5a0039","#a558ff","#e2ffb2","#784800","#016def","#b400a2","#00143c","#00212d","#403d00","#ff75fe","#975300","#166c00","#260008","#917fff","#ff8d89","#01bf7a","#ffa6bf","#800086","#90a100","#cce4ff","#dad800","#52c900","#46a700","#0c0039","#0b0052","#79009d","#003c85","#bb0034","#59e7ff","#af0064","#64001e","#c0007e","#000897","#bd8400","#2b007f","#318400","#31f1ff","#7c8600","#807300","#ffc072","#6f005f","#770040","#e62c00","#2e0019","#005599","#6535e1","#5b0099","#006bd5","#0142a1","#baaf00","#00ab2d","#ffcc40","#edffec","#ef0031","#153100","#abe9ff","#6bbd00","#e5ff4e","#ffdb43","#ffa5ef","#01c4f3","#ffbd8f","#84d100","#bbff84","#9fcdff","#7b0059","#ffe897","#ff8711","#ffa869","#febaff","#20003a","#94002b","#5387ff","#756dff","#fff494","#a5c1ff","#e0ffcf","#002417","#530076","#ff8459","#ffe4ec","#00b650","#0119b7","#c963ff","#a2ff64","#9c6800","#03b6f8","#00a0c2","#00240b","#6297ff","#bd0010","#fff7af","#7d2d00","#cf7aff","#af5600","#322c00","#500028")
-my_colour_pallete_10_distinct <- c("#8eec45","#0265e8","#f6a800","#bf6549","#486900","#c655a0","#00d1b6","#ff4431","#aeb85c","#7e7fc8")
-# my_colour_pallete_soft_8 <- c("#8b90bc","#76cc5d","#a85bd2","#d2c351","#cd5f88","#89cab7","#d06842","#858658")
-my_colour_pallete_soft_8 <- c("#8b90bc","#76cc5d","#9558b7","#d2c351","#cd5f88","#89cab7","#d06842","#858658")
-############################################################
+my_colour_palette_20 <- c("#66bd79","#a35bcf","#5bb643","#d14ea6","#a2b239","#5c6bcc","#dc892e","#5e93cd","#d64737","#49b6a8","#dc3c6e","#4f7e3c","#bd8cd5","#caab55","#914c88","#867230","#df82a2","#a65429","#ab4a5a","#e0896a")
+my_colour_palette_20_distinct <- c("#0057b4","#7fff56","#d600bc","#d8d500","#e76eff","#019932","#9f8fff","#ffc730","#007fac","#a20019","#06fefd","#ff6782","#00774c","#e0c8ff","#717a00","#4b2952","#e2ed7d","#46321e","#ffbd76","#ffb4c6")
+my_colour_palette_30_distinct <- c("#009348","#f579fe","#4fe16e","#b40085","#4d7e00","#4742b4","#f0c031","#016dd9","#d45200","#7499ff","#ef4d2d","#01c9c8","#f8394b","#88d7a6","#d20063","#c8cc5d","#882986","#fdb95d","#404f8f","#917300","#f3aefc","#5c5800","#ff75c3","#00674a","#ba001c","#979760","#8b354c","#ff875f","#943105","#cf9478")
+my_colour_palette_206_distinct <- c("#cfefb4","#7d8b00","#a70079","#552155","#632900","#ffb173","#fbdcf2","#015a6a","#43fdf7","#ff443a","#008186","#3b8aff","#8b5fff","#ff9777","#4200a9","#85f6fd","#c96000","#36218a","#d28900","#0137d7","#30325b","#ff836b","#008b4f","#21ff9d","#00794d","#870052","#e9ec4b","#ce006b","#6e0044","#8a6500","#006971","#432e4b","#ca8dff","#f20059","#44ffe2","#00be5c","#a0d2ff","#1914ab","#4d284e","#59d7ff","#ab9aff","#0151d9","#1de740","#e24500","#9fc400","#610769","#0a4600","#1e365b","#018f3f","#b15fff","#009c5e","#005290","#506100","#f49aff","#0187c1","#ffb5f4","#daf100","#70081d","#ff9890","#c1baff","#ffbe5a","#1b3466","#ff2a7f","#ff5d3c","#e47800","#ac6bff","#1f6000","#006627","#4f4000","#dcd6ff","#ffd7c1","#ed2de4","#a50038","#a5a8ff","#0f2f7f","#b11700","#00e06b","#ffabb8","#015780","#82eaff","#1b2a88","#6f1600","#d3ef9c","#746e00","#01d851","#625300","#01d799","#96fd6c","#ff5ca1","#7b0017","#004c2b","#baf678","#f8aaff","#007c1b","#01a88a","#a71ed8","#fb8cff","#840079","#276d00","#556655","#02b0de","#c0efd7","#63193e","#8e9984","#017ac9","#ff925f","#ff63d7","#294100","#28baff","#5b2523","#35ab00","#69132e","#8a3b00","#a67700","#7fff6a","#002f96","#681a0b","#4d3003","#ff7de6","#0190d8","#a69700","#ff6282","#d3f266","#ffc4cf","#ffac3c","#d064ff","#d07aff","#c3005d","#9d0067","#0167c1","#8cfe82","#ffd68f","#8cfcaf","#f50096","#00c2a2","#aa5e00","#02c16d","#4e4bf6","#ffd962","#004793","#93d800","#462a58","#323a03","#4f9eff","#2b3a25","#2defff","#02edd6","#864e00","#ffc59f","#e7e9ab","#014cc4","#437bff","#00afba","#ff7d82","#8a1ed4","#ff48b3","#acf7ab","#005550","#7600a6","#bc0028","#00adab","#02dfbf","#ba004c","#004760","#ebc5ff","#0162d7","#9b3900","#5869ff","#ff6160","#87b6ff","#ff6796","#ff8422","#ff8440","#b500a8","#937fff","#0132bd","#f48e00","#1e8800","#462370","#3e3614","#9ca800","#efe5bf","#aeb6a0","#d9aaff","#d8ef89","#cec800","#ffb8b3","#4a2c42","#01715b","#b8ebff","#ff9ec0","#ff93ec","#ffe0aa","#65b300","#6a8b00","#f6e77c","#ff85c0","#5de522","#a5f6ca","#c70077","#5a4149","#a3b700","#ff63c4","#63fecd","#93f6e7","#01b4a4")
+my_colour_palette_15 <- c("#77b642","#7166d9","#cfa240","#b351bb","#4fac7f","#d44891","#79843a","#c68ad4","#d15a2c","#5ba7d9","#ce4355","#6570ba","#b67249","#9b4a6f","#df8398")
+my_colour_palette_32_distinct <- c("#ea7e00","#ca0074","#d1c69b","#474007","#bb00ad","#9c80ff","#be3300","#542e72","#00b9f5","#09436b","#8b0036","#9ac8e6","#ff1059","#959eff","#154a11","#0290f4","#ff7762","#7dbf00","#ff8194","#834c00","#006e73","#f9bb5d","#d6c943","#017229","#00d3a8","#732427","#36e191","#6a8200","#efb3ea","#3227bb","#ff90e1","#e92a12")
+# lesion_palette_7 <- c("#8558d6","#6ee268","#d247ad","#c9d743","#d7453e","#59a237","#d78f2a")
+# patient_palette_45 <- c("#d64530","#585fb1","#795d97","#9e4773","#3f6921","#71692c","#a2b93c","#d571cc","#9b3e97","#33947a","#98ad66","#448a4e","#869ae0","#5ce7af","#e085a3","#dfdc87","#d19be2","#5cb735","#e38269","#3db6c0","#50b565","#50902c","#a98a2c","#dde84a","#db3d76","#5fe485","#7c8329","#b3e791","#6fe965","#5ebce9","#3c86c1","#2a6a45","#65b688","#6651d1","#af4ed3","#df872f","#56e4db","#737cea","#ac464b","#dd37b5","#995b2b","#daac6f","#92e2be","#a2e24b","#e0be3a")
+my_colour_palette_10_distinct <- c("#8eec45","#0265e8","#f6a800","#bf6549","#486900","#c655a0","#00d1b6","#ff4431","#aeb85c","#7e7fc8")
+my_colour_palette_10_soft <- c("#9E788F","#4C5B61","#678D58","#AD5233","#A0A083","#4D456A","#588578","#D0AC4C","#2A7BA0","#931621")
+
+my_colour_palette_12_soft <-c("#9E788F","#4C5B61","#678D58","#AD5233","#A0A083","#4D456A","#588578","#D0AC4C","#2A7BA0","#931621", "#c75a93", "#7c7731")
+
+
+# ------------------------------------------------------------------------------------------
 
 setwd("/Users/julianzaugg/Desktop/ACE/major_projects/skin_microbiome_16S/")
 
@@ -34,49 +60,81 @@ otu_taxonomy_map.df <- read.csv("Result_tables/other/otu_taxonomy_map.csv", head
 # Load the processed metadata
 metadata.df <- read.csv("Result_tables/other/processed_metadata.csv", sep =",", header = T)
 
-metadata.df <- metadata.df[!metadata.df$Sampletype == "negative",]
+# Set the Index to be the rowname
+rownames(metadata.df) <- metadata.df$Index
+
+# We are only interested in C,AK_PL,IEC_PL,SCC_PL,AK,IEC and SCC lesions. 
+# Remove samples for different lesion types (nasal,scar,scar_PL,KA,KA_PL,VV,VV_PL,SF,SF_PL,other,other_PL) from metadata and otu table
+metadata.df <- metadata.df[metadata.df$Sampletype %in% c("C","AK_PL","IEC_PL","SCC_PL","AK","IEC","SCC", "NLC"),]
+
+# Factorise discrete columns
+metadata.df$Patient <- factor(metadata.df$Patient)
+metadata.df$Sampletype <- factor(metadata.df$Sampletype)
+metadata.df$Sampletype_pooled <- factor(metadata.df$Sampletype_pooled)
+metadata.df$Project <- factor(metadata.df$Project)
+metadata.df$Patient_group <- factor(metadata.df$Patient_group)
+metadata.df$Gender <- factor(metadata.df$Gender)
+metadata.df$Number_of_meds <- factor(metadata.df$Number_of_meds)
 
 # Load unfiltered data
-unfiltered_data.df <- read.csv(file = "Result_tables/other/project_otu_table_unfiltered.csv",header = T)
+# unfiltered_data.df <- read.csv(file = "Result_tables/other/project_otu_table_unfiltered.csv",header = T)
 
 # Load filtered/processed abundance data with metadata
-otu_data.df <- read.csv("Result_tables/other/OTU_counts_abundances_and_metadata.csv")
+# otu_data.df <- read.csv("Result_tables/other/OTU_counts_abundances_and_metadata.csv")
 genus_data.df <- read.csv("Result_tables/other/genus_counts_abundances_and_metadata.csv")
-family_data.df <- read.csv("Result_tables/other/family_counts_abundances_and_metadata.csv")
-order_data.df <- read.csv("Result_tables/other/order_counts_abundances_and_metadata.csv")
-class_data.df <- read.csv("Result_tables/other/class_counts_abundances_and_metadata.csv")
-phylum_data.df <- read.csv("Result_tables/other/phylum_counts_abundances_and_metadata.csv")
+# family_data.df <- read.csv("Result_tables/other/family_counts_abundances_and_metadata.csv")
+# order_data.df <- read.csv("Result_tables/other/order_counts_abundances_and_metadata.csv")
+# class_data.df <- read.csv("Result_tables/other/class_counts_abundances_and_metadata.csv")
+# phylum_data.df <- read.csv("Result_tables/other/phylum_counts_abundances_and_metadata.csv")
 
+genus_data.df <- genus_data.df[genus_data.df$Sample %in% rownames(metadata.df),]
+
+# Set levels
+genus_data.df$Sampletype_pooled <- factor(genus_data.df$Sampletype_pooled, levels = c("NLC", "AK","SCC"))
+genus_data.df$Patient_group <- factor(genus_data.df$Patient_group, levels = c("Control", "AK","SCC"))
+genus_data.df$Number_of_meds <- factor(genus_data.df$Number_of_meds, levels = c("1", "2","3"))
+genus_data.df$Fitzpatrick_skin_type <- factor(genus_data.df$Fitzpatrick_skin_type, levels = c("1", "2","3","4"))
+
+  
 # --------------------------------------------------------------------------------------------
+# FUNCTIONS
+
 ### Calculate the (min, max, mean, median, stdev, #samples) abundances of each taxa at each taxa level
-generate_taxa_summary <- function(mydata, taxa_column, group_by_columns = c("Sample_Type")){
-  select_columns <- c(taxa_column, group_by_columns, "Sample", "Read_count", "Read_count_rarified", "Relative_abundance", "Relative_abundance_rarified")
+generate_taxa_summary <- function(mydata, taxa_column, group_by_columns){
+  # select_columns <- c(taxa_column, group_by_columns, "Sample", "Read_count", "Read_count_rarefied", "Relative_abundance", "Relative_abundance_rarefied")
+  select_columns <- c(taxa_column, group_by_columns, "Sample", "Patient", "Read_count", "Read_count_rarefied", "Relative_abundance", "Relative_abundance_rarefied")
   total_samples <- length(unique(mydata$Sample))
+  total_patients <- length(unique(mydata$Patient))
   taxa_group_summary <- 
     mydata %>%
     # dplyr::filter(retained = "yes") %>% # keep only those samples that were retained
     dplyr::select_(.dots = select_columns) %>%
     dplyr::group_by_(.dots = c(taxa_column, group_by_columns)) %>%
-    dplyr::mutate(N_samples = n_distinct(Sample)) %>% # number of unique samples/index
+    dplyr::mutate(N_samples = n_distinct(Sample), N_patients = n_distinct(Patient)) %>% # number of unique samples/index
     dplyr::group_by_(.dots = c(group_by_columns)) %>%
-    dplyr::mutate(N_total_samples_in_group = n_distinct(Sample))  %>%
+    dplyr::mutate(N_total_samples_in_group = n_distinct(Sample),
+                  N_total_patients_in_group = n_distinct(Patient))  %>%
     dplyr::group_by_(.dots = c(group_by_columns, taxa_column)) %>%
-    dplyr::select(-Sample) %>%
+    dplyr::select(-Sample, -Patient) %>%
     dplyr::summarise(N_samples = max(N_samples),
                      N_total_samples_in_group = max(N_total_samples_in_group),
+                     N_patients = max(N_patients),
+                     N_total_patients_in_group = max(N_total_patients_in_group),
                      Percent_group_samples = round((max(N_samples) / max(N_total_samples_in_group))*100, 2),
                      Percent_total_samples = round((max(N_samples) / total_samples)*100, 2),
+                     Percent_group_patients = round((max(N_patients) / max(N_total_patients_in_group))*100, 2),
+                     Percent_total_patients = round((max(N_patients) / total_patients)*100, 2),
                      Mean_read_count = round(mean(Read_count), 2),
                      Median_read_count = median(Read_count),
                      Min_read_count = min(Read_count),
                      Max_read_count = max(Read_count),
                      Summed_read_count = sum(Read_count),
                      
-                     Mean_read_count_rarified = round(mean(Read_count_rarified),2),
-                     Median_read_count_rarified = median(Read_count_rarified),
-                     Min_read_count_rarified = min(Read_count_rarified),
-                     Max_read_count_rarified = max(Read_count_rarified),
-                     Summed_read_count_rarified = sum(Read_count_rarified),
+                     Mean_read_count_rarefied = round(mean(Read_count_rarefied),2),
+                     Median_read_count_rarefied = median(Read_count_rarefied),
+                     Min_read_count_rarefied = min(Read_count_rarefied),
+                     Max_read_count_rarefied = max(Read_count_rarefied),
+                     Summed_read_count_rarefied = sum(Read_count_rarefied),
                      
                      Mean_relative_abundance = round(mean(Relative_abundance), 5),
                      Median_relative_abundance = round(median(Relative_abundance), 5),
@@ -84,32 +142,17 @@ generate_taxa_summary <- function(mydata, taxa_column, group_by_columns = c("Sam
                      Max_relative_abundance = round(max(Relative_abundance),5),
                      Summed_relative_abundance = round(sum(Relative_abundance),5),
                      
-                     Mean_relative_abundance_rarified = round(mean(Relative_abundance_rarified), 5),
-                     Median_relative_abundance_rarified = round(median(Relative_abundance_rarified), 5),
-                     Min_relative_abundance_rarified = round(min(Relative_abundance_rarified), 5),
-                     Max_relative_abundance_rarified = round(max(Relative_abundance_rarified), 5),
-                     Summed_relative_abundance_rarified = round(sum(Relative_abundance_rarified),5)
+                     Mean_relative_abundance_rarefied = round(mean(Relative_abundance_rarefied), 5),
+                     Median_relative_abundance_rarefied = round(median(Relative_abundance_rarefied), 5),
+                     Min_relative_abundance_rarefied = round(min(Relative_abundance_rarefied), 5),
+                     Max_relative_abundance_rarefied = round(max(Relative_abundance_rarefied), 5),
+                     Summed_relative_abundance_rarefied = round(sum(Relative_abundance_rarefied),5)
     ) %>%
     as.data.frame()
   return(taxa_group_summary)
 }
-
-# ---------------------------------------------------------------------------------------------
-# ---------------------------------------------------------------------------------------------
-# ---------------------------------------------------------------------------------------------
-# Sample type
-
-genus_cohort_sampletype_summary <- generate_taxa_summary(genus_data.df,taxa_column = "taxonomy_genus", group_by_columns = c("Project", "Sampletype_pooled"))
-# otu_cohort_sampletype_summary <- generate_taxa_summary(otu_data.df, "OTU.ID", group_by_columns = c("Project", "Sampletype_pooled"))
-# otu_cohort_sampletype_summary$taxonomy_species <- as.character(unlist(lapply(as.character(otu_cohort_sampletype_summary$OTU.ID), function(x) otu_taxonomy_map.df[otu_taxonomy_map.df$OTU.ID == x,]$taxonomy_species)))
-
-# Write sample type summaries to file
-write.csv(genus_cohort_sampletype_summary,file = "Result_tables/abundance_analysis_tables/genus_cohort_sampletype_taxa_summary.csv", row.names = F, quote = F)
-# write.csv(otu_cohort_sampletype_summary,file = "Result_tables/abundance_analysis_tables/paper_UC_CD_CONTROL/otu_sample_type_taxa_summary.csv", row.names = F, quote = F)
-
-# --------------------------
-filter_summary_to_top_n <- function(taxa_summary, grouping_variables, abundance_column = "Summed_read_count_rarified", my_top_n = 10){
-  # Get the top N taxa by rarified read count. Requires taxa summary table.
+filter_summary_to_top_n <- function(taxa_summary, grouping_variables, abundance_column, my_top_n = 10){
+  # Get the top N taxa as described in a provided taxa summary table.
   out <- 
     taxa_summary %>%
     dplyr::group_by_(.dots = c(grouping_variables)) %>%
@@ -122,9 +165,455 @@ filter_summary_to_top_n <- function(taxa_summary, grouping_variables, abundance_
 }
 
 
+# Boxplot for relative abundances. If data has not been filtered to a single taxa entry,
+# the plot will be a mix and should have factet_wrap(~TAXA) applied. Or just pre-filter.
+generate_abundance_boxplot <- function(mydata, variable, metric, variable_colours_available = T){
+  internal_data.df <- mydata[!is.na(mydata[variable]),]
+  variable_values <- factor(as.character(unique(internal_data.df[[variable]])))
+  if (variable_colours_available == T){
+    color_col_name <- paste0(variable, "_colour")
+    variable_colours <- setNames(as.character(unique(internal_data.df[[color_col_name]])), as.character(unique(internal_data.df[[variable]])))
+  } else{
+    variable_colours <- setNames(my_colour_pallete_206_distinct[1:length(variable_values)], variable_values)  
+  }
+  myplot <- ggplot(internal_data.df, aes(x = get(variable), y = get(metric))) +
+    geom_boxplot(outlier.shape = NA, aes(fill = get(variable))) +
+    scale_fill_manual(values = variable_colours, name = variable) +
+    geom_jitter(size=0.5, width = 0.10, height=0) +
+    guides(fill=FALSE) +
+    # scale_y_continuous(limits = c(0,4.5), breaks = seq(0,4.5,.5)) +
+    xlab("") +
+    ylab(metric)  +
+    # common_theme +
+    theme(panel.border = element_blank(), 
+          panel.grid.major = element_blank(),
+          panel.grid.minor = element_blank(),
+          axis.line = element_line(colour = "black", size = 0.5),
+          panel.background = element_blank(),
+          strip.background = element_rect(fill = "white", colour = "white", size = 1),
+          strip.text = element_text(size = 6),
+          legend.key=element_blank(),
+          legend.direction="vertical",
+          legend.background = element_rect(colour ="white", size = .3),
+          legend.text.align = 0,
+          legend.title = element_text(size=10, face="bold"),
+          legend.title.align = 0.5,
+          legend.margin = margin(c(2,2,2,2)),
+          legend.key.height=unit(.4,"cm"),
+          legend.text = element_text(size = 8),
+          axis.text = element_text(size = 9, colour = "black"),
+          axis.title = element_text(size = 10,face = "bold"),
+          complete = F,
+          plot.title = element_text(size = 6))
+  myplot
+}
+
+# mydata = data table
+# taxa_column, e.g. taxonomy_genus or Genus
+# variable, e.g. Sampletype_pooled
+# metric, e.g. Relative_abundance_rarefied
+generate_multiple_abundance_boxplot <-  function(mydata, taxa_column, variable, metric, variable_colours_available = T, add_points = F){
+  internal_data.df <- mydata[!is.na(mydata[variable]),]
+  variable_values <- factor(as.character(unique(internal_data.df[[variable]])))
+  if (variable_colours_available == T){
+    color_col_name <- paste0(variable, "_colour")
+    variable_colours <- setNames(as.character(unique(internal_data.df[[color_col_name]])), as.character(unique(internal_data.df[[variable]])))
+  } else{
+    variable_colours <- setNames(my_colour_pallete_206_distinct[1:length(variable_values)], variable_values)  
+  }
+  # Check for groups that are missing taxa. If any are missing, create a single fake entry.
+  # This forces ggplot boxplots to have all the discrete groups
+  for (entry in unique(internal_data.df[,taxa_column])){
+    data_subset <- subset(internal_data.df, get(taxa_column) == entry) # get those entries matching the taxa
+    # Determine those groups defined in the full data that are missing from the subset 
+    missing_groups <- unique(internal_data.df[,variable])[!unique(internal_data.df[,variable]) %in% data_subset[,variable]]
+    for (mg in missing_groups){
+      temp <- data_subset[1,]
+      temp[,taxa_column] <- entry
+      temp[,variable] <- mg
+      # temp[,metric] <- NA
+      temp[,metric] <- 0
+      internal_data.df <- rbind(internal_data.df, temp)
+    }
+  }
+
+  myplot <- ggplot(internal_data.df, aes(x = get(taxa_column), y = get(metric), fill = get(variable))) +
+    geom_boxplot(outlier.shape = NA) +
+    scale_fill_manual(values = variable_colours, name = variable) +
+    coord_flip() +
+    # guides(fill=FALSE) +
+    # scale_y_continuous(limits = c(0,4.5), breaks = seq(0,4.5,.5)) +
+    xlab("") +
+    ylab(metric)  +
+    theme(panel.border = element_blank(), 
+          panel.grid.major = element_blank(),
+          panel.grid.minor = element_blank(),
+          axis.line = element_line(colour = "black", size = 0.5),
+          panel.background = element_blank(),
+          strip.background = element_rect(fill = "white", colour = "white", size = 1),
+          strip.text = element_text(size = 6),
+          legend.key=element_blank(),
+          legend.direction="vertical",
+          legend.background = element_rect(colour ="white", size = .3),
+          legend.text.align = 0,
+          legend.title = element_text(size=8, face="bold"),
+          legend.title.align = 0.5,
+          legend.margin = margin(c(2,2,2,2)),
+          legend.key.height=unit(.4,"cm"),
+          legend.text = element_text(size = 8),
+          axis.text = element_text(size = 9, colour = "black"),
+          axis.title = element_text(size = 10,face = "bold"),
+          complete = F,
+          plot.title = element_text(size = 6))
+  if(add_points){
+    myplot <- myplot + geom_point(position = position_jitterdodge(), size = 0.2)
+  }
+  myplot
+}
+# Calculate the significance between abundances for taxa
+calculate_abundance_significance <- function(mydata, variable, taxonomy_column, metric){
+  internal_data.df <- mydata
+  results.df <- data.frame("Taxonomy" = character(),
+                           "Group_1" = character(),
+                           "Group_2" = character(),
+                           "Shannon_p-value" = character(),
+                           "Simpson_p-value" = character(),
+                           "Chao1_p-value" = character())
+  group_combinations <- combn(as.character(unique(internal_data.df[,variable])), 2)
+  for (taxa in unique(internal_data.df[,taxonomy_column])){ # For each taxa in the taxonomy column
+    for (i in 1:ncol(group_combinations)) { # For each group combination
+      group_1 <- group_combinations[1,i]
+      group_2 <- group_combinations[2,i]
+      group_1_meta <- subset(internal_data.df, get(variable) == group_1 & get(taxonomy_column) == taxa)
+      group_2_meta <- subset(internal_data.df, get(variable) == group_2 & get(taxonomy_column) == taxa)
+      if (any(c(nrow(group_1_meta) < 2, nrow(group_2_meta) < 2))){
+        next
+      }
+      wilcox_test <- wilcox.test(group_1_meta[,metric], group_2_meta[,metric], exact = F)
+      results.df <- rbind(results.df, data.frame("Taxonomy" = taxa,
+                                                 "Group_1" = group_1, 
+                                                 "Group_2" = group_2, 
+                                                 "Wilcox_pvalue" = round(wilcox_test$p.value,6)
+      ))
+    }
+  }
+  
+  results.df$Wilcox_padj <- round(p.adjust(results.df$Wilcox_pvalue,method = "BH"),6)
+  results.df
+}
+
+# ---------------------------------------------------------------------------------------------
+# ---------------------------------------------------------------------------------------------
+# ---------------------------------------------------------------------------------------------
+# Project
+project_genus_summary.df <- generate_taxa_summary(genus_data.df,
+                                                  taxa_column = "taxonomy_genus", 
+                                                  group_by_columns = c("Project"))
+
+project_genus_summary_top.df <- filter_summary_to_top_n(taxa_summary = project_genus_summary.df, 
+                                                        grouping_variables = c("Project"), 
+                                                        abundance_column = "Mean_relative_abundance_rarefied", 
+                                                        my_top_n = 10)
+
+project_genus_summary_top_significances.df <- calculate_abundance_significance(mydata = subset(genus_data.df, taxonomy_genus %in% project_genus_summary_top.df$taxonomy_genus), 
+                                         variable = "Project", taxonomy_column = "taxonomy_genus",metric = "Relative_abundance_rarefied")
+
+write.csv(project_genus_summary_top_significances.df,"Result_tables/abundance_analysis_tables/project__genus_wilcox.csv", row.names = F)
+
+# Make group boxplot for top taxa
+temp <- genus_data.df
+temp <- temp[temp$taxonomy_genus %in% project_genus_summary_top.df$taxonomy_genus,]
+temp$Family_Genus <- with(temp, paste0(Family, ";", Genus))
+myplot <- generate_multiple_abundance_boxplot(temp, "Family_Genus", "Project","Relative_abundance_rarefied", add_points = F) + 
+  geom_point(position = position_jitterdodge(), size = .3,stroke = 0.1, shape = 21,aes(fill = Project)) +
+  # scale_y_continuous(limits = c(-1,1)) +
+  # facet_wrap(~Project) + 
+  ylab("Relative abundance") + 
+  xlab("Taxa") +
+  theme(axis.text.y = element_text(size =6),
+        axis.text.x = element_text(size =6),
+        axis.title = element_text(size =6))
+ggsave(plot = myplot,
+       filename = paste0("Result_figures/abundance_analysis_plots/boxplots/Project_top_taxa.pdf"),
+       height = 10,
+       width = 16,
+       units = "cm")
+
+# Make individual boxplots for the top taxa
+for (genus in project_genus_summary_top.df$taxonomy_genus){
+  data_subset <- subset(genus_data.df, taxonomy_genus == genus)
+  base_name <- gsub(".*(f__.*)", "\\1",genus)
+  myplot <- generate_abundance_boxplot(data_subset, variable = "Project", metric = "Relative_abundance_rarefied") +
+    ylab("Relative abundance") +
+    scale_y_continuous(breaks = seq(0,1,.1), limits = c(0,1)) +
+    ggtitle(base_name)
+  
+  ggsave(plot = myplot,
+         filename = paste0("Result_figures/abundance_analysis_plots/boxplots/Project/genus__",base_name, ".pdf"),
+         height = 8,
+         width = 12,
+         units = "cm")
+}
+  
+
+
+# ------------------------------------------
+# Sampletype_pooled for each Project
+project_sampletype_pooled_genus_summary.df <- generate_taxa_summary(genus_data.df,
+                                                                    taxa_column = "taxonomy_genus", 
+                                                                    group_by_columns = c("Project", "Sampletype_pooled"))
+project_sampletype_pooled_genus_summary_top.df <- filter_summary_to_top_n(taxa_summary =  project_sampletype_pooled_genus_summary.df, 
+                                                                          grouping_variables = c("Project", "Sampletype_pooled"), 
+                                                                          abundance_column = "Mean_relative_abundance_rarefied", 
+                                                                          my_top_n = 9)
+
+# immunocompetent
+project_sampletype_pooled_genus_top_significances.df <- calculate_abundance_significance(mydata = subset(genus_data.df, Project == "immunocompetent" & taxonomy_genus %in% project_sampletype_pooled_genus_summary_top.df$taxonomy_genus), 
+                                                                               variable = "Sampletype_pooled", taxonomy_column = "taxonomy_genus",metric = "Relative_abundance_rarefied")
+project_sampletype_pooled_genus_top_significances.df$Project <- "immunocompetent"
+write.csv(project_sampletype_pooled_genus_top_significances.df,"Result_tables/abundance_analysis_tables/immunocompetent_sampletype_pooled__genus_wilcox.csv", row.names = F)
+# immunocompromised
+project_sampletype_pooled_genus_top_significances.df <- calculate_abundance_significance(mydata = subset(genus_data.df, Project == "immunocompromised" & taxonomy_genus %in% project_sampletype_pooled_genus_summary_top.df$taxonomy_genus), 
+                                                                                         variable = "Sampletype_pooled", taxonomy_column = "taxonomy_genus",metric = "Relative_abundance_rarefied")
+project_sampletype_pooled_genus_top_significances.df$Project <- "immunocompromised"
+write.csv(project_sampletype_pooled_genus_top_significances.df,"Result_tables/abundance_analysis_tables/immunocompromised_sampletype_pooled__genus_wilcox.csv", row.names = F)
+
+# Make group boxplot for top taxa
+temp <- genus_data.df
+temp <- temp[temp$taxonomy_genus %in% project_sampletype_pooled_genus_summary_top.df$taxonomy_genus,]
+temp$Family_Genus <- with(temp, paste0(Family, ";", Genus))
+myplot <- generate_multiple_abundance_boxplot(temp, "Family_Genus", "Sampletype_pooled","Relative_abundance_rarefied", add_points = F) + 
+  geom_point(position = position_jitterdodge(), size = .3,stroke = 0.1, shape = 21,aes(fill = Sampletype_pooled)) +
+  # scale_y_continuous(limits = c(-1,1)) +
+  facet_wrap(~Project) +
+  ylab("Relative abundance") + 
+  xlab("Taxa") +
+  theme(axis.text.y = element_text(size =6),
+        axis.text.x = element_text(size =6),
+        axis.title = element_text(size =6))
+ggsave(plot = myplot,
+       filename = paste0("Result_figures/abundance_analysis_plots/boxplots/Project_sampletype_pooled_top_taxa.pdf"),
+       height = 15,
+       width = 16,
+       units = "cm")
+
+
+# Make individual boxplots for the top taxa
+for (project in unique(project_genus_summary_top.df$Project)){
+  for (genus in project_genus_summary_top.df$taxonomy_genus){
+    data_subset <- subset(genus_data.df, taxonomy_genus == genus & Project == project)
+    base_name <- gsub(".*(f__.*)", "\\1",genus)
+    myplot <- generate_abundance_boxplot(data_subset, variable = "Sampletype_pooled", metric = "Relative_abundance_rarefied") +
+      ylab("Relative abundance") +
+      scale_y_continuous(breaks = seq(0,1,.1), limits = c(0,1)) +
+      labs(title = project,
+           subtitle = base_name)
+    if (nchar(base_name) > 50){
+      myplot <- myplot + theme(plot.subtitle = element_text(size = 3.5, hjust = 0.5))
+    } else{
+      myplot <- myplot + theme(plot.subtitle = element_text(size = 6, hjust = 0.5))
+    }
+      # ggtitle(paste0(project, "\n", base_name))
+    
+    ggsave(plot = myplot,
+           filename = paste0("Result_figures/abundance_analysis_plots/boxplots/Project_sampletype/", project, "_genus__",base_name, ".pdf"),
+           height = 8,
+           width = 8,
+           units = "cm")
+  }
+}
+
+# ------------------------------------------
+# Patient_group for immunocompromised
+immunocompromised_patient_group_genus_summary.df <- generate_taxa_summary(subset(genus_data.df, Project == "immunocompromised"),
+                                                                          taxa_column = "taxonomy_genus", 
+                                                                          group_by_columns = c("Patient_group"))
+immunocompromised_patient_group_genus_summary_top.df <- filter_summary_to_top_n(taxa_summary =  immunocompromised_patient_group_genus_summary.df, 
+                                                                          grouping_variables = c("Patient_group"), 
+                                                                          abundance_column = "Mean_relative_abundance_rarefied", 
+                                                                          my_top_n = 9)
+
+# immunocompromised
+immunocompromised_patient_group_genus_top_significances.df <- calculate_abundance_significance(mydata = subset(genus_data.df, Project == "immunocompromised" & 
+                                                                                                                 taxonomy_genus %in% immunocompromised_patient_group_genus_summary_top.df$taxonomy_genus), 
+                                                                                         variable = "Patient_group", taxonomy_column = "taxonomy_genus",metric = "Relative_abundance_rarefied")
+immunocompromised_patient_group_genus_top_significances.df$Project <- "immunocompromised"
+write.csv(immunocompromised_patient_group_genus_top_significances.df,"Result_tables/abundance_analysis_tables/immunocompromised_patient_group__genus_wilcox.csv", row.names = F)
+
+
+# Make group boxplot for top taxa
+temp <- subset(genus_data.df, Project == "immunocompromised")
+temp <- temp[temp$taxonomy_genus %in% immunocompromised_patient_group_genus_summary_top.df$taxonomy_genus,]
+temp$Family_Genus <- with(temp, paste0(Family, ";", Genus))
+myplot <- generate_multiple_abundance_boxplot(temp, "Family_Genus", "Patient_group","Relative_abundance_rarefied", add_points = F) + 
+  geom_point(position = position_jitterdodge(), size = .3,stroke = 0.1, shape = 21,aes(fill = Patient_group)) +
+  ylab("Relative abundance") + 
+  xlab("Taxa") +
+  theme(axis.text.y = element_text(size =6),
+        axis.text.x = element_text(size =6),
+        axis.title = element_text(size =6))
+ggsave(plot = myplot,
+       filename = paste0("Result_figures/abundance_analysis_plots/boxplots/Patient_group_top_taxa.pdf"),
+       height = 15,
+       width = 16,
+       units = "cm")
+
+
+# Make individual boxplots for the top taxa
+for (genus in immunocompromised_patient_group_genus_summary_top.df$taxonomy_genus){
+  data_subset <- subset(genus_data.df, Project == "immunocompromised" & taxonomy_genus == genus)
+  base_name <- gsub(".*(f__.*)", "\\1",genus)
+  myplot <- generate_abundance_boxplot(data_subset, variable = "Patient_group", metric = "Relative_abundance_rarefied") +
+    ylab("Relative abundance") +
+    scale_y_continuous(breaks = seq(0,1,.1), limits = c(0,1)) +
+    labs(title = paste0("Patient group"),
+         subtitle = base_name)
+  if (nchar(base_name) > 50){
+    myplot <- myplot + theme(plot.subtitle = element_text(size = 3.5, hjust = 0.5))
+  } else{
+    myplot <- myplot + theme(plot.subtitle = element_text(size = 6, hjust = 0.5))
+  }
+  ggsave(plot = myplot,
+         filename = paste0("Result_figures/abundance_analysis_plots/boxplots/Patient_group/patient_group_genus__",base_name, ".pdf"),
+         height = 8,
+         width = 8,
+         units = "cm")
+}
+# ------------------------------------------
+# Number_of_meds for immunocompromised
+immunocompromised_number_of_meds_genus_summary.df <- generate_taxa_summary(subset(genus_data.df, Project == "immunocompromised"),
+                                                                          taxa_column = "taxonomy_genus", 
+                                                                          group_by_columns = c("Number_of_meds"))
+immunocompromised_number_of_meds_genus_summary_top.df <- filter_summary_to_top_n(taxa_summary =  immunocompromised_number_of_meds_genus_summary.df, 
+                                                                                grouping_variables = c("Number_of_meds"), 
+                                                                                abundance_column = "Mean_relative_abundance_rarefied", 
+                                                                                my_top_n = 9)
+
+# Calculate abundance significance
+immunocompromised_number_of_meds_genus_top_significances.df <- calculate_abundance_significance(mydata = subset(genus_data.df, Project == "immunocompromised" & taxonomy_genus %in% immunocompromised_number_of_meds_genus_summary_top.df$taxonomy_genus), 
+                                                                                               variable = "Number_of_meds", taxonomy_column = "taxonomy_genus",metric = "Relative_abundance_rarefied")
+immunocompromised_number_of_meds_genus_top_significances.df$Project <- "immunocompromised"
+write.csv(immunocompromised_number_of_meds_genus_top_significances.df,"Result_tables/abundance_analysis_tables/immunocompromised_Number_of_meds__genus_wilcox.csv", row.names = F)
+
+
+# Make group boxplot for top taxa
+temp <- subset(genus_data.df, Project == "immunocompromised")
+temp <- temp[temp$taxonomy_genus %in% immunocompromised_number_of_meds_genus_summary_top.df$taxonomy_genus,]
+temp$Family_Genus <- with(temp, paste0(Family, ";", Genus))
+myplot <- generate_multiple_abundance_boxplot(temp, "Family_Genus", "Number_of_meds","Relative_abundance_rarefied", add_points = F) + 
+  geom_point(position = position_jitterdodge(), size = .3,stroke = 0.1, shape = 21,aes(fill = Number_of_meds)) +
+  ylab("Relative abundance") + 
+  xlab("Taxa") +
+  theme(axis.text.y = element_text(size =6),
+        axis.text.x = element_text(size =6),
+        axis.title = element_text(size =6))
+ggsave(plot = myplot,
+       filename = paste0("Result_figures/abundance_analysis_plots/boxplots/Number_of_meds_top_taxa.pdf"),
+       height = 15,
+       width = 16,
+       units = "cm")
+
+
+# Make individual boxplots for the top taxa
+for (genus in immunocompromised_number_of_meds_genus_summary_top.df$taxonomy_genus){
+  data_subset <- subset(genus_data.df, Project == "immunocompromised" & taxonomy_genus == genus)
+  base_name <- gsub(".*(f__.*)", "\\1",genus)
+  myplot <- generate_abundance_boxplot(data_subset, variable = "Number_of_meds", metric = "Relative_abundance_rarefied") +
+    ylab("Relative abundance") +
+    scale_y_continuous(breaks = seq(0,1,.1), limits = c(0,1)) +
+    labs(title = paste0("Number of meds"),
+         subtitle = base_name)
+  if (nchar(base_name) > 50){
+    myplot <- myplot + theme(plot.subtitle = element_text(size = 3.5, hjust = 0.5))
+  } else{
+    myplot <- myplot + theme(plot.subtitle = element_text(size = 6, hjust = 0.5))
+  }
+  ggsave(plot = myplot,
+         filename = paste0("Result_figures/abundance_analysis_plots/boxplots/Number_of_meds/Number_of_meds_genus__",base_name, ".pdf"),
+         height = 8,
+         width = 8,
+         units = "cm")
+}
+
+# ------------------------------------------
+# Fitzpatrick_skin_type for immunocompromised
+immunocompromised_skin_type_genus_summary.df <- generate_taxa_summary(subset(genus_data.df, Project == "immunocompromised"),
+                                                                           taxa_column = "taxonomy_genus", 
+                                                                           group_by_columns = c("Fitzpatrick_skin_type"))
+immunocompromised_skin_type_genus_summary_top.df <- filter_summary_to_top_n(taxa_summary =  immunocompromised_skin_type_genus_summary.df, 
+                                                                                 grouping_variables = c("Fitzpatrick_skin_type"), 
+                                                                                 abundance_column = "Mean_relative_abundance_rarefied", 
+                                                                                 my_top_n = 9)
+# Calculate abundance significance
+immunocompromised_skin_type_genus_top_significances.df <- calculate_abundance_significance(mydata = subset(genus_data.df, Project == "immunocompromised" & taxonomy_genus %in% immunocompromised_skin_type_genus_summary_top.df$taxonomy_genus), 
+                                                                                                variable = "Fitzpatrick_skin_type", taxonomy_column = "taxonomy_genus",metric = "Relative_abundance_rarefied")
+immunocompromised_skin_type_genus_top_significances.df$Project <- "immunocompromised"
+write.csv(immunocompromised_skin_type_genus_top_significances.df,"Result_tables/abundance_analysis_tables/immunocompromised_Fitzpatrick_skin_type__genus_wilcox.csv", row.names = F)
+
+# Make group boxplot for top taxa
+temp <- subset(genus_data.df, Project == "immunocompromised")
+temp <- temp[temp$taxonomy_genus %in% immunocompromised_skin_type_genus_summary_top.df$taxonomy_genus,]
+temp$Family_Genus <- with(temp, paste0(Family, ";", Genus))
+myplot <- generate_multiple_abundance_boxplot(temp, "Family_Genus", "Fitzpatrick_skin_type","Relative_abundance_rarefied", add_points = F) + 
+  geom_point(position = position_jitterdodge(dodge.width = .75), size = .3,stroke = 0.1, shape = 21,aes(fill = Fitzpatrick_skin_type)) +
+  ylab("Relative abundance") + 
+  xlab("Taxa") +
+  theme(axis.text.y = element_text(size =6),
+        axis.text.x = element_text(size =6),
+        axis.title = element_text(size =6))
+ggsave(plot = myplot,
+       filename = paste0("Result_figures/abundance_analysis_plots/boxplots/Fitzpatrick_skin_type_top_taxa.pdf"),
+       height = 15,
+       width = 16,
+       units = "cm")
+
+
+# Make individual boxplots for the top taxa
+for (genus in immunocompromised_number_of_meds_genus_summary_top.df$taxonomy_genus){
+  data_subset <- subset(genus_data.df, Project == "immunocompromised" & taxonomy_genus == genus)
+  base_name <- gsub(".*(f__.*)", "\\1",genus)
+  myplot <- generate_abundance_boxplot(data_subset, variable = "Fitzpatrick_skin_type", metric = "Relative_abundance_rarefied") +
+    ylab("Relative abundance") +
+    scale_y_continuous(breaks = seq(0,1,.1), limits = c(0,1)) +
+    labs(title = paste0("Fitzpatrick skin type"),
+         subtitle = base_name)
+  if (nchar(base_name) > 50){
+    myplot <- myplot + theme(plot.subtitle = element_text(size = 3.5, hjust = 0.5))
+  } else{
+    myplot <- myplot + theme(plot.subtitle = element_text(size = 6, hjust = 0.5))
+  }
+  ggsave(plot = myplot,
+         filename = paste0("Result_figures/abundance_analysis_plots/boxplots/Fitzpatrick_skin_type/Fitzpatrick_skin_type_genus__",base_name, ".pdf"),
+         height = 8,
+         width = 8,
+         units = "cm")
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+# otu_cohort_sampletype_summary <- generate_taxa_summary(otu_data.df, "OTU.ID", group_by_columns = c("Project", "Sampletype_pooled"))
+# otu_cohort_sampletype_summary$taxonomy_species <- as.character(unlist(lapply(as.character(otu_cohort_sampletype_summary$OTU.ID), function(x) otu_taxonomy_map.df[otu_taxonomy_map.df$OTU.ID == x,]$taxonomy_species)))
+
+# Write sample type summaries to file
+write.csv(genus_cohort_sampletype_summary,file = "Result_tables/abundance_analysis_tables/genus_cohort_sampletype_taxa_summary.csv", row.names = F, quote = F)
+
+# --------------------------
+
+
 genus_cohort_sample_type_top_10 <- filter_summary_to_top_n(taxa_summary = genus_cohort_sampletype_summary,
                                                                                   grouping_variables = c("Project", "Sampletype_pooled"), 
-                                                                                  abundance_column = "Mean_relative_abundance_rarified",
+                                                                                  abundance_column = "Mean_relative_abundance_rarefied",
                                                                                     my_top_n = 10)
 
 write.csv(genus_cohort_sample_type_top_10,file = "Result_tables/abundance_analysis_tables/genus_cohort_sampletype_taxa_summary_top_10_mean_relative_abundance.csv", row.names = F, quote = F)
@@ -134,7 +623,7 @@ write.csv(genus_cohort_sample_type_top_10,file = "Result_tables/abundance_analys
 # Function to generate a more simplified summary for any group(s) (ignore taxa).
 # No need to calculate number/percent samples in group.
 generate_summary <- function(mydata, group_by_columns = c("Sample_Type")){
-  select_columns <- c(group_by_columns, "Sample", "Read_count", "Read_count_rarified", "Relative_abundance", "Relative_abundance_rarified")
+  select_columns <- c(group_by_columns, "Sample", "Read_count", "Read_count_rarefied", "Relative_abundance", "Relative_abundance_rarefied")
   total_samples <- length(unique(mydata$Sample))
   group_summary <- 
     mydata %>%
@@ -151,11 +640,11 @@ generate_summary <- function(mydata, group_by_columns = c("Sample_Type")){
                      Max_read_count = max(Read_count),
                      Summed_read_count = sum(Read_count),
                      
-                     Mean_read_count_rarified = round(mean(Read_count_rarified),2),
-                     Median_read_count_rarified = median(Read_count_rarified),
-                     Min_read_count_rarified = min(Read_count_rarified),
-                     Max_read_count_rarified = max(Read_count_rarified),
-                     Summed_read_count_rarified = sum(Read_count_rarified),
+                     Mean_read_count_rarefied = round(mean(Read_count_rarefied),2),
+                     Median_read_count_rarefied = median(Read_count_rarefied),
+                     Min_read_count_rarefied = min(Read_count_rarefied),
+                     Max_read_count_rarefied = max(Read_count_rarefied),
+                     Summed_read_count_rarefied = sum(Read_count_rarefied),
                      
                      Mean_relative_abundance = round(mean(Relative_abundance), 5),
                      Median_relative_abundance = round(median(Relative_abundance), 5),
@@ -163,11 +652,11 @@ generate_summary <- function(mydata, group_by_columns = c("Sample_Type")){
                      Max_relative_abundance = round(max(Relative_abundance),5),
                      Summed_relative_abundance = round(sum(Relative_abundance),5),
                      
-                     Mean_relative_abundance_rarified = round(mean(Relative_abundance_rarified), 5),
-                     Median_relative_abundance_rarified = round(median(Relative_abundance_rarified), 5),
-                     Min_relative_abundance_rarified = round(min(Relative_abundance_rarified), 5),
-                     Max_relative_abundance_rarified = round(max(Relative_abundance_rarified), 5),
-                     Summed_relative_abundance_rarified = round(sum(Relative_abundance_rarified),5)
+                     Mean_relative_abundance_rarefied = round(mean(Relative_abundance_rarefied), 5),
+                     Median_relative_abundance_rarefied = round(median(Relative_abundance_rarefied), 5),
+                     Min_relative_abundance_rarefied = round(min(Relative_abundance_rarefied), 5),
+                     Max_relative_abundance_rarefied = round(max(Relative_abundance_rarefied), 5),
+                     Summed_relative_abundance_rarefied = round(sum(Relative_abundance_rarefied),5)
     ) %>%
     as.data.frame()
   return(group_summary)
@@ -196,7 +685,7 @@ mean_read_count_bar_graph
 ggsave(plot = mean_read_count_bar_graph, filename ="Result_figures/abundance_analysis_plots/cohort_sampletype_mean_read_count_bar_graph.pdf", width = 10, height = 5)
 
 # Plot the summed read count for each sample site as a bar graph
-summed_read_count_bar_graph <- ggplot(cohort_sampletype_summary.df, aes(x = Sampletype_pooled, y = Summed_read_count_rarified)) +
+summed_read_count_bar_graph <- ggplot(cohort_sampletype_summary.df, aes(x = Sampletype_pooled, y = Summed_read_count_rarefied)) +
   geom_bar(position = "dodge", stat= "identity", aes(fill = Sampletype_pooled), color = "black",size =.2) +
   geom_text(aes(label = paste0("n = ",N_samples)),vjust = -0.6,size = 3) +
   # geom_text(aes(label = count, x = type, y = count), position = position_dodge(width = 0.8), vjust = -0.6
@@ -208,7 +697,7 @@ summed_read_count_bar_graph
 ggsave(plot = summed_read_count_bar_graph, filename ="Result_figures/abundance_analysis_plots/cohort_sampletype_summed_read_count_bar_graph.pdf", width = 10, height = 5)
 
 
-mean_relative_abundaunce_bar_graph <- ggplot(cohort_sampletype_summary.df, aes(x = Sampletype_pooled, y = Mean_relative_abundance_rarified)) +
+mean_relative_abundaunce_bar_graph <- ggplot(cohort_sampletype_summary.df, aes(x = Sampletype_pooled, y = Mean_relative_abundance_rarefied)) +
   geom_bar(position = "dodge", stat= "identity", aes(fill = Sampletype_pooled), color = "black",size =.2) +
   geom_text(aes(label = paste0("n = ",N_samples)),vjust = -0.6,size = 3) +
   # geom_text(aes(label = count, x = type, y = count), position = position_dodge(width = 0.8), vjust = -0.6

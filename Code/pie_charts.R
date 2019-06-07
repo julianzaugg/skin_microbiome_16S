@@ -73,7 +73,6 @@ phylum_data.df <- subset(phylum_data.df, Sampletype != "negative")
 
 
 # ------------------------------------------------------------------------------------------
-
 generate_taxa_summary <- function(mydata, taxa_column, abundance_column= "Relative_abundance_rarefied"){
   # Generate a summary table of each taxa for each group. Use this to filter to taxa of interest
   # For each taxa, count the :
