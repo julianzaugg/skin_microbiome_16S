@@ -275,7 +275,8 @@ run_per_patient_deseq <- function(my_otu_matrix, variable = "Sampletype_pooled",
 }
 # temp <- filter_matrix_rows(otu_rare.m, 200)
 # run_per_patient_deseq(temp, "Sampletype_pooled", my_levels <- c("NLC", "AK", "SCC"))
-run_per_patient_deseq(otu_rare.m, "Sampletype_pooled", my_levels <- c("NLC", "AK", "SCC"))
+run_per_patient_deseq(otu_rare.m, "Sampletype_pooled", my_levels <- c("NLC", "AK", "SCC"),assign_taxonomy = T)
+run_per_patient_deseq(genus_rare.m, "Sampletype_pooled", my_levels <- c("NLC", "AK", "SCC"),assign_taxonomy = F)
 
 
 # Comparing the same lesion types between cohorts
@@ -397,15 +398,16 @@ run_lesion_cohorts_deseq <- function(my_otu_matrix, variable = "Sampletype_poole
   }
   # Write the results
   if (assign_taxonomy == T){
-    outfilename <- paste("Result_tables/DESeq_results/lesion_cohort_otu_combined.csv", sep= "")
+    outfilename <- paste("Result_tables/DESeq_results/by_lesion_cohort/lesion_cohort_otu_combined.csv", sep= "")
   } else{
-    outfilename <- paste("Result_tables/DESeq_results/lesion_cohort_genus_combined.csv", sep= "")
+    outfilename <- paste("Result_tables/DESeq_results/by_lesion_cohort/lesion_cohort_genus_combined.csv", sep= "")
   }
   write.csv(all_combined_results.df, file=outfilename, quote = F, row.names = F)
 }
 # temp <- filter_matrix_rows(otu_rare.m, 200)
 # run_lesion_cohorts_deseq(temp, "Sampletype_pooled")
-run_lesion_cohorts_deseq(otu_rare.m, "Sampletype_pooled")
+run_lesion_cohorts_deseq(otu_rare.m, "Sampletype_pooled",assign_taxonomy = T)
+run_lesion_cohorts_deseq(genus_rare.m, "Sampletype_pooled",assign_taxonomy = F)
 
 
 # Number of medications. Compare those patients taking 1 vs 2 vs 3 medications

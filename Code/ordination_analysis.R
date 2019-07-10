@@ -69,6 +69,10 @@ otu_taxonomy_map.df <- read.csv("Result_tables/other/otu_taxonomy_map.csv", head
 # Load the processed metadata
 metadata.df <- read.csv("Result_tables/other/processed_metadata.csv", sep =",", header = T)
 
+# We are only interested in C,AK_PL,IEC_PL,SCC_PL,AK,IEC and SCC lesions. 
+# Remove samples for different lesion types (nasal,scar,scar_PL,KA,KA_PL,VV,VV_PL,SF,SF_PL,other,other_PL) from metadata and otu table
+metadata.df <- metadata.df[metadata.df$Sampletype %in% c("C","AK_PL","IEC_PL","SCC_PL","AK","IEC","SCC", "LC"),]
+
 # metadata.df <- metadata.df[metadata.df$Project == "immunocompetent",]
 # metadata.df <- metadata.df[metadata.df$Project == "immunocompromised",]
 
@@ -85,15 +89,15 @@ metadata.df <- metadata.df[! metadata.df$Index %in% samples_removed,]
 # Factorise discrete columns
 metadata.df$Patient <- factor(metadata.df$Patient)
 metadata.df$Sampletype <- factor(metadata.df$Sampletype)
-metadata.df$Sampletype_pooled <- factor(metadata.df$Sampletype_pooled)
+metadata.df$Sampletype_pooled <- factor(metadata.df$Sampletype_pooled, levels = c("LC", "AK","SCC"))
 metadata.df$Project <- factor(metadata.df$Project)
-metadata.df$Patient_group <- factor(metadata.df$Patient_group)
+metadata.df$Patient_group <- factor(metadata.df$Patient_group, levels = c("Control", "AK","SCC"))
 metadata.df$Gender <- factor(metadata.df$Gender)
-metadata.df$Number_of_meds <- factor(metadata.df$Number_of_meds)
+metadata.df$Number_of_meds <- factor(metadata.df$Number_of_meds, levels = c("1", "2","3"))
 
-# We are only interested in C,AK_PL,IEC_PL,SCC_PL,AK,IEC and SCC lesions. 
-# Remove samples for different lesion types (nasal,scar,scar_PL,KA,KA_PL,VV,VV_PL,SF,SF_PL,other,other_PL) from metadata and otu table
-metadata.df <- metadata.df[metadata.df$Sampletype %in% c("C","AK_PL","IEC_PL","SCC_PL","AK","IEC","SCC", "NLC"),]
+# Need to factorise the colour columns as well
+colour_columns <- names(metadata.df)[grepl("colour", names(metadata.df))]
+metadata.df[colour_columns] <- lapply(metadata.df[colour_columns], factor)
 
 # Remove samples from the OTU table that are not in the filtered metadata
 otu_rare.df <- otu_rare.df[,names(otu_rare.df) %in% c("OTU.ID", as.character(metadata.df$Index))]
@@ -164,7 +168,6 @@ generate_pca <- function(pca_object, mymetadata, variable_to_plot, colour_palett
                          label_ellipse = F, ellipse_label_size = 0.5, ellipse_border_width = 1,variable_colours_available = F, 
                          plot_title = NULL, use_shapes = F, my_levels = NULL){
   pca.scores <- try(scores(pca_object, choices=c(1,2,3)))
-  
   if(inherits(pca.scores, "try-error")) {
     return()
   }
@@ -190,11 +193,8 @@ generate_pca <- function(pca_object, mymetadata, variable_to_plot, colour_palett
     y_max <- round(lapply(max(pca_site_scores[,2]), function(x) ifelse(x > 0, x + 1, x - 1))[[1]])
     
   }
-  
-  
   my_xlab = paste("PC1 (", round(pca_percentages[1],1), "%)", sep = "")
   my_ylab = paste("PC2 (", round(pca_percentages[2],1), "%)", sep = "")
-  
   metadata_ordered.df <- internal_metadata[order(rownames(internal_metadata)),]
   metadata_ordered.df <- metadata_ordered.df[order(metadata_ordered.df[[variable_to_plot]]),]
   
@@ -204,7 +204,10 @@ generate_pca <- function(pca_object, mymetadata, variable_to_plot, colour_palett
   if (!is.null(my_levels)){
     metadata_ordered.df[,variable_to_plot] <- factor(metadata_ordered.df[,variable_to_plot], levels = my_levels)
   } else{
-    metadata_ordered.df[,variable_to_plot] <- factor(metadata_ordered.df[,variable_to_plot], levels = sort(unique(as.character(metadata_ordered.df[,variable_to_plot]))))  
+    # Uncomment to factorise and order levels alphabetically
+    metadata_ordered.df[,variable_to_plot] <- factor(metadata_ordered.df[,variable_to_plot], levels = sort(unique(as.character(metadata_ordered.df[,variable_to_plot]))))
+    # Uncomment to factorise and inherit the current ordering
+    # metadata_ordered.df[,variable_to_plot] <- factor(metadata_ordered.df[,variable_to_plot])
   }
   # ------------------------------------------------------------------------------------
   
@@ -224,8 +227,9 @@ generate_pca <- function(pca_object, mymetadata, variable_to_plot, colour_palett
   grid(NULL,NULL, lty = 2, col = "grey80")
   
   # Assign (unique) colours and shapes for each grouping variable
-  # variable_values <- factor(sort(as.character(unique(metadata_ordered.df[[variable_to_plot]]))))
   variable_values <- levels(metadata_ordered.df[[variable_to_plot]])
+  # variable_values <- unique(as.character(metadata_ordered.df[[variable_to_plot]]))
+  
   
   # If variable colour column "variable_colour" in metadata, use colours from there
   if (variable_colours_available == T){
@@ -240,11 +244,15 @@ generate_pca <- function(pca_object, mymetadata, variable_to_plot, colour_palett
   } else{
     variable_shapes <- setNames(rep(c(21),length(variable_values))[1:length(variable_values)],variable_values)  
   }
-  #variable_shapes <- setNames(c(25,24,23,22,21,8,6,5,4,3,2,1)[1:length(variable_values)],variable_values)
-  # print(variable_colours)
-  annotation_dataframe <- data.frame(variable_colours, variable_shapes)
+  annotation_dataframe <- data.frame(variable_colours, variable_shapes,stringsAsFactors = F)
   annotation_dataframe$variable_outline_colours <- as.character(annotation_dataframe$variable_colours)
-  annotation_dataframe[annotation_dataframe$variable_shapes > 15,"variable_outline_colours"] <- "black"
+  if (point_line_thickness != 0){
+    annotation_dataframe[annotation_dataframe$variable_shapes > 15,"variable_outline_colours"] <- "black"  
+  }
+  
+  if (!is.null(my_levels)){
+    annotation_dataframe <- annotation_dataframe[my_levels,]
+  }
   
   # Order the site scores by the order of the rows in the metadata
   pca_site_scores <- pca_site_scores[rownames(metadata_ordered.df),]
@@ -252,43 +260,34 @@ generate_pca <- function(pca_object, mymetadata, variable_to_plot, colour_palett
   all_sample_colours <- as.character(
     lapply(
       as.character(metadata_ordered.df[rownames(pca_site_scores),variable_to_plot]), 
-      function(x) variable_colours[x]
+      function(x) as.character(annotation_dataframe[x,"variable_colours"])
     )
   )
-  
-  all_sample_shapes <- as.numeric(
-    lapply(
-      as.character(sort(metadata_ordered.df[rownames(pca_site_scores),variable_to_plot])), 
-      function(x) variable_shapes[x][[1]]
-    )
-  )
-  
-  # Set the outline colours for all samples based on the sample colours and refering to the annotation dataframe created above
-  all_sample_outline_colours <- as.character(unlist(lapply(all_sample_colours, function(x) annotation_dataframe[annotation_dataframe$variable_colours == x, "variable_outline_colours"])))
-  
-  # Need to construct the legend outline colour vector.
-  legend_point_outline_colours <- annotation_dataframe$variable_outline_colours
-  
-  # for (i in 1:length(all_sample_colours)){ 
-  #   if (as.numeric(all_sample_shapes[i]) < 15){
-  #     
-  #     all_sample_outline_colours <- c(all_sample_outline_colours, all_sample_colours[i])
-  #   } else{
-  #     all_sample_outline_colours <- c(all_sample_outline_colours, "black")
-  #   }
-  # }
-  # print(all_sample_outline_colours)
-  # all_sample_outline_colours
-  
-  # all_sample_outline_colours <- as.character(
+  # all_sample_colours <- as.character(
   #   lapply(
-  #     all_sample_shapes, 
+  #     as.character(metadata_ordered.df[rownames(pca_site_scores),variable_to_plot]), 
   #     function(x) variable_colours[x]
   #   )
   # )
-  # for (i in )
-  # 
   
+  all_sample_shapes <- as.numeric(
+    lapply(
+      as.character(metadata_ordered.df[rownames(pca_site_scores),variable_to_plot]), 
+      function(x) annotation_dataframe[x,"variable_shapes"][[1]]
+    )
+  )
+  
+  # all_sample_shapes <- as.numeric(
+  #   lapply(
+  #     as.character(sort(metadata_ordered.df[rownames(pca_site_scores),variable_to_plot])), 
+  #     function(x) variable_shapes[x][[1]]
+  #   )
+  # )
+  
+  # Set the outline colours for all samples based on the sample colours and refering to the annotation dataframe created above
+  all_sample_outline_colours <- as.character(unlist(lapply(all_sample_colours, function(x) annotation_dataframe[annotation_dataframe$variable_colours == x, "variable_outline_colours"])))
+  # Need to construct the legend outline colour vector.
+  # legend_point_outline_colours <- annotation_dataframe$variable_outline_colours
   points(pca_site_scores, 
          cex = point_size,
          lwd = point_line_thickness,
@@ -438,11 +437,14 @@ generate_pca <- function(pca_object, mymetadata, variable_to_plot, colour_palett
       # y = y_max-6,
       x = legend_x,
       y = legend_y,
-      legend= variable_values,
-      pch= unique(all_sample_shapes),
-      col= legend_point_outline_colours,
-      # col= "black",
-      pt.bg = unique(all_sample_colours),
+      # legend= variable_values,
+      # pch= unique(all_sample_shapes),
+      # col= legend_point_outline_colours,
+      # pt.bg = unique(all_sample_colours),
+      legend= rownames(annotation_dataframe),
+      pch= annotation_dataframe$variable_shapes,
+      col= as.character(annotation_dataframe$variable_outline_colours),
+      pt.bg = as.character(annotation_dataframe$variable_colours),
       #bg = "white",
       bty = "n",
       ncol = legend_cols,
@@ -480,7 +482,7 @@ generate_pca <- function(pca_object, mymetadata, variable_to_plot, colour_palett
 #              colour_palette = my_colour_palette_206_distinct,
 #              variable_to_plot = "Sampletype_pooled", legend_cols = 1,
 #              variable_colours_available = T,
-#              filename = paste0("Result_figures/pcoa_dbrda_plots/both_cohorts_Sampletype_pooled_bray.pdf"))
+#              filename = paste0("Result_figures/ordination_plots/both_cohorts_Sampletype_pooled_bray.pdf"))
 
 # metadata_sampletype.df <- subset(metadata.df, Sampletype_pooled == "AK")
 # metadata_sampletype.df <- metadata_sampletype.df[order(rownames(metadata_sampletype.df)),]
@@ -504,33 +506,32 @@ generate_pca <- function(pca_object, mymetadata, variable_to_plot, colour_palett
 #              colour_palette = my_colour_palette_206_distinct,
 #              variable_to_plot = "Project", legend_cols = 1,
 #              variable_colours_available = T,
-#              filename = paste0("Result_figures/pcoa_dbrda_plots/AK_cohort_bray.pdf"))
+#              filename = paste0("Result_figures/ordination_plots/AK_cohort_bray.pdf"))
 
 # ------------------------------------------------------------------------------------------------------------------------
 
 # Both cohorts, all sample types 
-temp_metadata <- metadata.df #subset(metadata.df, Sampletype != "negative")
-temp_data <- otu_rare_clr_filtered.m[,rownames(temp_metadata)]
-temp <- rda(t(temp_data), data = temp_metadata) # ~1 makes it unconstrained
-
-generate_pca(temp, mymetadata = temp_metadata,
-             plot_height = 5, plot_width =5,
+temp <- rda(t(otu_rare_clr_filtered.m), data = metadata.df) # ~1 makes it unconstrained
+generate_pca(temp, mymetadata = metadata.df,
+             plot_height = 5, plot_width = 5,
              legend_x = -6, legend_y = 4,
-             point_size = .7, point_line_thickness = .3,point_alpha =.7,
+             point_size = .7, point_line_thickness = 0.3,point_alpha =.7,
              legend_title = "Sample type",
              plot_title = "Both cohorts, all lesion types",
              limits = c(-5,5,-5,5),
              plot_spiders = F,
              plot_ellipses = F,
+             plot_hulls = F,
              use_shapes = T,
              ellipse_border_width = .5,
              label_ellipse = F, ellipse_label_size = .5,
              colour_palette = my_colour_palette_206_distinct,
              variable_to_plot = "Sampletype_pooled", legend_cols = 1,
              variable_colours_available = T,
-             filename = paste0("Result_figures/pcoa_dbrda_plots/both_cohorts_Sampletype_pooled.pdf"))
+             my_levels = c("LC", "AK", "SCC"),
+             filename = paste0("Result_figures/ordination_plots/both_cohorts_Sampletype_pooled.pdf"))
 
-generate_pca(temp, mymetadata = temp_metadata,
+generate_pca(temp, mymetadata = metadata.df,
              plot_height = 5, plot_width =5,
              legend_x = -6, legend_y = 4,
              point_size = .7, point_line_thickness = .3,point_alpha =.7,
@@ -546,10 +547,10 @@ generate_pca(temp, mymetadata = temp_metadata,
              colour_palette = my_colour_palette_206_distinct,
              variable_to_plot = "Patient", legend_cols = 1,
              variable_colours_available = T,
-             filename = paste0("Result_figures/pcoa_dbrda_plots/both_cohorts_Patient.pdf"))
+             filename = paste0("Result_figures/ordination_plots/both_cohorts_Patient.pdf"))
 
 
-generate_pca(temp, mymetadata = temp_metadata,
+generate_pca(temp, mymetadata = metadata.df,
              plot_height = 5, plot_width =5,
              legend_x = -6, legend_y = 4,
              point_size = .7, point_line_thickness = .3,point_alpha =.7,
@@ -565,7 +566,7 @@ generate_pca(temp, mymetadata = temp_metadata,
              colour_palette = my_colour_palette_206_distinct,
              variable_to_plot = "Project", legend_cols = 1,
              variable_colours_available = T,
-             filename = paste0("Result_figures/pcoa_dbrda_plots/both_cohorts_Project.pdf"))
+             filename = paste0("Result_figures/ordination_plots/both_cohorts_Project.pdf"))
 
 
 # ---------------------------------------------------------------------------------------------------------
@@ -581,13 +582,16 @@ otu_rare_clr_filtered_competent.m <- otu_rare_clr_filtered_competent.m[,rownames
 colnames(otu_rare_clr_filtered_competent.m)[!rownames(metadata_immunocompetent.df) == colnames(otu_rare_clr_filtered_competent.m)]
 
 m.pca_competent <- rda(t(otu_rare_clr_filtered_competent.m), data = metadata_immunocompetent.df)
+
+# Sampletype_pooled
 generate_pca(m.pca_competent, mymetadata = metadata_immunocompetent.df,
              plot_height = 5, plot_width =5,
-             legend_x = -6, legend_y = 4,
+             legend_x = -4.5, legend_y = 5,
              point_size = .7, point_line_thickness = .3,point_alpha =.7,
-             legend_title = "Lesion type",
-             plot_title = "Immunocompetent, all lesion types",
-             limits = c(-5,5,-5,5),
+             legend_title = "Sample site",
+             include_legend = T,
+             # plot_title = "Immunocompetent, all lesion types",
+             limits = c(-5,5,-3,5),
              plot_spiders = F,
              plot_ellipses = F,
              use_shapes = T,
@@ -596,25 +600,27 @@ generate_pca(m.pca_competent, mymetadata = metadata_immunocompetent.df,
              colour_palette = my_colour_palette_206_distinct,
              variable_to_plot = "Sampletype_pooled", legend_cols = 1,
              variable_colours_available = T,
-             my_levels = c("NLC", "AK", "SCC"),
-             filename = paste0("Result_figures/pcoa_dbrda_plots/immunocompetent_Sampletype_pooled.pdf"))
+             my_levels = c("LC", "AK", "SCC"),
+             filename = paste0("Result_figures/ordination_plots/immunocompetent_Sampletype_pooled.pdf"))
 
+# Patient
 generate_pca(m.pca_competent, mymetadata = metadata_immunocompetent.df,
              plot_height = 5, plot_width =5,
              legend_x = -6, legend_y = 4,
              point_size = .7, point_line_thickness = .3,point_alpha =.7,
              legend_title = "Patient",
-             plot_title = "Immunocompetent, all lesion types",
-             limits = c(-5,5,-5,5),
+             include_legend = F,
+             # plot_title = "Immunocompetent, all lesion types",
+             limits = c(-5,5,-3,5),
              plot_spiders = F,
-             plot_ellipses = F,
+             plot_ellipses = T,
              use_shapes = T,
              ellipse_border_width = .5,
              label_ellipse = F, ellipse_label_size = .5,
              colour_palette = my_colour_palette_15,
              variable_to_plot = "Patient", legend_cols = 1,
              variable_colours_available = T,
-             filename = paste0("Result_figures/pcoa_dbrda_plots/immunocompetent_Patient.pdf"))
+             filename = paste0("Result_figures/ordination_plots/immunocompetent_Patient.pdf"))
 
 # ---------------------------------------------------------------------------------------------------------
 # Immunocompromised, all sample types
@@ -631,7 +637,7 @@ generate_pca(m.pca_compromised, mymetadata = metadata_immunocompromised.df,
              legend_x = -8, legend_y = 7,
              point_size = .7, point_line_thickness = .3,point_alpha =.7,
              legend_title = "Lesion type",
-             plot_title = "Immunocompromised, all lesion types",
+             # plot_title = "Immunocompromised, all lesion types",
              limits = c(-7,7,-7,7),
              plot_hulls = F,
              plot_spiders = F,
@@ -642,8 +648,29 @@ generate_pca(m.pca_compromised, mymetadata = metadata_immunocompromised.df,
              colour_palette = my_colour_palette_206_distinct,
              variable_to_plot = "Sampletype_pooled", legend_cols = 1,
              variable_colours_available = T,
-             my_levels = c("NLC", "AK", "SCC"),
-             filename = paste0("Result_figures/pcoa_dbrda_plots/immunocompromised_Sampletype_pooled.pdf"))
+             my_levels = c("LC", "AK", "SCC"),
+             filename = paste0("Result_figures/ordination_plots/immunocompromised_Sampletype_pooled.pdf"))
+
+# Sampletype_compromised_refined
+generate_pca(m.pca_compromised, mymetadata = metadata_immunocompromised.df,
+             plot_height = 5, plot_width =5,
+             legend_x = -9, legend_y = 6,
+             point_size = .7, point_line_thickness = .3,point_alpha =.7,
+             legend_title = "Sample site",
+             # plot_title = "Immunocompromised, all lesion types",
+             limits = c(-3,1,-8,6),
+             plot_hulls = F,
+             plot_spiders = F,
+             plot_ellipses = F,
+             use_shapes = T,
+             ellipse_border_width = .5,
+             label_ellipse = F, ellipse_label_size = .5,
+             colour_palette = my_colour_palette_206_distinct,
+             variable_to_plot = "Sampletype_compromised_refined", legend_cols = 1,
+             variable_colours_available = T,
+             my_levels = c("C", "LC", "AK", "SCC"),
+             filename = paste0("Result_figures/ordination_plots/immunocompromised_Sampletype_compromised_refined.pdf"))
+
 
 # Patient
 generate_pca(m.pca_compromised, mymetadata = metadata_immunocompromised.df,
@@ -652,18 +679,18 @@ generate_pca(m.pca_compromised, mymetadata = metadata_immunocompromised.df,
              point_size = .7, point_line_thickness = .3,point_alpha =.7,
              legend_title = "Patient",
              include_legend = F,
-             plot_title = "Immunocompromised, all lesion types",
-             limits = c(-7,7,-7,7),
+             # plot_title = "Immunocompromised, all lesion types",
+             limits = c(-3,1,-8,6),
              plot_hulls = F,
              plot_spiders = F,
-             plot_ellipses = F,
+             plot_ellipses = T,
              use_shapes = T,
              ellipse_border_width = .5,
              label_ellipse = F, ellipse_label_size = .5,
              colour_palette = my_colour_palette_206_distinct,
              variable_to_plot = "Patient", legend_cols = 1,
              variable_colours_available = T,
-             filename = paste0("Result_figures/pcoa_dbrda_plots/immunocompromised_Patient.pdf"))
+             filename = paste0("Result_figures/ordination_plots/immunocompromised_Patient.pdf"))
 
 # Patient_group
 generate_pca(m.pca_compromised, mymetadata = metadata_immunocompromised.df,
@@ -683,7 +710,7 @@ generate_pca(m.pca_compromised, mymetadata = metadata_immunocompromised.df,
              colour_palette = my_colour_palette_206_distinct,
              variable_to_plot = "Patient_group", legend_cols = 1,
              variable_colours_available = T,
-             filename = paste0("Result_figures/pcoa_dbrda_plots/immunocompromised_Patient_group.pdf"))
+             filename = paste0("Result_figures/ordination_plots/immunocompromised_Patient_group.pdf"))
 
 # Gender
 generate_pca(m.pca_compromised, mymetadata = metadata_immunocompromised.df,
@@ -703,7 +730,7 @@ generate_pca(m.pca_compromised, mymetadata = metadata_immunocompromised.df,
              colour_palette = my_colour_palette_206_distinct,
              variable_to_plot = "Gender", legend_cols = 1,
              variable_colours_available = T,
-             filename = paste0("Result_figures/pcoa_dbrda_plots/immunocompromised_Gender.pdf"))
+             filename = paste0("Result_figures/ordination_plots/immunocompromised_Gender.pdf"))
 
 # Number_of_meds
 generate_pca(m.pca_compromised, mymetadata = metadata_immunocompromised.df,
@@ -723,7 +750,7 @@ generate_pca(m.pca_compromised, mymetadata = metadata_immunocompromised.df,
              colour_palette = my_colour_palette_206_distinct,
              variable_to_plot = "Number_of_meds", legend_cols = 1,
              variable_colours_available = T,
-             filename = paste0("Result_figures/pcoa_dbrda_plots/immunocompromised_number_of_meds.pdf"))
+             filename = paste0("Result_figures/ordination_plots/immunocompromised_number_of_meds.pdf"))
 
 
 # Fitzpatrick_skin_type
@@ -744,7 +771,7 @@ generate_pca(m.pca_compromised, mymetadata = metadata_immunocompromised.df,
              colour_palette = my_colour_palette_206_distinct,
              variable_to_plot = "Fitzpatrick_skin_type", legend_cols = 1,
              variable_colours_available = T,
-             filename = paste0("Result_figures/pcoa_dbrda_plots/immunocompromised_fitzpatrick_skin_type.pdf"))
+             filename = paste0("Result_figures/ordination_plots/immunocompromised_fitzpatrick_skin_type.pdf"))
 
 
 # ---------------------------------------------------------------------------------------------------------
@@ -773,7 +800,7 @@ for (sample_type in unique(metadata.df$Sampletype_pooled)){
                colour_palette = my_colour_palette_206_distinct,
                variable_to_plot = "Project", legend_cols = 1,
                variable_colours_available = T,
-               filename = paste0("Result_figures/pcoa_dbrda_plots/",sample_type,"_cohort.pdf"))
+               filename = paste0("Result_figures/ordination_plots/",sample_type,"_cohort.pdf"))
   
   
   generate_pca(m.pca_sampletype, mymetadata = metadata_sampletype.df,
@@ -793,7 +820,7 @@ for (sample_type in unique(metadata.df$Sampletype_pooled)){
                colour_palette = my_colour_palette_206_distinct,
                variable_to_plot = "Patient", legend_cols = 1,
                variable_colours_available = T,
-               filename = paste0("Result_figures/pcoa_dbrda_plots/", sample_type, "_Patient.pdf"))
+               filename = paste0("Result_figures/ordination_plots/", sample_type, "_Patient.pdf"))
 }
 
 # Each lesion type within cohort, color by patient
@@ -820,10 +847,11 @@ for (cohort in unique(metadata.df$Project)){
                  colour_palette = my_colour_palette_206_distinct,
                  variable_to_plot = "Patient", legend_cols = 1,
                  variable_colours_available = T,
-                 filename = paste0("Result_figures/pcoa_dbrda_plots/",cohort, "_",sample_type,"_patient.pdf"))
-    
+                 filename = paste0("Result_figures/ordination_plots/",cohort, "_",sample_type,"_patient.pdf"))
   }
 }
+
+
 
 # For each patient; all lesion types
 # for (patient in unique(metadata.df$Patient)){
@@ -849,7 +877,7 @@ for (cohort in unique(metadata.df$Project)){
 #                colour_palette = my_colour_palette_206_distinct,
 #                variable_to_plot = "Sampletype_pooled", legend_cols = 1,
 #                variable_colours_available = T,
-#                filename = paste0("Result_figures/pcoa_dbrda_plots/",patient,".pdf"))
+#                filename = paste0("Result_figures/ordination_plots/",patient,".pdf"))
 # }
 
 # ------------------------------------------------------------------------
@@ -893,6 +921,7 @@ run_permanova <- function(my_community_data, my_metadata, my_variables){
 run_permanova_custom <- function(my_metadata, my_formula){
   stat_sig_table <- NULL
   result <- adonis(my_formula,data = my_metadata, permu=999,method="euclidean")
+  # result <- adonis(my_formula,data = my_metadata, permu=999,method="bray")
   for (r in rownames(result$aov.tab)){
     variable <- r
     Degress_of_freedom <- result$aov.tab[r,]$Df[1]
@@ -929,17 +958,32 @@ permanova_results_immunocompromised <- run_permanova_custom(my_metadata = metada
                      my_formula = as.formula(t(otu_rare_clr_filtered_compromised.m)~Patient+Sampletype_pooled+Patient:Sampletype_pooled))
 
 permanova_results_immunocompromised <- run_permanova_custom(my_metadata = metadata_immunocompromised.df,
-                                                            my_formula = as.formula("t(otu_rare_clr_filtered_compromised.m)~Patient+Sampletype_pooled+Gender+Patient_group + Number_of_meds"))
+                                                            my_formula = as.formula(t(otu_rare_clr_filtered_compromised.m)~Patient+Sampletype_compromised_refined+Patient:Sampletype_compromised_refined))
+
+# permanova_results_immunocompromised <- run_permanova_custom(my_metadata = metadata_immunocompromised.df,
+#                                                             my_formula = as.formula("t(otu_rare_clr_filtered_compromised.m)~Patient+Sampletype_pooled+Gender+Patient_group + Number_of_meds"))
 
 # Immunocompetent, all sample types
 metadata_immunocompetent.df <- subset(metadata.df, Project == "immunocompetent" & Sampletype != "negative")
 metadata_immunocompetent.df <- metadata_immunocompetent.df[order(rownames(metadata_immunocompetent.df)),]
+metadata_immunocompetent_AK_LC.df <- subset(metadata_immunocompetent.df, Sampletype_pooled %in% c("LC", "AK"))
+metadata_immunocompetent_AK_LC_non_pooled.df <- subset(metadata_immunocompetent.df, Sampletype %in% c("LC", "AK"))
+# otu_clr_skin_filt.m <- otu_clr.m[which(apply(otu_clr.m[,samples.l[['long']]], 1, max) >= 3),samples.l[['long']]]
+# otu_clr_skin_filt.m[which(otu_clr_skin_filt.m < 0)] <- 0
 otu_rare_clr_filtered_competent.m <- otu_rare_clr_filtered.m[,colnames(otu_rare_clr_filtered.m) %in% rownames(metadata_immunocompetent.df)]
 otu_rare_clr_filtered_competent.m <- otu_rare_clr_filtered_competent.m[,rownames(metadata_immunocompetent.df)]
+otu_rare_clr_filtered_competent_AK_LC.m <- otu_rare_clr_filtered_competent.m[,rownames(metadata_immunocompetent_AK_LC.df)]
+otu_rare_clr_filtered_competent_AK_LC_non_pooled.m <- otu_rare_clr_filtered_competent.m[,rownames(metadata_immunocompetent_AK_LC_non_pooled.df)]
 
 permanova_results_immunocompetent <- run_permanova_custom(my_metadata = metadata_immunocompetent.df,
                                                             my_formula = as.formula(t(otu_rare_clr_filtered_competent.m)~Patient+Sampletype_pooled+Patient:Sampletype_pooled))
+permanova_results_immunocompetent
+permanova_results_immunocompetent_AK_LC <- run_permanova_custom(my_metadata = metadata_immunocompetent_AK_LC.df,
+                                                          my_formula = as.formula(t(otu_rare_clr_filtered_competent_AK_LC.m)~Patient+Sampletype_pooled+Patient:Sampletype_pooled))
 
+permanova_results_immunocompetent_AK_LC_non_pooled <- run_permanova_custom(my_metadata = metadata_immunocompetent_AK_LC_non_pooled.df,
+                                                                 my_formula = as.formula(t(otu_rare_clr_filtered_competent_AK_LC_non_pooled.m)~Patient+Sampletype_pooled+Patient:Sampletype_pooled))
+permanova_results_immunocompetent_AK_LC_non_pooled
 # Both cohorts, all samples types
 permanova_results_both_cohorts <- run_permanova_custom(my_metadata = metadata.df,
                                                        my_formula = as.formula(t(otu_rare_clr_filtered.m)~Patient+Sampletype_pooled+Patient:Sampletype_pooled))

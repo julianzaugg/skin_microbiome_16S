@@ -394,10 +394,22 @@ make_heatmap(heatmap_family_rel.m,
 
 # family, immunocompromised
 discrete_variables <- c("Patient","Sampletype_pooled","Number_of_meds","Fitzpatrick_skin_type","Patient_group")
-
+discrete_variables <- c("Patient","Sampletype_pooled")
 make_heatmap(heatmap_family_rel.m, 
              subset(metadata.df, Project == "immunocompromised"),
              filename = paste0("Result_figures/heatmaps/family_relative_abundance_immunocompromised_clustered.pdf"),
+             variables = discrete_variables,
+             plot_height = 10,
+             plot_width = 25,
+             cluster_columns = T,
+             my_breaks = c(0, 0.001, 0.005,0.05, seq(.1,1,.1)),
+             legend_title = "Relative abundance %",
+             palette_choice = 'purple'
+)
+# discrete_variables <- c("Sampletype_pooled")
+make_heatmap(heatmap_family_rel.m, 
+             subset(metadata.df, Project == "immunocompromised"),
+             filename = paste0("Result_figures/heatmaps/family_relative_abundance_immunocompromised.pdf"),
              variables = discrete_variables,
              plot_height = 10,
              plot_width = 25,
@@ -406,6 +418,9 @@ make_heatmap(heatmap_family_rel.m,
              legend_title = "Relative abundance %",
              palette_choice = 'purple'
 )
+
+
+
 # family, immunocompetent
 discrete_variables <- c("Patient","Sampletype_pooled")
 make_heatmap(heatmap_family_rel.m, 
@@ -414,11 +429,23 @@ make_heatmap(heatmap_family_rel.m,
              variables = discrete_variables,
              plot_height = 10,
              plot_width = 100,
-             cluster_columns = F,
+             cluster_columns = T,
              my_breaks = c(0, 0.001, 0.005,0.05, seq(.1,1,.1)),
              legend_title = "Relative abundance %",
              palette_choice = 'purple'
 )
+make_heatmap(heatmap_family_rel.m, 
+             subset(metadata.df, Project == "immunocompetent"),
+             filename = paste0("Result_figures/heatmaps/family_relative_abundance_immunocompetent.pdf"),
+             variables = discrete_variables,
+             plot_height = 10,
+             plot_width = 100,
+             cluster_columns = T,
+             my_breaks = c(0, 0.001, 0.005,0.05, seq(.1,1,.1)),
+             legend_title = "Relative abundance %",
+             palette_choice = 'purple'
+)
+
 
 
 

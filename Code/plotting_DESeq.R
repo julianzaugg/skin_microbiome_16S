@@ -124,31 +124,55 @@ plot_genus_deseq <- function(deseq_result_table, facet_plot = T, limit_to = NULL
 # Load the deseq data. Assume that there is a Group_1 and Group_2 column
 
 # Per patient results
-temp <- read.csv("Result_tables/DESeq_results/by_patient/patient__Sampletype_pooled_combined.csv", header = T)
+sampletype_pooled_otu_deseq <- read.csv("Result_tables/DESeq_results/by_patient/patient_otu__Sampletype_pooled_combined.csv", header = T)
+sampletype_pooled_genus_deseq <- read.csv("Result_tables/DESeq_results/by_patient/patient_genus__Sampletype_pooled_combined.csv", header = T)
 
-head(temp)
-names(temp)[names(temp) == "taxonomy"] <- "Taxonomy"
+immunocompromised_sampletype_pooled_otu_deseq <- sampletype_pooled_otu_deseq[grepl("MST", sampletype_pooled_otu_deseq$Variable),]
+immunocompromised_sampletype_pooled_genus_deseq <- sampletype_pooled_genus_deseq[grepl("MST", sampletype_pooled_genus_deseq$Variable),]
 
-immunocompromised <- temp[grepl("MST", temp$Variable),]
-myplot <- plot_genus_deseq(immunocompromised,facet_plot = T,
-                           limit_to = ".", title = "Immunocompromised\nDifferentially abundant features between lesion types\ncalculated by patient",
+
+myplot <- plot_genus_deseq(immunocompromised_sampletype_pooled_otu_deseq,facet_plot = T,
+                           limit_to = ".", title = "Immunocompromised\nDifferentially abundant features between lesion types\ncalculated by patient at feature level",
                            pallete = my_colour_pallete_20,include_grid = T)
-myplot
 
-ggsave(filename = paste0("Result_figures/DESeq_plots/immunocompromised_by_patient_DESeq.pdf"),
+ggsave(filename = paste0("Result_figures/DESeq_plots/immunocompromised_by_patient_otu_DESeq.pdf"),
        plot = myplot,
        width = 15,
        height = 15,
        units = "cm")
 
+myplot <- plot_genus_deseq(immunocompromised_sampletype_pooled_genus_deseq,facet_plot = T,
+                           limit_to = ".", title = "Immunocompromised\nDifferentially abundant features between lesion types\ncalculated by patient at genus level",
+                           pallete = my_colour_pallete_20,include_grid = T)
 
-immunocompetent <- temp[!grepl("MST", temp$Variable),]
-myplot <- plot_genus_deseq(immunocompetent,facet_plot = T,
-                           limit_to = ".", title = "Immunocompetent\nDifferentially abundant features between lesion types\ncalculated by patient",
+ggsave(filename = paste0("Result_figures/DESeq_plots/immunocompromised_by_patient_genus_DESeq.pdf"),
+       plot = myplot,
+       width = 10,
+       height = 15,
+       units = "cm")
+
+
+
+immunocompetent_sampletype_pooled_otu_deseq <- sampletype_pooled_otu_deseq[!grepl("MST", sampletype_pooled_otu_deseq$Variable),]
+immunocompetent_sampletype_pooled_genus_deseq <- sampletype_pooled_genus_deseq[!grepl("MST", sampletype_pooled_genus_deseq$Variable),]
+
+myplot <- plot_genus_deseq(immunocompetent_sampletype_pooled_otu_deseq,facet_plot = T,
+                           limit_to = ".", title = "Immunocompetent\nDifferentially abundant features between lesion types\ncalculated by patient at feature level",
                            pallete = my_colour_pallete_20,include_grid = T) 
 myplot
 
-ggsave(filename = paste0("Result_figures/DESeq_plots/immunocompetent_by_patient_DESeq.pdf"),
+ggsave(filename = paste0("Result_figures/DESeq_plots/immunocompetent_by_patient_otu_DESeq.pdf"),
+       plot = myplot,
+       width = 10,
+       height = 12,
+       units = "cm")
+
+myplot <- plot_genus_deseq(immunocompetent_sampletype_pooled_genus_deseq,facet_plot = T,
+                           limit_to = ".", title = "Immunocompetent\nDifferentially abundant features between lesion types\ncalculated by patient at genus level",
+                           pallete = my_colour_pallete_20,include_grid = T) 
+myplot
+
+ggsave(filename = paste0("Result_figures/DESeq_plots/immunocompetent_by_patient_genus_DESeq.pdf"),
        plot = myplot,
        width = 10,
        height = 12,
@@ -184,19 +208,31 @@ ggsave(filename = paste0("Result_figures/DESeq_plots/immunocompromised_Patient_g
 
 # ----------------------------------------------------------------------------------------------------
 # Per cohort results (comparing same lesion type between different cohorts)
-temp <- read.csv("Result_tables/DESeq_results/by_lesion_cohort/lesion_cohort_combined.csv", header = T)
-head(temp)
-names(temp)[names(temp) == "taxonomy"] <- "Taxonomy"
-myplot <- plot_genus_deseq(temp,facet_plot = T,
-                           limit_to = ".", title = "Differentially abundant features\nSame lesion type between cohorts",
+lesion_cohort_otu_deseq <- read.csv("Result_tables/DESeq_results/by_lesion_cohort/lesion_cohort_otu_combined.csv", header = T)
+lesion_cohort_genus_deseq <- read.csv("Result_tables/DESeq_results/by_lesion_cohort/lesion_cohort_genus_combined.csv", header = T)
+
+myplot <- plot_genus_deseq(lesion_cohort_otu_deseq,facet_plot = T,
+                           limit_to = ".", title = "Differentially abundant features\nSame lesion type between cohorts at feature level",
                            pallete = my_colour_pallete_20,include_grid = T) 
 myplot
 
 
-ggsave(filename = paste0("Result_figures/DESeq_plots/lesion_type_between_cohorts_DESeq.pdf"),
+ggsave(filename = paste0("Result_figures/DESeq_plots/lesion_type_between_cohorts_otu_DESeq.pdf"),
        plot = myplot,
        width = 12,
        height = 14,
+       units = "cm")
+
+myplot <- plot_genus_deseq(lesion_cohort_genus_deseq,facet_plot = T,
+                           limit_to = ".", title = "Differentially abundant features\nSame lesion type between cohorts at genus level",
+                           pallete = my_colour_pallete_20,include_grid = T) 
+myplot
+
+
+ggsave(filename = paste0("Result_figures/DESeq_plots/lesion_type_between_cohorts_genus_DESeq.pdf"),
+       plot = myplot,
+       width = 16,
+       height = 18,
        units = "cm")
 # ----------------------------------------------------------------------------------------------------
 immunocompromised_sampletype_pooled_otu_deseq <- read.csv("Result_tables/DESeq_results/immunocompromised_otu_sampletype_pooled.csv", header = T)

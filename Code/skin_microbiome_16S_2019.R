@@ -44,7 +44,11 @@ patient_pallete_45 <- c("#d64530","#585fb1","#795d97","#9e4773","#3f6921","#7169
 # Lesion / Sampletype
 lesion_palette_10 <- c("#d4a33e","#5ca876","#687fc9","#ce5944","#51b2d0","#9b62c8","#d14a8e","#79b041","#bc759a","#9c7f45")
 # Cohort / Project
-project_pallet_2 <- c("#0043b8", "#990000")
+#335fa5 - blue
+#c12a2a - red
+project_pallet_2 <- c("#335fa5", "#c12a2a")
+
+
 ####################################
 
 common_theme <- theme(
@@ -82,29 +86,37 @@ dir.create(file.path(".", "Result_objects"), showWarnings = FALSE)
 
 
 dir.create(file.path("./Result_figures", "abundance_analysis_plots"), showWarnings = FALSE)
-dir.create(file.path("./Result_figures", "pcoa_dbrda_plots"), showWarnings = FALSE)
-dir.create(file.path("./Result_figures", "abundance_plots"), showWarnings = FALSE)
-dir.create(file.path("./Result_figures", "shannon_simpson_diversities"), showWarnings = FALSE)
-dir.create(file.path("./Result_figures", "heatmaps"), showWarnings = FALSE)
-dir.create(file.path("./Result_figures", "exploratory_analysis"), showWarnings = FALSE)
+dir.create(file.path("./Result_figures/abundance_analysis_plots/boxplots"), showWarnings = FALSE, recursive = T)
+dir.create(file.path("./Result_figures/abundance_analysis_plots/boxplots/Number_of_meds"), showWarnings = FALSE, recursive = T)
+dir.create(file.path("./Result_figures/abundance_analysis_plots/boxplots/Patient_group"), showWarnings = FALSE, recursive = T)
+dir.create(file.path("./Result_figures/abundance_analysis_plots/boxplots/Project_sampletype_pooled"), showWarnings = FALSE, recursive = T)
+dir.create(file.path("./Result_figures/abundance_analysis_plots/boxplots/Project"), showWarnings = FALSE, recursive = T)
+dir.create(file.path("./Result_figures/abundance_analysis_plots/boxplots/Fitzpatrick_skin_type"), showWarnings = FALSE, recursive = T)
 
-# dir.create(file.path("./Result_figures/relative_abundances", "pdf"), showWarnings = FALSE)
-# dir.create(file.path("./Result_figures/relative_abundances", "svg"), showWarnings = FALSE)
-# dir.create(file.path("./Result_figures/relative_abundances", "jpg"), showWarnings = FALSE)
-# dir.create(file.path("./Result_figures/shannon_simpson_diversities", "pdf"), showWarnings = FALSE)
-# dir.create(file.path("./Result_figures/shannon_simpson_diversities", "svg"), showWarnings = FALSE)
-# dir.create(file.path("./Result_figures/shannon_simpson_diversities", "jpg"), showWarnings = FALSE)
+
+dir.create(file.path("./Result_figures", "DESeq_plots"), showWarnings = FALSE)
+dir.create(file.path("./Result_figures/DESeq_plots/boxplots"), showWarnings = FALSE, recursive = T)
+
+dir.create(file.path("./Result_figures", "diversity_analysis"), showWarnings = FALSE)
+dir.create(file.path("./Result_figures", "exploratory_analysis"), showWarnings = FALSE)
+dir.create(file.path("./Result_figures", "heatmaps"), showWarnings = FALSE)
+dir.create(file.path("./Result_figures", "mixomics"), showWarnings = FALSE)
+dir.create(file.path("./Result_figures", "ordination_plots"), showWarnings = FALSE)
 
 dir.create(file.path("./Result_tables", "abundance_analysis_tables"), showWarnings = FALSE)
-dir.create(file.path("./Result_tables", "DESeq_results"), showWarnings = FALSE)
-dir.create(file.path("./Result_tables", "other"), showWarnings = FALSE)
 dir.create(file.path("./Result_tables", "count_tables"), showWarnings = FALSE)
-dir.create(file.path("./Result_tables", "relative_abundance_tables"), showWarnings = FALSE)
-dir.create(file.path("./Result_tables", "prevalences"), showWarnings = FALSE)
-dir.create(file.path("./Result_tables", "stats_various"), showWarnings = FALSE)
-dir.create(file.path("./Result_tables", "shannon_simpson_diversities"), showWarnings = FALSE)
 
+dir.create(file.path("./Result_tables", "DESeq_results"), showWarnings = FALSE)
 dir.create(file.path("./Result_tables/DESeq_results/by_patient"), showWarnings = FALSE, recursive = T)
+dir.create(file.path("./Result_tables/DESeq_results/by_lesion_cohort"), showWarnings = FALSE, recursive = T)
+
+dir.create(file.path("./Result_tables", "diversity_analysis"), showWarnings = FALSE)
+dir.create(file.path("./Result_tables", "mixomics"), showWarnings = FALSE)
+dir.create(file.path("./Result_tables", "other"), showWarnings = FALSE)
+dir.create(file.path("./Result_tables", "relative_abundance_tables"), showWarnings = FALSE)
+dir.create(file.path("./Result_tables", "stats_various"), showWarnings = FALSE)
+
+
 ###############################################################
 # Load the and process metadata
 
@@ -118,19 +130,35 @@ levels(metadata.df$Sampletype)[match("SwabCo",levels(metadata.df$Sampletype))] <
 # Make the index the rowname
 rownames(metadata.df) <- metadata.df$Index
 
+# We are currently only interested in a samples with the following lesion types. Filter the metadata to just those.
+metadata_unfiltered.df <- metadata.df
+metadata.df <- metadata.df[metadata.df$Sampletype %in% c("C","AK_PL","IEC_PL","SCC_PL","AK","IEC","SCC", "negative", "NLC"),]
+
+
+
+# Change NLC to LC
+metadata.df$Sampletype <- as.character(metadata.df$Sampletype)
+metadata.df$Sampletype[metadata.df$Sampletype == "NLC"] <- "LC"
+
+# unique(metadata.df$Sampletype[!metadata.df$Sampletype %in% c("C","AK_PL","IEC_PL","SCC_PL","AK","IEC","SCC", "negative", "NLC")])
+
 # Create new pooled lesion types variables
-pool_1 <- c("C","AK_PL","IEC_PL","SCC_PL", "NLC")
+pool_1 <- c("C","AK_PL","IEC_PL","SCC_PL", "LC")
 pool_2 <- c("AK","IEC")
 pool_3 <- c("AK_PL","IEC_PL","SCC_PL")
+pool_4 <- c("SCC", "IEC")
 
+# If AK, make AK; SCC and IEC is SCC and everything else is NLC
+# metadata.df$Sampletype_pooled <- factor(as.character(lapply(metadata.df$Sampletype, function(x) ifelse(x %in% pool_1, "NLC", ifelse(x %in% pool_4, "SCC", ifelse(x == "negative", "negative","AK"))))))
+metadata.df$Sampletype_pooled <- factor(as.character(lapply(metadata.df$Sampletype, function(x) ifelse(x %in% pool_1, "LC", ifelse(x %in% pool_4, "SCC", ifelse(x == "negative", "negative","AK"))))))
 # If AK or IEC, make AK; SCC is SCC and everything else is NLC
-metadata.df$Sampletype_pooled <- factor(as.character(lapply(metadata.df$Sampletype, function(x) ifelse(x %in% pool_1, "NLC", ifelse(x %in% pool_2, "AK", ifelse(x == "negative", "negative","SCC"))))))
+metadata.df$Sampletype_pooled_IEC_in_AK <- factor(as.character(lapply(metadata.df$Sampletype, function(x) ifelse(x %in% pool_1, "LC", ifelse(x %in% pool_2, "AK", ifelse(x == "negative", "negative","SCC"))))))
 # AK is AK; IEC is IEC; SCC is SCC and everything else is NLC
-metadata.df$Sampletype_pooled_IEC_sep <- factor(as.character(lapply(metadata.df$Sampletype, function(x) ifelse(x %in% pool_1, "NLC", ifelse(x == "AK", "AK", ifelse(x =="IEC", "IEC", ifelse(x == "negative", "negative","SCC")))))))
+metadata.df$Sampletype_pooled_IEC_sep <- factor(as.character(lapply(metadata.df$Sampletype, function(x) ifelse(x %in% pool_1, "LC", ifelse(x == "AK", "AK", ifelse(x =="IEC", "IEC", ifelse(x == "negative", "negative","SCC")))))))
 # If AK or IEC, make AK; SCC is SCC; C is C and everything is NLC; 
-metadata.df$Sampletype_pooled_C_sep <- factor(as.character(lapply(metadata.df$Sampletype, function(x) ifelse(x %in% pool_3, "NLC", 
+metadata.df$Sampletype_pooled_C_sep <- factor(as.character(lapply(metadata.df$Sampletype, function(x) ifelse(x %in% pool_3, "LC", 
                                                                                                              ifelse(x %in% pool_2, "AK", 
-                                                                                                                    ifelse(x %in% c("C", "NLC"), "C",ifelse(x == "negative", "negative","SCC")))))))
+                                                                                                                    ifelse(x %in% c("C", "LC"), "C",ifelse(x == "negative", "negative","SCC")))))))
 
 
 
@@ -157,9 +185,8 @@ metadata.df$Sampletype_pooled_C_sep <- factor(as.character(lapply(metadata.df$Sa
 
 # ------------------------------------
 
-# We are currently only interested in a samples with the following lesion types. Filter the metadata to just those.
-metadata_unfiltered.df <- metadata.df
-metadata.df <- metadata.df[metadata.df$Sampletype %in% c("C","AK_PL","IEC_PL","SCC_PL","AK","IEC","SCC", "negative", "NLC"),]
+
+
 
 ##############################
 # Load and process the OTU table
@@ -324,6 +351,19 @@ metadata.df$Sampletype_pooled_colour <- all_sample_colours
 all_sample_colours <- as.character(lapply(as.character(metadata.df$Sampletype_pooled_IEC_sep), function(x) sampletype_colours[x]))
 metadata.df$Sampletype_pooled_IEC_sep_colour <- all_sample_colours
 
+
+# For Sampletype_compromised_refined
+Sampletype_compromised_refined_values <- factor(as.character(unique(metadata.df$Sampletype_compromised_refined)))
+Sampletype_compromised_refined_values <- Sampletype_compromised_refined_values[!is.na(Sampletype_compromised_refined_values)]
+Sampletype_compromised_refined_colours <- setNames(lesion_palette_10[1:length(Sampletype_compromised_refined_values)], Sampletype_compromised_refined_values)
+Sampletype_compromised_refined_colours["SCC"] <- sampletype_colours["SCC"]
+Sampletype_compromised_refined_colours["C"] <- sampletype_colours["C"]
+Sampletype_compromised_refined_colours["LC"] <- sampletype_colours["LC"]
+Sampletype_compromised_refined_colours["AK"] <- sampletype_colours["AK"]
+all_Sampletype_compromised_refined_colours <- as.character(lapply(as.character(metadata.df$Sampletype_compromised_refined), function(x) Sampletype_compromised_refined_colours[x]))
+metadata.df$Sampletype_compromised_refined_colour <- all_Sampletype_compromised_refined_colours
+
+
 # For Cohort (Project)
 project_values <- factor(as.character(unique(metadata.df$Project)))
 project_colours <- setNames(project_pallet_2[1:length(project_values)], project_values)
@@ -344,7 +384,7 @@ patient_group_values <- patient_group_values[!is.na(patient_group_values)]
 patient_group_colours <- setNames(lesion_palette_10[1:length(patient_group_values)], patient_group_values)
 # Manually set to match sampletype (since the groupings are similar)
 patient_group_colours["SCC"] <- sampletype_colours["SCC"]
-patient_group_colours["Control"] <- sampletype_colours["NLC"]
+patient_group_colours["Control"] <- sampletype_colours["LC"]
 patient_group_colours["AK"] <- sampletype_colours["AK"]
 all_patient_group_colours <- as.character(lapply(as.character(metadata.df$Patient_group), function(x) patient_group_colours[x]))
 metadata.df$Patient_group_colour <- all_patient_group_colours
@@ -518,7 +558,7 @@ C_sample_ids <- as.character(metadata.df[metadata.df$Sampletype == "C",]$Index)
 pooled_AK_sample_ids <- as.character(metadata.df[metadata.df$Sampletype %in% c("AK", "IEC"),]$Index)
 not_negative_sample_ids <- as.character(metadata.df[metadata.df$Sampletype != "negative",]$Index)
 # not_negative_or_control_sample_ids <- as.character(metadata.df[!metadata.df$Sampletype %in% c("negative", "C"),]$Index)
-not_negative_or_control_sample_ids <- as.character(metadata.df[!metadata.df$Sampletype %in% c("negative", "C","NLC"),]$Index)
+not_negative_or_control_sample_ids <- as.character(metadata.df[!metadata.df$Sampletype %in% c("negative", "C","LC"),]$Index)
 # pooled_not_negative_sample_ids <- as.character(metadata.df[metadata.df$Sampletype %in% c("C","AK_PL","IEC_PL","SCC_PL","AK","IEC"),]$Index)
 # pooled_not_negative_sample_ids <- as.character(metadata.df[metadata.df$Sampletype %in% c("SCC","C","NLC","AK_PL","IEC_PL","SCC_PL","AK","IEC"),]$Index)
 
@@ -764,6 +804,15 @@ per_sampletype_pooled <- metadata.df %>%
   mutate(Percent = round((Count/sum(Count))*100,2)) %>%
   arrange(desc(Percent)) %>%
   as.data.frame
+
+# Number of samples for each Sampletype_compromised_refined
+per_sampletype_compromised_refined <- metadata.df %>% 
+  group_by(Sampletype_compromised_refined) %>%
+  summarise(Count = n()) %>%
+  mutate(Percent = round((Count/sum(Count))*100,2)) %>%
+  arrange(desc(Percent)) %>%
+  as.data.frame
+
 
 # Number of samples for each Sampletype for each patient
 per_patient_sampletype <- metadata.df %>% 

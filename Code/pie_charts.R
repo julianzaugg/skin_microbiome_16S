@@ -194,9 +194,12 @@ make_pie_graph <- function(mydata, taxonomy_column, mytitle = NULL,  mysubtitle 
   pie_chart
 } 
 # -------------------------------------------------------
+# immunocompromised, Sampletype_compromised_refined
 immunocompromised_lesions_top_genus <- c()
-for (lesion in unique(genus_data.df$Sampletype_pooled)){
-  data_subset <- subset(genus_data.df, Project == "immunocompromised" & Sampletype_pooled == lesion)
+immunocompromised_genus_data.df <- subset(genus_data.df, Project == "immunocompromised")
+for (lesion in unique(immunocompromised_genus_data.df$Sampletype_compromised_refined)){
+  if (is.na(lesion)) {next}
+  data_subset <- subset(genus_data.df, Project == "immunocompromised" & Sampletype_compromised_refined == lesion)
   taxa_summary <- generate_taxa_summary(data_subset, taxa_column = "taxonomy_genus",abundance_column = "Relative_abundance_rarefied")
   immunocompromised_lesions_top_genus <- unique(c(immunocompromised_lesions_top_genus, get_top_taxa(taxa_summary,my_top_n = 10)))
 }
@@ -204,9 +207,9 @@ immunocompromised_genus_palette <- setNames(my_colour_palette_30_distinct[1:leng
 names(immunocompromised_genus_palette) <- gsub(".*(f__.*)", "\\1",names(immunocompromised_genus_palette))
 immunocompromised_genus_palette["Other"] <- "grey"
 
-temp <- subset(genus_data.df, Project == "immunocompromised")
-for (lesion in unique(temp$Sampletype_pooled)){
-  data_subset <- subset(temp, Sampletype_pooled == lesion)
+for (lesion in unique(immunocompromised_genus_data.df$Sampletype_compromised_refined)){
+  if (is.na(lesion)) {next}
+  data_subset <- subset(immunocompromised_genus_data.df, Sampletype_compromised_refined == lesion)
   n_patients <- length(unique(data_subset$Patient))
   n_samples <- length(unique(data_subset$Sample))
   my_title <- paste0("immunocompromised, ", lesion) 
@@ -215,16 +218,12 @@ for (lesion in unique(temp$Sampletype_pooled)){
   outname <- paste0("immunocompromised", "_", lesion, "_sampletype_pooled_top_genera_pie_chart.pdf") 
   ggsave(myplot, filename = paste0("Result_figures/abundance_analysis_plots/",outname), height = 10, width =25, units = "cm")
 }
-# length(unique(subset(temp, Patient_group == "SCC")$Patient))
-# length(unique(subset(temp, Sampletype_pooled == "SCC")$Patient))
-
-sort(unique(subset(temp, Patient_group == "SCC")$Patient))[!sort(unique(subset(temp, Patient_group == "SCC")$Patient)) %in% sort(unique(subset(temp, Sampletype_pooled == "SCC")$Patient))]
-# MST005 MST029 MST030
 
 myplot <- make_pie_graph(genus_data.df[genus_data.df$taxonomy_genus %in% immunocompromised_lesions_top_genus,], "taxonomy_genus", n_taxa = 20, my_colour_list = immunocompromised_genus_palette) 
-ggsave(myplot, filename = paste0("Result_figures/abundance_analysis_plots/immunocompromised_sampletype_pooled_for_legend.pdf"), height = 10, width =45, units = "cm")
+ggsave(myplot, filename = paste0("Result_figures/abundance_analysis_plots/immunocompromised_sampletype_compromised_refined_for_legend.pdf"), height = 15, width =45, units = "cm")
 
 # -------------------------------------------------------
+# immunocompetent, Sampletype_pooled
 immunocompetent_lesions_top_genus <- c()
 for (lesion in unique(genus_data.df$Sampletype_pooled)){
   data_subset <- subset(genus_data.df, Project == "immunocompetent" & Sampletype_pooled == lesion)
