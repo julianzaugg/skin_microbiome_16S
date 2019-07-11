@@ -121,6 +121,9 @@ dir.create(file.path("./Result_tables", "stats_various"), showWarnings = FALSE)
 # Load the and process metadata
 
 metadata.df <- read.table("data/metadata_immunocompromised_competent.tsv", header = T, sep = "\t")
+temp <- subset(metadata.df, Project == "immunocompromised")
+summary(unique(temp[c("Patient", "Gender")]))
+
 # Make empty cells NA
 metadata.df[metadata.df == ''] <- NA
 
@@ -499,6 +502,13 @@ otu_unfiltered_rel.m <- t(t(otu_unfiltered.m) / colSums(otu_unfiltered.m))
 otu_rel.m[is.nan(otu_rel.m)] <- 0
 otu_unfiltered_rel.m[is.nan(otu_unfiltered_rel.m)] <- 0
 
+# summary(colSums(otu.m) < 5000)
+# summary(colSums(otu.m) < 4000)
+# colSums(otu_unfiltered.m)["SB4909_J1426"]
+# colSums(otu_unfiltered.m)["SB4911_J1426"]
+# 1647 SB4909_J1426 REMOVED
+# 1649 SB4911_J1426 REMOVED
+
 ############################################################
 # Filter those OTUs that are low abundance in all samples
 
@@ -621,7 +631,8 @@ otu.m <- otu.m[rownames(otu_rel.m),]
 # colSums(otu.m) < 5000
 
 dim(otu.m)
-otu.m <- otu.m[,colSums(otu.m) >= 5000]
+# otu.m <- otu.m[,colSums(otu.m) >= 5000]
+otu.m <- otu.m[,colSums(otu.m) >= 4000]
 dim(otu.m)
 dim(otu.m[apply(otu.m, 1, max) == 0,])
 # The might be many rows whos maximum is 0 at this point. Remove them.
@@ -656,7 +667,7 @@ myplot <- ggplot(column_sums.df, aes(x = sample, y = value)) +
   # geom_hline(yintercept = 20000, color = 'red')+
   geom_hline(yintercept = mean(column_sums.df$value), color = 'blue')+
   geom_hline(yintercept = median(column_sums.df$value), color = 'purple')+
-  scale_y_continuous(breaks = seq(0,max(column_sums.df$value), 5000)) +
+  scale_y_continuous(breaks = seq(0,max(column_sums.df$value), 4000)) +
   xlab("Sample") +
   ylab("Read count") +
   common_theme +
@@ -666,7 +677,7 @@ ggsave(plot = myplot, filename = "./Result_figures/exploratory_analysis/sample_r
 myplot <- ggplot(column_sums.df, aes(x = value)) + 
   xlab("Read count") +
   ylab("Number of samples") +
-  scale_x_continuous(breaks = seq(5000,max(column_sums.df$value), 5000)) +
+  scale_x_continuous(breaks = seq(4000,max(column_sums.df$value), 4000)) +
   scale_y_continuous(breaks = seq(0,length(column_sums.df$value), 5)) +
   geom_histogram(stat = "bin", bins = 60, colour = "black",fill = "grey") +
   geom_vline(xintercept = 30000, color = 'red')+

@@ -99,7 +99,7 @@ genus_data.df$Fitzpatrick_skin_type <- factor(genus_data.df$Fitzpatrick_skin_typ
 genus_data.df$Project_Sampletype_pooled <- with(genus_data.df, paste0(Project, "_", Sampletype_pooled))
 genus_data.df$Project_Sampletype_pooled <- factor(genus_data.df$Project_Sampletype_pooled , levels = sort(unique(genus_data.df$Project_Sampletype_pooled)))
 
-  
+
 # --------------------------------------------------------------------------------------------
 # FUNCTIONS
 
@@ -282,9 +282,9 @@ calculate_abundance_significance <- function(mydata, variable, taxonomy_column, 
   results.df <- data.frame("Taxonomy" = character(),
                            "Group_1" = character(),
                            "Group_2" = character(),
-                           "Shannon_p-value" = character(),
-                           "Simpson_p-value" = character(),
-                           "Chao1_p-value" = character())
+                           "MannW_pvalue" = character(),
+                           "KrusW_pvalue" = character())
+  # "Shannon_MannW_pvalue" = character(),
   group_combinations <- combn(as.character(unique(internal_data.df[,variable])), 2)
   for (taxa in unique(internal_data.df[,taxonomy_column])){ # For each taxa in the taxonomy column
     for (i in 1:ncol(group_combinations)) { # For each group combination
@@ -295,16 +295,23 @@ calculate_abundance_significance <- function(mydata, variable, taxonomy_column, 
       if (any(c(nrow(group_1_meta) < 2, nrow(group_2_meta) < 2))){
         next
       }
+      # Mann-Whitney test
       wilcox_test <- wilcox.test(group_1_meta[,metric], group_2_meta[,metric], exact = F)
+    
+      # Kruskal-Wallis
+      kruskal_test <- kruskal.test(get(metric)~get(variable), data = subset(mydata, get(variable) %in% c(group_1, group_2)))
+
       results.df <- rbind(results.df, data.frame("Taxonomy" = taxa,
                                                  "Group_1" = group_1, 
                                                  "Group_2" = group_2, 
-                                                 "Wilcox_pvalue" = round(wilcox_test$p.value,6)
+                                                 "MannW_pvalue" = round(wilcox_test$p.value,6),
+                                                 "KrusW_pvalue" = round(kruskal_test$p.value,6)
       ))
     }
   }
   
-  results.df$Wilcox_padj <- round(p.adjust(results.df$Wilcox_pvalue,method = "BH"),6)
+  results.df$MannW_padj <- round(p.adjust(results.df$MannW_pvalue,method = "BH"),6)
+  results.df$KrusW_padj <- round(p.adjust(results.df$KrusW_pvalue,method = "BH"),6)
   results.df
 }
 
@@ -377,7 +384,7 @@ project_sampletype_pooled_genus_top_significances.df <- separate(project_samplet
 project_sampletype_pooled_genus_top_significances.df <- separate(project_sampletype_pooled_genus_top_significances.df,col = "Group_2", into = c("Group_2_Project", "Group_2_Sampletype_pooled"),sep = "_")
 project_sampletype_pooled_genus_top_significances.df <- project_sampletype_pooled_genus_top_significances.df[c("Taxonomy", "Group_1_Project", "Group_2_Project", 
                                                        "Group_1_Sampletype_pooled", "Group_2_Sampletype_pooled",
-                                                       "Wilcox_pvalue", "Wilcox_padj")]
+                                                       "MannW_pvalue", "MannW_padj", "KrusW_pvalue", "KrusW_padj")]
 project_sampletype_pooled_genus_top_significances.df$Same_project <- project_sampletype_pooled_genus_top_significances.df$Group_1_Project == project_sampletype_pooled_genus_top_significances.df$Group_2_Project
 project_sampletype_pooled_genus_top_significances.df$Same_sampletype <- project_sampletype_pooled_genus_top_significances.df$Group_1_Sampletype_pooled == project_sampletype_pooled_genus_top_significances.df$Group_2_Sampletype_pooled
 
@@ -491,27 +498,26 @@ project_Sampletype_compromised_refined_both_projects_genus_top_significances.df$
 write.csv(project_Sampletype_compromised_refined_both_projects_genus_top_significances.df,"Result_tables/abundance_analysis_tables/immunocompromised_sampletype_compromised_refined_both_projects__genus_wilcox.csv", row.names = F)
 
 # Make group boxplot for top taxa
-temp <- modified_genus_data.df
-temp <- temp[temp$taxonomy_genus %in% project_Sampletype_compromised_refined_both_projects_genus_summary_top.df$taxonomy_genus,]
-temp$Family_Genus <- with(temp, paste0(Family, ";", Genus))
-myplot <- generate_multiple_abundance_boxplot(temp, "Family_Genus", "Sampletype_compromised_refined_both_projects","Relative_abundance_rarefied", add_points = F, variable_colours_available = T) + 
-  geom_point(position = position_jitterdodge(), size = .3,stroke = 0.1, shape = 21,aes(fill = Sampletype_compromised_refined_both_projects)) +
-  # scale_y_continuous(limits = c(-1,1)) +
-  facet_wrap(~Project) +
-  ylab("Relative abundance") + 
-  xlab("Taxa") +
-  theme(axis.text.y = element_text(size =6),
-        axis.text.x = element_text(size =6),
-        axis.title = element_text(size =6))
-ggsave(plot = myplot,
-       filename = paste0("Result_figures/abundance_analysis_plots/boxplots/Project_Sampletype_compromised_refined_both_projects_top_taxa.pdf"),
-       height = 25,
-       width = 20,
-       units = "cm")
+# temp <- modified_genus_data.df
+# temp <- temp[temp$taxonomy_genus %in% project_Sampletype_compromised_refined_both_projects_genus_summary_top.df$taxonomy_genus,]
+# temp$Family_Genus <- with(temp, paste0(Family, ";", Genus))
+# myplot <- generate_multiple_abundance_boxplot(temp, "Family_Genus", "Sampletype_compromised_refined_both_projects","Relative_abundance_rarefied", add_points = F, variable_colours_available = T) + 
+#   geom_point(position = position_jitterdodge(), size = .3,stroke = 0.1, shape = 21,aes(fill = Sampletype_compromised_refined_both_projects)) +
+#   # scale_y_continuous(limits = c(-1,1)) +
+#   facet_wrap(~Project) +
+#   ylab("Relative abundance") + 
+#   xlab("Taxa") +
+#   theme(axis.text.y = element_text(size =6),
+#         axis.text.x = element_text(size =6),
+#         axis.title = element_text(size =6))
+# ggsave(plot = myplot,
+#        filename = paste0("Result_figures/abundance_analysis_plots/boxplots/Project_Sampletype_compromised_refined_both_projects_top_taxa.pdf"),
+#        height = 25,
+#        width = 20,
+#        units = "cm")
 
 
 # Make individual boxplots for the top taxa
-# for (project in unique(project_genus_summary_top.df$Project)){
 for (project in c("immunocompromised")){
   for (genus in project_genus_summary_top.df$taxonomy_genus){
     data_subset <- subset(modified_genus_data.df, taxonomy_genus == genus & Project == project)

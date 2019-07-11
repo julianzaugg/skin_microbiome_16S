@@ -404,6 +404,7 @@ run_lesion_cohorts_deseq <- function(my_otu_matrix, variable = "Sampletype_poole
   }
   write.csv(all_combined_results.df, file=outfilename, quote = F, row.names = F)
 }
+
 # temp <- filter_matrix_rows(otu_rare.m, 200)
 # run_lesion_cohorts_deseq(temp, "Sampletype_pooled")
 run_lesion_cohorts_deseq(otu_rare.m, "Sampletype_pooled",assign_taxonomy = T)
@@ -605,7 +606,8 @@ run_immunocompromised_lesion_type_deseq <- function(my_otu_matrix, my_metadata, 
   internal_metadata.df <- my_metadata
   
   # Ensure factored
-  internal_metadata.df$Sampletype_pooled <- factor(internal_metadata.df$Sampletype_pooled)
+  # internal_metadata.df$Sampletype_pooled <- factor(internal_metadata.df$Sampletype_pooled)
+  internal_metadata.df$Sampletype_compromised_refined <- factor(internal_metadata.df$Sampletype_compromised_refined)
   
   # Order the feature table and the metadata to be the same
   internal_otu_matrix.m <- internal_otu_matrix.m[,order(rownames(internal_metadata.df))]
@@ -618,7 +620,8 @@ run_immunocompromised_lesion_type_deseq <- function(my_otu_matrix, my_metadata, 
   }
   
   # Run DESeq
-  dds <-DESeqDataSetFromMatrix(countData = internal_otu_matrix.m, colData = internal_metadata.df, design = ~Sampletype_pooled)
+  # dds <-DESeqDataSetFromMatrix(countData = internal_otu_matrix.m, colData = internal_metadata.df, design = ~Sampletype_pooled)
+  dds <-DESeqDataSetFromMatrix(countData = internal_otu_matrix.m, colData = internal_metadata.df, design = ~Sampletype_compromised_refined)
   geoMeans <- apply(counts(dds), 1, gm_mean)
   dds <- estimateSizeFactors(dds, geoMeans = geoMeans)
   dds <- try(DESeq(dds, test = "Wald", fitType = "parametric", parallel = T))
@@ -632,7 +635,8 @@ run_immunocompromised_lesion_type_deseq <- function(my_otu_matrix, my_metadata, 
   
 
   
-  my_levels <- c("NLC", "AK", "SCC")
+  # my_levels <- c("NLC", "AK", "SCC")
+  my_levels <- c("C" ,"LC", "AK", "SCC")
   sample_type_combinations <- combn(rev(my_levels), 2)
   
   for (i in 1:ncol(sample_type_combinations)){
@@ -641,22 +645,28 @@ run_immunocompromised_lesion_type_deseq <- function(my_otu_matrix, my_metadata, 
     group_2 <- as.character(sample_type_combinations[2,i])
     
     # Get the number of samples in each group
-    n_group_1 <- dim(subset(internal_metadata.df, Sampletype_pooled == group_1))[1]
-    n_group_2 <- dim(subset(internal_metadata.df, Sampletype_pooled == group_2))[1]
+    n_group_1 <- dim(subset(internal_metadata.df, Sampletype_compromised_refined == group_1))[1]
+    n_group_2 <- dim(subset(internal_metadata.df, Sampletype_compromised_refined == group_2))[1]
+    # n_group_1 <- dim(subset(internal_metadata.df, Sampletype_pooled == group_1))[1]
+    # n_group_2 <- dim(subset(internal_metadata.df, Sampletype_pooled == group_2))[1]
     
     print(paste0("processing : ", group_1, "_vs_", group_2))
     
     # Get the results from contrasting these groups
-    resMFSource <- results(dds, contrast = c("Sampletype_pooled",group_1,group_2), alpha=0.01, independentFiltering = F, cooksCutoff = F, parallel = T)
+    # resMFSource <- results(dds, contrast = c("Sampletype_pooled",group_1,group_2), alpha=0.01, independentFiltering = F, cooksCutoff = F, parallel = T)
+    resMFSource <- results(dds, contrast = c("Sampletype_compromised_refined",group_1,group_2), alpha=0.01, independentFiltering = F, cooksCutoff = F, parallel = T)
     
-    group_1_meta <- subset(internal_metadata.df, Sampletype_pooled == group_1)
-    group_2_meta <- subset(internal_metadata.df, Sampletype_pooled == group_2)
+    # group_1_meta <- subset(internal_metadata.df, Sampletype_pooled == group_1)
+    # group_2_meta <- subset(internal_metadata.df, Sampletype_pooled == group_2)
+    group_1_meta <- subset(internal_metadata.df, Sampletype_compromised_refined == group_1)
+    group_2_meta <- subset(internal_metadata.df, Sampletype_compromised_refined == group_2)
     n_patients_group_1 <- length(unique(group_1_meta$Patient))
     n_patients_group_2 <- length(unique(group_2_meta$Patient))
     
     resMFSource$Group_1 <- group_1
     resMFSource$Group_2 <- group_2
-    resMFSource$Variable <- "Sampletype_pooled"
+    # resMFSource$Variable <- "Sampletype_pooled"
+    resMFSource$Variable <- "Sampletype_compromised_refined"
     resMFSource$N_Group_1 <- n_group_1
     resMFSource$N_Group_2 <- n_group_2
     resMFSource$N_patients_Group_1 <- n_patients_group_1
@@ -681,11 +691,12 @@ run_immunocompromised_lesion_type_deseq <- function(my_otu_matrix, my_metadata, 
   }
   # Write the results
   if (assign_taxonomy == T){
-    outfilename <- paste("Result_tables/DESeq_results/immunocompromised_otu_sampletype_pooled.csv", sep= "")
+    # outfilename <- paste("Result_tables/DESeq_results/immunocompromised_otu_sampletype_pooled.csv", sep= "")
+    outfilename <- paste("Result_tables/DESeq_results/immunocompromised_otu_sampletype_compromised_refined.csv", sep= "")
   } else{
-    outfilename <- paste("Result_tables/DESeq_results/immunocompromised_genus_sampletype_pooled.csv", sep= "")
+    # outfilename <- paste("Result_tables/DESeq_results/immunocompromised_genus_sampletype_pooled.csv", sep= "")
+    outfilename <- paste("Result_tables/DESeq_results/immunocompromised_genus_sampletype_compromised_refined.csv", sep= "")
   }
-  
   write.csv(all_combined_results.df, file=outfilename, quote = F, row.names = F)
   
 }
