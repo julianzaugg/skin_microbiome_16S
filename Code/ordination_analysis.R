@@ -583,12 +583,12 @@ colnames(otu_rare_clr_filtered_competent.m)[!rownames(metadata_immunocompetent.d
 
 m.pca_competent <- rda(t(otu_rare_clr_filtered_competent.m), data = metadata_immunocompetent.df)
 
-# Sampletype_pooled
+# Sampletype_pooled ***
 generate_pca(m.pca_competent, mymetadata = metadata_immunocompetent.df,
              plot_height = 5, plot_width =5,
              legend_x = -4.5, legend_y = 5,
              point_size = .7, point_line_thickness = .3,point_alpha =.7,
-             legend_title = "Sample site",
+             legend_title = "Sample type",
              include_legend = T,
              # plot_title = "Immunocompetent, all lesion types",
              limits = c(-5,5,-3,5),
@@ -603,7 +603,7 @@ generate_pca(m.pca_competent, mymetadata = metadata_immunocompetent.df,
              my_levels = c("LC", "AK", "SCC"),
              filename = paste0("Result_figures/ordination_plots/immunocompetent_Sampletype_pooled.pdf"))
 
-# Patient
+# Patient ***
 generate_pca(m.pca_competent, mymetadata = metadata_immunocompetent.df,
              plot_height = 5, plot_width =5,
              legend_x = -6, legend_y = 4,
@@ -636,7 +636,7 @@ generate_pca(m.pca_compromised, mymetadata = metadata_immunocompromised.df,
              plot_height = 5, plot_width =5,
              legend_x = -8, legend_y = 7,
              point_size = .7, point_line_thickness = .3,point_alpha =.7,
-             legend_title = "Lesion type",
+             legend_title = "Sample type",
              # plot_title = "Immunocompromised, all lesion types",
              limits = c(-7,7,-7,7),
              plot_hulls = F,
@@ -651,12 +651,12 @@ generate_pca(m.pca_compromised, mymetadata = metadata_immunocompromised.df,
              my_levels = c("LC", "AK", "SCC"),
              filename = paste0("Result_figures/ordination_plots/immunocompromised_Sampletype_pooled.pdf"))
 
-# Sampletype_compromised_refined
+# Sampletype_compromised_refined ***
 generate_pca(m.pca_compromised, mymetadata = metadata_immunocompromised.df,
              plot_height = 5, plot_width =5,
              legend_x = -9, legend_y = 6,
              point_size = .7, point_line_thickness = .3,point_alpha =.7,
-             legend_title = "Sample site",
+             legend_title = "Sample type",
              # plot_title = "Immunocompromised, all lesion types",
              limits = c(-3,1,-8,6),
              plot_hulls = F,
@@ -672,7 +672,7 @@ generate_pca(m.pca_compromised, mymetadata = metadata_immunocompromised.df,
              filename = paste0("Result_figures/ordination_plots/immunocompromised_Sampletype_compromised_refined.pdf"))
 
 
-# Patient
+# Patient ***
 generate_pca(m.pca_compromised, mymetadata = metadata_immunocompromised.df,
              plot_height = 5, plot_width =5,
              legend_x = -6, legend_y = 4,
@@ -954,8 +954,8 @@ otu_rare_clr_filtered_compromised.m <- otu_rare_clr_filtered.m[,colnames(otu_rar
 otu_rare_clr_filtered_compromised.m <- otu_rare_clr_filtered_compromised.m[,rownames(metadata_immunocompromised.df)]
 
 # result <- adonis(t(otu_rare_clr_filtered_compromised.m)~Patient+Sampletype_pooled+Patient:Sampletype_pooled,data = metadata_immunocompromised.df, permu=999,method="euclidean")
-permanova_results_immunocompromised <- run_permanova_custom(my_metadata = metadata_immunocompromised.df,
-                     my_formula = as.formula(t(otu_rare_clr_filtered_compromised.m)~Patient+Sampletype_pooled+Patient:Sampletype_pooled))
+# permanova_results_immunocompromised <- run_permanova_custom(my_metadata = metadata_immunocompromised.df,
+#                      my_formula = as.formula(t(otu_rare_clr_filtered_compromised.m)~Patient+Sampletype_pooled+Patient:Sampletype_pooled))
 
 permanova_results_immunocompromised <- run_permanova_custom(my_metadata = metadata_immunocompromised.df,
                                                             my_formula = as.formula(t(otu_rare_clr_filtered_compromised.m)~Patient+Sampletype_compromised_refined+Patient:Sampletype_compromised_refined))
@@ -964,29 +964,38 @@ permanova_results_immunocompromised <- run_permanova_custom(my_metadata = metada
 #                                                             my_formula = as.formula("t(otu_rare_clr_filtered_compromised.m)~Patient+Sampletype_pooled+Gender+Patient_group + Number_of_meds"))
 
 # Immunocompetent, all sample types
-metadata_immunocompetent.df <- subset(metadata.df, Project == "immunocompetent" & Sampletype != "negative")
+# metadata_immunocompetent.df <- subset(metadata.df, Project == "immunocompetent" & Sampletype != "negative")
+metadata_immunocompetent.df <- subset(metadata.df, Project == "immunocompetent" & Sampletype != "negative" & Snapshot_sample == "yes")
 metadata_immunocompetent.df <- metadata_immunocompetent.df[order(rownames(metadata_immunocompetent.df)),]
-metadata_immunocompetent_AK_LC.df <- subset(metadata_immunocompetent.df, Sampletype_pooled %in% c("LC", "AK"))
-metadata_immunocompetent_AK_LC_non_pooled.df <- subset(metadata_immunocompetent.df, Sampletype %in% c("LC", "AK"))
+# metadata_immunocompetent_AK_LC.df <- subset(metadata_immunocompetent.df, Sampletype_pooled %in% c("LC", "AK"))
+# metadata_immunocompetent_AK_LC_non_pooled.df <- subset(metadata_immunocompetent.df, Sampletype %in% c("LC", "AK"))
 # otu_clr_skin_filt.m <- otu_clr.m[which(apply(otu_clr.m[,samples.l[['long']]], 1, max) >= 3),samples.l[['long']]]
 # otu_clr_skin_filt.m[which(otu_clr_skin_filt.m < 0)] <- 0
 otu_rare_clr_filtered_competent.m <- otu_rare_clr_filtered.m[,colnames(otu_rare_clr_filtered.m) %in% rownames(metadata_immunocompetent.df)]
 otu_rare_clr_filtered_competent.m <- otu_rare_clr_filtered_competent.m[,rownames(metadata_immunocompetent.df)]
-otu_rare_clr_filtered_competent_AK_LC.m <- otu_rare_clr_filtered_competent.m[,rownames(metadata_immunocompetent_AK_LC.df)]
-otu_rare_clr_filtered_competent_AK_LC_non_pooled.m <- otu_rare_clr_filtered_competent.m[,rownames(metadata_immunocompetent_AK_LC_non_pooled.df)]
+# otu_rare_clr_filtered_competent_AK_LC.m <- otu_rare_clr_filtered_competent.m[,rownames(metadata_immunocompetent_AK_LC.df)]
+# otu_rare_clr_filtered_competent_AK_LC_non_pooled.m <- otu_rare_clr_filtered_competent.m[,rownames(metadata_immunocompetent_AK_LC_non_pooled.df)]
 
 permanova_results_immunocompetent <- run_permanova_custom(my_metadata = metadata_immunocompetent.df,
                                                             my_formula = as.formula(t(otu_rare_clr_filtered_competent.m)~Patient+Sampletype_pooled+Patient:Sampletype_pooled))
 permanova_results_immunocompetent
-permanova_results_immunocompetent_AK_LC <- run_permanova_custom(my_metadata = metadata_immunocompetent_AK_LC.df,
-                                                          my_formula = as.formula(t(otu_rare_clr_filtered_competent_AK_LC.m)~Patient+Sampletype_pooled+Patient:Sampletype_pooled))
+# permanova_results_immunocompetent_AK_LC <- run_permanova_custom(my_metadata = metadata_immunocompetent_AK_LC.df,
+                                                          # my_formula = as.formula(t(otu_rare_clr_filtered_competent_AK_LC.m)~Patient+Sampletype_pooled+Patient:Sampletype_pooled))
 
-permanova_results_immunocompetent_AK_LC_non_pooled <- run_permanova_custom(my_metadata = metadata_immunocompetent_AK_LC_non_pooled.df,
-                                                                 my_formula = as.formula(t(otu_rare_clr_filtered_competent_AK_LC_non_pooled.m)~Patient+Sampletype_pooled+Patient:Sampletype_pooled))
-permanova_results_immunocompetent_AK_LC_non_pooled
+# permanova_results_immunocompetent_AK_LC_non_pooled <- run_permanova_custom(my_metadata = metadata_immunocompetent_AK_LC_non_pooled.df,
+                                                                 # my_formula = as.formula(t(otu_rare_clr_filtered_competent_AK_LC_non_pooled.m)~Patient+Sampletype_pooled+Patient:Sampletype_pooled))
+# permanova_results_immunocompetent_AK_LC_non_pooled
+
 # Both cohorts, all samples types
-permanova_results_both_cohorts <- run_permanova_custom(my_metadata = metadata.df,
-                                                       my_formula = as.formula(t(otu_rare_clr_filtered.m)~Patient+Sampletype_pooled+Patient:Sampletype_pooled))
+metadata_competent_compromised.df <- metadata.df[c(rownames(metadata_immunocompetent.df), rownames(metadata_immunocompromised.df)),]
+metadata_competent_compromised.df <- metadata_competent_compromised.df[order(rownames(metadata_competent_compromised.df)),]
+otu_rare_clr_filtered_competent_compromised.m <- otu_rare_clr_filtered.m[,colnames(otu_rare_clr_filtered.m) %in% rownames(metadata_competent_compromised.df)]
+otu_rare_clr_filtered_competent_compromised.m <- otu_rare_clr_filtered_competent_compromised.m[,rownames(metadata_competent_compromised.df)]
+# Since the immunocompetent do not have values for Sampletype_compromised_refined, use the corresponding Sampletype_pooled values
+metadata_competent_compromised.df[is.na(metadata_competent_compromised.df$Sampletype_compromised_refined),]$Sampletype_compromised_refined <- metadata_competent_compromised.df[is.na(metadata_competent_compromised.df$Sampletype_compromised_refined),c("Sampletype_pooled")]
+
+permanova_results_both_cohorts <- run_permanova_custom(my_metadata = metadata_competent_compromised.df,
+                                                       my_formula = as.formula(t(otu_rare_clr_filtered_competent_compromised.m)~Patient+Sampletype_compromised_refined+Patient:Sampletype_compromised_refined))
 
 write.csv(permanova_results_both_cohorts,file="Result_tables/stats_various/PERMANOVA_both_cohorts.csv",row.names = F)
 write.csv(permanova_results_immunocompromised,file="Result_tables/stats_various/PERMANOVA_immunocompromised.csv",row.names = F)

@@ -88,6 +88,9 @@ genus_data.df <- read.csv("Result_tables/other/genus_counts_abundances_and_metad
 # class_data.df <- read.csv("Result_tables/other/class_counts_abundances_and_metadata.csv")
 # phylum_data.df <- read.csv("Result_tables/other/phylum_counts_abundances_and_metadata.csv")
 
+# First, filter out non-snapshot samples from immunocompetent
+genus_data.df <- subset(genus_data.df, Project == "immunocompromised" | Snapshot_sample == "yes")
+
 genus_data.df <- genus_data.df[genus_data.df$Sample %in% rownames(metadata.df),]
 
 # Set levels
@@ -98,6 +101,8 @@ genus_data.df$Number_of_meds <- factor(genus_data.df$Number_of_meds, levels = c(
 genus_data.df$Fitzpatrick_skin_type <- factor(genus_data.df$Fitzpatrick_skin_type, levels = c("1", "2","3","4"))
 genus_data.df$Project_Sampletype_pooled <- with(genus_data.df, paste0(Project, "_", Sampletype_pooled))
 genus_data.df$Project_Sampletype_pooled <- factor(genus_data.df$Project_Sampletype_pooled , levels = sort(unique(genus_data.df$Project_Sampletype_pooled)))
+
+genus_data.df$Sampletype_final <- factor(genus_data.df$Sampletype_final, levels = c("C", "LC", "AK", "SCC"))
 
 
 # --------------------------------------------------------------------------------------------

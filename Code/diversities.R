@@ -246,21 +246,31 @@ for (scr in unique(immunocompromised_data.df$Sampletype_compromised_refined)){
   iterations <- 0
   # print(scr)
   if (scr == "C"){
-    while ( N_patients != lowest_patient_group.df$Count | N_samples != lowest_sample_group.df$Count-4){
-      temp_downsampled <- full_data_subset_scr.df %>% sample_n(lowest_sample_group.df$Count-4)
+    while ( N_patients != lowest_patient_group.df$Count | N_samples != lowest_sample_group.df$Count-5){
+      temp_downsampled <- full_data_subset_scr.df %>% sample_n(lowest_sample_group.df$Count-5)
       N_patients <- length(unique(temp_downsampled$Patient))
       N_samples <- length(unique(temp_downsampled$Index))
     }
   }
   while ( N_patients != lowest_patient_group.df$Count){
-    temp_downsampled <- full_data_subset_scr.df %>% sample_n(lowest_sample_group.df$Count-4)
+    temp_downsampled <- full_data_subset_scr.df %>% sample_n(lowest_sample_group.df$Count-5)
     N_patients <- length(unique(temp_downsampled$Patient))
     N_samples <- length(unique(temp_downsampled$Index))
     iterations <- sum(iterations, 1)
     # print(iterations)
+    # print(N_patients)
+    # print(N_samples)
+    # print(scr)
   }
   immunocompromised_down_sampled.df <- rbind(immunocompromised_down_sampled.df, temp_downsampled)
 }
+# immunocompromised_down_sampled.df %>% 
+#   group_by(Sampletype_compromised_refined) %>% 
+#   select(Sampletype_compromised_refined, Index) %>% 
+#   distinct() %>% 
+#   tally() %>% 
+#   as.data.frame()
+# 9 patients, 17 samples
 
 # -----------------------------------------------------------------------------------------------------------------
 
