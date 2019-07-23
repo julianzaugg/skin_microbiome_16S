@@ -95,6 +95,9 @@ metadata.df$Patient_group <- factor(metadata.df$Patient_group, levels = c("Contr
 metadata.df$Gender <- factor(metadata.df$Gender)
 metadata.df$Number_of_meds <- factor(metadata.df$Number_of_meds, levels = c("1", "2","3"))
 
+# Filter to just immunocompromised or snapshot samples
+metadata.df <- subset(metadata.df, Project == "immunocompromised" | Snapshot_sample == "yes")
+
 # Need to factorise the colour columns as well
 colour_columns <- names(metadata.df)[grepl("colour", names(metadata.df))]
 metadata.df[colour_columns] <- lapply(metadata.df[colour_columns], factor)
@@ -155,6 +158,7 @@ otu_rare_clr_rel_filtered.m[which(otu_rare_clr_rel_filtered.m < 0)] <- 0
 # metadata.df <- metadata.df[!rownames(metadata.df) %in% samples_to_remove,]
 #metadata.df <- metadata.df["Sampletype"]
 # metadata.df <- metadata.df[variables_of_interest]
+
 
 # --------------------------------------------------------------------------------
 # --------------------------------------------------------------------------------
@@ -586,12 +590,12 @@ m.pca_competent <- rda(t(otu_rare_clr_filtered_competent.m), data = metadata_imm
 # Sampletype_pooled ***
 generate_pca(m.pca_competent, mymetadata = metadata_immunocompetent.df,
              plot_height = 5, plot_width =5,
-             legend_x = -4.5, legend_y = 5,
+             legend_x = -4, legend_y = 5,
              point_size = .7, point_line_thickness = .3,point_alpha =.7,
              legend_title = "Sample type",
              include_legend = T,
              # plot_title = "Immunocompetent, all lesion types",
-             limits = c(-5,5,-3,5),
+             # limits = c(-5,5,-3,5),
              plot_spiders = F,
              plot_ellipses = F,
              use_shapes = T,
@@ -611,7 +615,8 @@ generate_pca(m.pca_competent, mymetadata = metadata_immunocompetent.df,
              legend_title = "Patient",
              include_legend = F,
              # plot_title = "Immunocompetent, all lesion types",
-             limits = c(-5,5,-3,5),
+             # limits = c(-5,5,-3,5),
+             # limits = c(-5,5,-3,5),
              plot_spiders = F,
              plot_ellipses = T,
              use_shapes = T,

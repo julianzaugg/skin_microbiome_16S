@@ -102,6 +102,7 @@ dir.create(file.path("./Result_figures/abundance_analysis_plots/boxplots/Patient
 dir.create(file.path("./Result_figures/abundance_analysis_plots/boxplots/Project_sampletype_pooled"), showWarnings = FALSE, recursive = T)
 dir.create(file.path("./Result_figures/abundance_analysis_plots/boxplots/Project"), showWarnings = FALSE, recursive = T)
 dir.create(file.path("./Result_figures/abundance_analysis_plots/boxplots/Fitzpatrick_skin_type"), showWarnings = FALSE, recursive = T)
+dir.create(file.path("./Result_figures/abundance_analysis_plots/boxplots/Project_sampletype_final"), showWarnings = FALSE, recursive = T)
 
 dir.create(file.path("./Result_figures", "DESeq_plots"), showWarnings = FALSE)
 dir.create(file.path("./Result_figures/DESeq_plots/boxplots"), showWarnings = FALSE, recursive = T)
@@ -371,6 +372,10 @@ metadata.df$Sampletype_colour <- all_sample_colours
 # For Sampletype_pooled. Same Sampletype colours defined above
 all_sample_colours <- as.character(lapply(as.character(metadata.df$Sampletype_pooled), function(x) sampletype_colours[x]))
 metadata.df$Sampletype_pooled_colour <- all_sample_colours
+
+# For Sampletype_final Same Sampletype colours defined above
+all_sample_colours <- as.character(lapply(as.character(metadata.df$Sampletype_final), function(x) sampletype_colours[x]))
+metadata.df$Sampletype_final_colour <- all_sample_colours
 
 # For Sampletype_pooled_IEC_sep Same Sampletype colours defined above
 all_sample_colours <- as.character(lapply(as.character(metadata.df$Sampletype_pooled_IEC_sep), function(x) sampletype_colours[x]))
