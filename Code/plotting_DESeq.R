@@ -51,7 +51,168 @@ my_colour_pallete_12_soft <-c("#9E788F","#4C5B61","#678D58","#AD5233","#A0A083",
 # Set the working directory
 setwd("/Users/julianzaugg/Desktop/ACE/major_projects/skin_microbiome_16S")
 
+otu_data.df <- read.csv("Result_tables/other/OTU_counts_abundances_and_metadata.csv")
+genus_data.df <- read.csv("Result_tables/other/genus_counts_abundances_and_metadata.csv")
 
+immunocompromised_sampletype_final_otu_deseq <- read.csv("Result_tables/DESeq_results/immunocompromised_otu_sampletype_final.csv", header = T)
+immunocompromised_sampletype_final_genus_deseq <- read.csv("Result_tables/DESeq_results/immunocompromised_genus_sampletype_final.csv", header = T)
+
+immunocompetent_sampletype_final_otu_deseq <- read.csv("Result_tables/DESeq_results/immunocompetent_otu_sampletype_final.csv", header = T)
+immunocompetent_sampletype_final_genus_deseq <- read.csv("Result_tables/DESeq_results/immunocompetent_genus_sampletype_final.csv", header = T)
+
+
+# -------------------------------------------
+
+
+# Take DESeq result table and counts+metadata table (can be OTU or genus) and generate log10(read count) boxplots
+# for variable. Bit hacky.
+# data_merge_variable = "OTU.ID",
+# deseq_merge_variable = "OTU",
+# data_merge_variable = "taxonomy_genus",
+# deseq_merge_variable = "Taxonomy",
+# my_deseq_results
+make_deseq_boxplots <- function(my_data, variable, taxonomy_level,
+                                outlocation = "Result_figures/DESeq_plots/boxplots/",
+                                individual_plot_width = 10, individual_plot_height = 10,
+                                n_columns = 4){
+  internal_data.df <- my_data
+  # internal_data.df <- merge(internal_data.df, my_deseq_results, by.x = data_merge_variable, by.y =deseq_merge_variable, all.x = T)
+  
+  if (taxonomy_level == "OTU"){
+    internal_data.df$label <- with(internal_data.df, paste0(Genus, "\n", OTU.ID))
+    temp <- internal_data.df[grepl("Unassigned", internal_data.df$label),]
+    if (dim(temp)[1] != 0){
+      last_assigned_taxa <- unlist(lapply(strsplit(gsub(";Unassigned.*","", temp$taxonomy_genus), ";"), function(x) rev(x)[1]))
+      internal_data.df[grepl("Unassigned", internal_data.df$label),]$label <- with(internal_data.df[grepl("Unassigned", internal_data.df$label),],paste0(last_assigned_taxa, "\n", OTU.ID))
+    }
+  } else if (taxonomy_level == "Genus") {
+    internal_data.df$label <- as.character(internal_data.df$Genus)
+    temp <- internal_data.df[grepl("Unassigned", internal_data.df$label),]
+    if (dim(temp)[1] != 0){
+      last_assigned_taxa <- unlist(lapply(strsplit(gsub(";Unassigned.*","", temp$taxonomy_genus), ";"), function(x) rev(x)[1]))
+      internal_data.df[grepl("Unassigned", internal_data.df$label),]$label <- with(internal_data.df[grepl("Unassigned", internal_data.df$label),], 
+                                                                                   paste0(last_assigned_taxa))
+    }
+  } else{
+    break
+  }
+  fill_colours <- setNames(unique(as.character(internal_data.df[,paste0(variable,"_colour")])), unique(as.character(internal_data.df[,variable])))
+  
+  # Generate the individual plots
+  plot_list <- list()
+  
+  # Order the labels (whole table) by alphabetical order
+  internal_data.df <- internal_data.df[order(internal_data.df$label),]
+  
+  # Check for groups that are missing. If any are missing, create a single fake entry.
+  # This forces ggplot boxplots to have all the discrete groups
+  for (entry in unique(internal_data.df$label)){
+    data_subset <- subset(internal_data.df, label == entry)
+    missing_groups <- unique(internal_data.df[,variable])[!unique(internal_data.df[,variable]) %in% data_subset[,variable]]
+    for (mg in missing_groups){
+      temp <- data_subset[1,]
+      temp$label <- entry
+      temp[,variable] <- mg
+      temp$Read_count_rarefied <- NA
+      temp$Read_count_rarefied_logged <- NA
+      temp$Relative_abundance <- NA
+      temp$Relative_abundance_rarefied <- NA
+      data_subset <- rbind(data_subset, temp)
+    }
+    # print(data_subset[data_subset$Sample == "R1487_J1425",]$label)
+    myplot <- ggplot(data_subset, aes(x = get(variable), y = Read_count_rarefied_logged)) +
+      # myplot <- ggplot(data_subset, aes(x = get(variable), y = Relative_abundance_rarefied)) +
+      geom_boxplot(outlier.shape = NA, aes(fill = get(variable))) +
+      scale_fill_manual(values = fill_colours, name = variable) +
+      geom_jitter(size=0.5, width = 0.10, height=0) +
+      guides(fill=FALSE) +
+      ggtitle(entry) +
+      scale_y_continuous(limits = c(0,4.5), breaks = seq(0,4.5,.5)) +
+      xlab("") +
+      ylab("Log 10 (read count)")  +
+      common_theme +
+      theme(panel.border = element_blank(), 
+            panel.grid.major = element_blank(),
+            panel.grid.minor = element_blank(),
+            axis.line = element_line(colour = "black", size = 0.5),
+            panel.background = element_blank(),
+            strip.background = element_rect(fill = "white", colour = "white", size = 1),
+            strip.text = element_text(size = 6),
+            legend.key=element_blank(),
+            legend.direction="vertical",
+            legend.background = element_rect(colour ="white", size = .3),
+            legend.text.align = 0,
+            legend.title = element_text(size=10, face="bold"),
+            legend.title.align = 0.5,
+            legend.margin = margin(c(2,2,2,2)),
+            legend.key.height=unit(.4,"cm"),
+            legend.text = element_text(size = 8),
+            axis.text = element_text(size = 9, colour = "black"),
+            axis.title = element_text(size = 10,face = "bold"),
+            complete = F,
+            plot.title = element_text(size = 6))
+    
+    
+    plot_list[[gsub("\n","_",entry)]] <- myplot
+    outname <- paste0(as.character(entry), "__", variable, ".pdf")
+    outname <- gsub("^[a-zA-Z]__(.*)", "\\1", outname)
+    outname <- gsub("\n", "_", outname)
+    # ggsave(plot = myplot,filename =  paste0("Result_figures/DESeq_plots/boxplots/sampletype_pooled/", outname), width = 10, height = 10, units = "cm")
+    ggsave(plot = myplot,filename =  paste0(outlocation, outname), width = individual_plot_width, height = individual_plot_height, units = "cm")
+  }
+  
+  # Create legend by creating plot with everything to ensure legend is complete
+  all_sample_plot_for_colour <- ggplot(internal_data.df, aes(x = get(variable), y = Read_count_rarefied_logged)) +
+    geom_boxplot(aes(fill =  get(variable))) +
+    scale_fill_manual(values = fill_colours, name = variable)
+  
+  my_legend_colour <- cowplot::get_legend(all_sample_plot_for_colour + theme(legend.position = "right", 
+                                                                             legend.text = element_text(size = 9),
+                                                                             legend.title = element_text(size =10, face = "bold"),
+                                                                             legend.justification = "center",
+                                                                             plot.margin = unit(c(0, 0, 0, 0), "cm")))
+  
+  grid_plot <- cowplot::plot_grid(plotlist = plot_list, ncol = n_columns)
+  grid_plot <- plot_grid(grid_plot, my_legend_colour, rel_widths = c(1,.4), ncol = 2)
+  return(grid_plot)
+}
+
+# ----------------------------------------------------------------
+# immunocompromised
+
+# Filter to project
+genus_data_filtered.df <- genus_data.df[genus_data.df$Project == "immunocompromised",]
+otu_data_filtered.df <- otu_data.df[otu_data.df$Project == "immunocompromised",]
+
+# Remove negative if present
+genus_data_filtered.df <- genus_data_filtered.df[genus_data_filtered.df$Sampletype != "negative",]
+otu_data_filtered.df <- otu_data_filtered.df[otu_data_filtered.df$Sampletype != "negative",]
+
+# Set the ordering of the groups levels (variable of interest)
+genus_data_filtered.df$Sampletype_final <- factor(genus_data_filtered.df$Sampletype_final, levels = c("C", "LC", "AK", "SCC"))
+otu_data_filtered.df$Sampletype_final <- factor(otu_data_filtered.df$Sampletype_final, levels = c("C", "LC", "AK", "SCC"))
+
+# Filter data to significant genera/OTUs for each deseq result
+sampletype_final_genus_data_filtered.df <- genus_data_filtered.df[genus_data_filtered.df$taxonomy_genus %in% immunocompromised_sampletype_final_genus_deseq$Taxonomy,]
+sampletype_final_otu_data_filtered.df <- otu_data_filtered.df[otu_data_filtered.df$OTU.ID %in% immunocompromised_sampletype_final_otu_deseq$OTU,]
+
+grid_plot <- make_deseq_boxplots(my_data = sampletype_final_genus_data_filtered.df, 
+                                 # my_deseq_results = immunocompromised_sampletype_pooled_genus_deseq, 
+                                 variable = "Sampletype_final", 
+                                 taxonomy_level = "Genus",
+                                 outlocation = "Result_figures/DESeq_plots/boxplots/sampletype_final_genus/")
+
+ggsave(plot = grid_plot,filename =  paste0("Result_figures/DESeq_plots/boxplots/all_genus_sampletype_final.pdf"), width = 30, height = 15, units = "cm")
+
+grid_plot <- make_deseq_boxplots(my_data = sampletype_final_otu_data_filtered.df, 
+                                 # my_deseq_results = immunocompromised_sampletype_pooled_otu_deseq, 
+                                 variable = "Sampletype_final", 
+                                 taxonomy_level = "OTU",
+                                 outlocation = "Result_figures/DESeq_plots/boxplots/sampletype_final_otu/")
+
+ggsave(plot = grid_plot,filename =  paste0("Result_figures/DESeq_plots/boxplots/all_otu_sampletype_final.pdf"), width = 30, height = 15, units = "cm")
+
+# ------------------------------------------------------------------------------------------------------------------------------
 
 plot_genus_deseq <- function(deseq_result_table, facet_plot = T, limit_to = NULL, title = NULL, pallete = my_colour_pallete_30_distinct,
                              include_grid = F,point_size =1 ){
@@ -264,9 +425,6 @@ ggsave(filename = paste0("Result_figures/DESeq_plots/immunocompromised_sampletyp
 # --------------------------------------------------------------------------------------------------------------
 # Boxplots for the abundances / log(read count, 10) for significantly differential features
 
-otu_data.df <- read.csv("Result_tables/other/OTU_counts_abundances_and_metadata.csv")
-genus_data.df <- read.csv("Result_tables/other/genus_counts_abundances_and_metadata.csv")
-
 
 # -------------------------------------------
 # Patient group, immunocompromised
@@ -348,182 +506,5 @@ genus_data.df <- read.csv("Result_tables/other/genus_counts_abundances_and_metad
 # grid_plot <- cowplot::plot_grid(plotlist = plot_list, ncol = 5)
 # grid_plot <- plot_grid(grid_plot, my_legend_colour, rel_widths = c(1,.4), ncol = 2)
 # ggsave(plot = grid_plot,filename =  paste0("Result_figures/DESeq_plots/boxplots/all_patient_group.pdf"), width = 50, height = 40, units = "cm")
-
-
-# -------------------------------------------
-
-
-# Take DESeq result table and counts+metadata table (can be OTU or genus) and generate log10(read count) boxplots
-# for variable. Bit hacky.
-# data_merge_variable = "OTU.ID",
-# deseq_merge_variable = "OTU",
-# data_merge_variable = "taxonomy_genus",
-# deseq_merge_variable = "Taxonomy",
-# my_deseq_results
-make_deseq_boxplots <- function(my_data, variable, taxonomy_level,
-                                outlocation = "Result_figures/DESeq_plots/boxplots/",
-                                individual_plot_width = 10, individual_plot_height = 10,
-                                n_columns = 4){
-  internal_data.df <- my_data
-  # internal_data.df <- merge(internal_data.df, my_deseq_results, by.x = data_merge_variable, by.y =deseq_merge_variable, all.x = T)
-  
-  if (taxonomy_level == "OTU"){
-    internal_data.df$label <- with(internal_data.df, paste0(Genus, "\n", OTU.ID))
-    temp <- internal_data.df[grepl("Unassigned", internal_data.df$label),]
-    if (dim(temp)[1] != 0){
-      last_assigned_taxa <- unlist(lapply(strsplit(gsub(";Unassigned.*","", temp$taxonomy_genus), ";"), function(x) rev(x)[1]))
-      internal_data.df[grepl("Unassigned", internal_data.df$label),]$label <- with(internal_data.df[grepl("Unassigned", internal_data.df$label),],paste0(last_assigned_taxa, "\n", OTU.ID))
-    }
-  } else if (taxonomy_level == "Genus") {
-    internal_data.df$label <- as.character(internal_data.df$Genus)
-    temp <- internal_data.df[grepl("Unassigned", internal_data.df$label),]
-    if (dim(temp)[1] != 0){
-      last_assigned_taxa <- unlist(lapply(strsplit(gsub(";Unassigned.*","", temp$taxonomy_genus), ";"), function(x) rev(x)[1]))
-      internal_data.df[grepl("Unassigned", internal_data.df$label),]$label <- with(internal_data.df[grepl("Unassigned", internal_data.df$label),], 
-                                                                                   paste0(last_assigned_taxa))
-    }
-  } else{
-    break
-  }
-  fill_colours <- setNames(unique(as.character(internal_data.df[,paste0(variable,"_colour")])), unique(as.character(internal_data.df[,variable])))
-  
-  # Generate the individual plots
-  plot_list <- list()
-  
-  # Order the labels (whole table) by alphabetical order
-  internal_data.df <- internal_data.df[order(internal_data.df$label),]
-  
-  # Check for groups that are missing. If any are missing, create a single fake entry.
-  # This forces ggplot boxplots to have all the discrete groups
-  for (entry in unique(internal_data.df$label)){
-    data_subset <- subset(internal_data.df, label == entry)
-    missing_groups <- unique(internal_data.df[,variable])[!unique(internal_data.df[,variable]) %in% data_subset[,variable]]
-    for (mg in missing_groups){
-      temp <- data_subset[1,]
-      temp$label <- entry
-      temp[,variable] <- mg
-      temp$Read_count_rarefied <- NA
-      temp$Read_count_rarefied_logged <- NA
-      temp$Relative_abundance <- NA
-      temp$Relative_abundance_rarefied <- NA
-      data_subset <- rbind(data_subset, temp)
-    }
-  # print(data_subset[data_subset$Sample == "R1487_J1425",]$label)
-  myplot <- ggplot(data_subset, aes(x = get(variable), y = Read_count_rarefied_logged)) +
-  # myplot <- ggplot(data_subset, aes(x = get(variable), y = Relative_abundance_rarefied)) +
-    geom_boxplot(outlier.shape = NA, aes(fill = get(variable))) +
-    scale_fill_manual(values = fill_colours, name = variable) +
-    geom_jitter(size=0.5, width = 0.10, height=0) +
-    guides(fill=FALSE) +
-    ggtitle(entry) +
-    scale_y_continuous(limits = c(0,4.5), breaks = seq(0,4.5,.5)) +
-    xlab("") +
-    ylab("Log 10 (read count)")  +
-    common_theme +
-    theme(panel.border = element_blank(), 
-          panel.grid.major = element_blank(),
-          panel.grid.minor = element_blank(),
-          axis.line = element_line(colour = "black", size = 0.5),
-          panel.background = element_blank(),
-          strip.background = element_rect(fill = "white", colour = "white", size = 1),
-          strip.text = element_text(size = 6),
-          legend.key=element_blank(),
-          legend.direction="vertical",
-          legend.background = element_rect(colour ="white", size = .3),
-          legend.text.align = 0,
-          legend.title = element_text(size=10, face="bold"),
-          legend.title.align = 0.5,
-          legend.margin = margin(c(2,2,2,2)),
-          legend.key.height=unit(.4,"cm"),
-          legend.text = element_text(size = 8),
-          axis.text = element_text(size = 9, colour = "black"),
-          axis.title = element_text(size = 10,face = "bold"),
-          complete = F,
-          plot.title = element_text(size = 6))
-    
-    
-    plot_list[[gsub("\n","_",entry)]] <- myplot
-    outname <- paste0(as.character(entry), "__", variable, ".pdf")
-    outname <- gsub("^[a-zA-Z]__(.*)", "\\1", outname)
-    outname <- gsub("\n", "_", outname)
-    # ggsave(plot = myplot,filename =  paste0("Result_figures/DESeq_plots/boxplots/sampletype_pooled/", outname), width = 10, height = 10, units = "cm")
-    ggsave(plot = myplot,filename =  paste0(outlocation, outname), width = individual_plot_width, height = individual_plot_height, units = "cm")
-  }
-  
-  # Create legend by creating plot with everything to ensure legend is complete
-  all_sample_plot_for_colour <- ggplot(internal_data.df, aes(x = get(variable), y = Read_count_rarefied_logged)) +
-    geom_boxplot(aes(fill =  get(variable))) +
-    scale_fill_manual(values = fill_colours, name = variable)
-  
-  my_legend_colour <- cowplot::get_legend(all_sample_plot_for_colour + theme(legend.position = "right", 
-                                                                             legend.text = element_text(size = 9),
-                                                                             legend.title = element_text(size =10, face = "bold"),
-                                                                             legend.justification = "center",
-                                                                             plot.margin = unit(c(0, 0, 0, 0), "cm")))
-  
-  grid_plot <- cowplot::plot_grid(plotlist = plot_list, ncol = n_columns)
-  grid_plot <- plot_grid(grid_plot, my_legend_colour, rel_widths = c(1,.4), ncol = 2)
-  return(grid_plot)
-}
-
-# Filter to immunocompromised
-genus_data_filtered.df <- genus_data.df[genus_data.df$Project == "immunocompromised",]
-otu_data_filtered.df <- otu_data.df[otu_data.df$Project == "immunocompromised",]
-
-# Remove negative if present
-genus_data_filtered.df <- genus_data_filtered.df[genus_data_filtered.df$Sampletype != "negative",]
-otu_data_filtered.df <- otu_data_filtered.df[otu_data_filtered.df$Sampletype != "negative",]
-
-# Set the ordering of the groups levels (variable of interest)
-genus_data_filtered.df$Sampletype_pooled <- factor(genus_data_filtered.df$Sampletype_pooled, levels = c("NLC", "AK", "SCC"))
-otu_data_filtered.df$Sampletype_pooled <- factor(otu_data_filtered.df$Sampletype_pooled, levels = c("NLC", "AK", "SCC"))
-genus_data_filtered.df$Patient_group <- factor(genus_data_filtered.df$Patient_group, levels = c("Control", "AK", "SCC"))
-otu_data_filtered.df$Patient_group <- factor(otu_data_filtered.df$Patient_group, levels = c("Control", "AK", "SCC"))
-
-# Filter data to significant OTUs for each deseq result
-sampletype_pooled_genus_data_filtered.df <- genus_data_filtered.df[genus_data_filtered.df$taxonomy_genus %in% immunocompromised_sampletype_pooled_genus_deseq$Taxonomy,]
-sampletype_pooled_otu_data_filtered.df <- otu_data_filtered.df[otu_data_filtered.df$OTU.ID %in% immunocompromised_sampletype_pooled_otu_deseq$OTU,]
-
-patient_group_genus_data_filtered.df <- genus_data_filtered.df[genus_data_filtered.df$taxonomy_genus %in% immunocompromised_patient_group_genus_deseq$Taxonomy,]
-patient_group_otu_data_filtered.df <- otu_data_filtered.df[otu_data_filtered.df$OTU.ID %in% immunocompromised_patient_group_otu_deseq$OTU,]
-
-# sampletype_pooled_genus_data_filtered.df[sampletype_pooled_genus_data_filtered.df$Sample == "R1487_J1425",]
-# temp <- subset(sampletype_pooled_genus_data_filtered.df, Genus == "g__Staphylococcus")
-# ggplot(temp, aes(x = Sampletype_pooled, y = Read_count_logged)) +
-  # geom_boxplot() +
-  # geom_jitter()
-
-grid_plot <- make_deseq_boxplots(my_data = sampletype_pooled_genus_data_filtered.df, 
-                    # my_deseq_results = immunocompromised_sampletype_pooled_genus_deseq, 
-                    variable = "Sampletype_pooled", 
-                    taxonomy_level = "Genus",
-                    outlocation = "Result_figures/DESeq_plots/boxplots/sampletype_pooled_genus/")
-
-ggsave(plot = grid_plot,filename =  paste0("Result_figures/DESeq_plots/boxplots/all_genus_sampletype_pooled.pdf"), width = 30, height = 15, units = "cm")
-
-grid_plot <- make_deseq_boxplots(my_data = sampletype_pooled_otu_data_filtered.df, 
-                                 # my_deseq_results = immunocompromised_sampletype_pooled_otu_deseq, 
-                                 variable = "Sampletype_pooled", 
-                                 taxonomy_level = "OTU",
-                                 outlocation = "Result_figures/DESeq_plots/boxplots/sampletype_pooled_otu/")
-
-ggsave(plot = grid_plot,filename =  paste0("Result_figures/DESeq_plots/boxplots/all_otu_sampletype_pooled.pdf"), width = 30, height = 15, units = "cm")
-
-grid_plot <- make_deseq_boxplots(my_data = patient_group_genus_data_filtered.df, 
-                                 # my_deseq_results = immunocompromised_sampletype_pooled_genus_deseq, 
-                                 variable = "Patient_group", 
-                                 taxonomy_level = "Genus",
-                                 outlocation = "Result_figures/DESeq_plots/boxplots/patient_group_genus/")
-
-ggsave(plot = grid_plot,filename =  paste0("Result_figures/DESeq_plots/boxplots/all_genus_patient_group.pdf"), width = 30, height = 15, units = "cm")
-
-grid_plot <- make_deseq_boxplots(my_data = patient_group_otu_data_filtered.df, 
-                                 # my_deseq_results = immunocompromised_sampletype_pooled_otu_deseq, 
-                                 variable = "Patient_group", 
-                                 taxonomy_level = "OTU",
-                                 outlocation = "Result_figures/DESeq_plots/boxplots/patient_group_otu/",
-                                 n_columns = 7)
-
-ggsave(plot = grid_plot,filename =  paste0("Result_figures/DESeq_plots/boxplots/all_otu_patient_group.pdf"), width = 70, height = 30, units = "cm")
 
 

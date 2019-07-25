@@ -587,10 +587,10 @@ colnames(otu_rare_clr_filtered_competent.m)[!rownames(metadata_immunocompetent.d
 
 m.pca_competent <- rda(t(otu_rare_clr_filtered_competent.m), data = metadata_immunocompetent.df)
 
-# Sampletype_pooled ***
+# Sampletype_final ***
 generate_pca(m.pca_competent, mymetadata = metadata_immunocompetent.df,
              plot_height = 5, plot_width =5,
-             legend_x = -4, legend_y = 5,
+             legend_x = -3.5, legend_y = 5,
              point_size = .7, point_line_thickness = .3,point_alpha =.7,
              legend_title = "Sample type",
              include_legend = T,
@@ -602,10 +602,10 @@ generate_pca(m.pca_competent, mymetadata = metadata_immunocompetent.df,
              ellipse_border_width = .5,
              label_ellipse = F, ellipse_label_size = .5,
              colour_palette = my_colour_palette_206_distinct,
-             variable_to_plot = "Sampletype_pooled", legend_cols = 1,
+             variable_to_plot = "Sampletype_final", legend_cols = 1,
              variable_colours_available = T,
              my_levels = c("LC", "AK", "SCC"),
-             filename = paste0("Result_figures/ordination_plots/immunocompetent_Sampletype_pooled.pdf"))
+             filename = paste0("Result_figures/ordination_plots/immunocompetent_Sampletype_final.pdf"))
 
 # Patient ***
 generate_pca(m.pca_competent, mymetadata = metadata_immunocompetent.df,
@@ -639,26 +639,6 @@ m.pca_compromised <- rda(t(otu_rare_clr_filtered_compromised.m), data = metadata
 # Sampletype_pooled
 generate_pca(m.pca_compromised, mymetadata = metadata_immunocompromised.df,
              plot_height = 5, plot_width =5,
-             legend_x = -8, legend_y = 7,
-             point_size = .7, point_line_thickness = .3,point_alpha =.7,
-             legend_title = "Sample type",
-             # plot_title = "Immunocompromised, all lesion types",
-             limits = c(-7,7,-7,7),
-             plot_hulls = F,
-             plot_spiders = F,
-             plot_ellipses = F,
-             use_shapes = T,
-             ellipse_border_width = .5,
-             label_ellipse = F, ellipse_label_size = .5,
-             colour_palette = my_colour_palette_206_distinct,
-             variable_to_plot = "Sampletype_pooled", legend_cols = 1,
-             variable_colours_available = T,
-             my_levels = c("LC", "AK", "SCC"),
-             filename = paste0("Result_figures/ordination_plots/immunocompromised_Sampletype_pooled.pdf"))
-
-# Sampletype_compromised_refined ***
-generate_pca(m.pca_compromised, mymetadata = metadata_immunocompromised.df,
-             plot_height = 5, plot_width =5,
              legend_x = -9, legend_y = 6,
              point_size = .7, point_line_thickness = .3,point_alpha =.7,
              legend_title = "Sample type",
@@ -671,11 +651,10 @@ generate_pca(m.pca_compromised, mymetadata = metadata_immunocompromised.df,
              ellipse_border_width = .5,
              label_ellipse = F, ellipse_label_size = .5,
              colour_palette = my_colour_palette_206_distinct,
-             variable_to_plot = "Sampletype_compromised_refined", legend_cols = 1,
+             variable_to_plot = "Sampletype_final", legend_cols = 1,
              variable_colours_available = T,
-             my_levels = c("C", "LC", "AK", "SCC"),
-             filename = paste0("Result_figures/ordination_plots/immunocompromised_Sampletype_compromised_refined.pdf"))
-
+             my_levels = c("C","LC", "AK", "SCC"),
+             filename = paste0("Result_figures/ordination_plots/immunocompromised_Sampletype_final.pdf"))
 
 # Patient ***
 generate_pca(m.pca_compromised, mymetadata = metadata_immunocompromised.df,

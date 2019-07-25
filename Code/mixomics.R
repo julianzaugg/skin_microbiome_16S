@@ -55,11 +55,11 @@ head(melt(sort(colSums(otu_rare.m))))
 # We are only interested in C,AK_PL,IEC_PL,SCC_PL,AK,IEC, NLC and SCC lesions. 
 metadata.df <- metadata.df[metadata.df$Sampletype %in% c("C","AK_PL","IEC_PL","SCC_PL","AK","IEC","SCC", "NLC"),]
 
+# Filter to immunocompromised or snapshot samples
+metadata.df <- subset(metadata.df, Project == "immunocompromised" | Snapshot_sample == "yes")
+
 # Only keep columns (samples) in the metadata
 otu_rare.m <- otu_rare.m[,colnames(otu_rare.m) %in% as.character(metadata.df$Index)]
-
-# Order the metadata.df by the index value
-metadata.df <- metadata.df[order(metadata.df$Index),]
 
 # Since we likely removed samples from the count matrix
 # in the main script, remove them from the metadata.df here
@@ -250,36 +250,48 @@ run_mixomics <- function(my_otu_matrix, my_metadata, outcome_variable, prefix = 
 immunocompromised_metadata.df <- metadata.df[metadata.df$Project == "immunocompromised",]
 immunocompromised_otu_rare.m <- otu_rare.m[,rownames(immunocompromised_metadata.df)]
 
+immunocompetent_metadata.df <- metadata.df[metadata.df$Project == "immunocompetent",]
+immunocompetent_otu_rare.m <- otu_rare.m[,rownames(immunocompetent_metadata.df)]
+
 # Like DESeq, filter out features that do not have at # reads in at least one sample
 dim(immunocompromised_otu_rare.m)
 immunocompromised_otu_rare.m <- filter_matrix_rows(immunocompromised_otu_rare.m,15)
+immunocompetent_otu_rare.m <- filter_matrix_rows(immunocompetent_otu_rare.m,15)
+
 # Could use sum instead
 # immunocompromised_otu_rare.m <- immunocompromised_otu_rare.m[which(apply(X = immunocompromised_otu_rare.m, MARGIN = 1, FUN = sum) >= 30),]
 dim(immunocompromised_otu_rare.m)
 
-# Sampletype_pooled
+# Sampletype_final
 run_mixomics(my_otu_matrix = immunocompromised_otu_rare.m, 
              my_metadata = immunocompromised_metadata.df, 
              prefix = "immunocompromised_",
              use_shapes = T,
-             outcome_variable = "Sampletype_pooled",
-             my_levels = c("NLC","AK","SCC"))
+             outcome_variable = "Sampletype_final",
+             my_levels = c("C", "LC","AK","SCC"))
 
-# Patient_group
-run_mixomics(my_otu_matrix = immunocompromised_otu_rare.m, 
-             my_metadata = immunocompromised_metadata.df, 
-             prefix = "immunocompromised_",
+run_mixomics(my_otu_matrix = immunocompetent_otu_rare.m, 
+             my_metadata = immunocompetent_metadata.df, 
+             prefix = "immunocompetent_",
              use_shapes = T,
-             outcome_variable = "Patient_group",
-             my_levels = c("Control","AK","SCC"))
+             outcome_variable = "Sampletype_final",
+             my_levels = c("LC","AK","SCC"))
 
-# Number_of_meds
-run_mixomics(my_otu_matrix = immunocompromised_otu_rare.m, 
-             my_metadata = immunocompromised_metadata.df, 
-             prefix = "immunocompromised_",
-             use_shapes = T,
-             outcome_variable = "Number_of_meds",
-             my_levels = c("1","2","3"))
+# # Patient_group
+# run_mixomics(my_otu_matrix = immunocompromised_otu_rare.m, 
+#              my_metadata = immunocompromised_metadata.df, 
+#              prefix = "immunocompromised_",
+#              use_shapes = T,
+#              outcome_variable = "Patient_group",
+#              my_levels = c("Control","AK","SCC"))
+# 
+# # Number_of_meds
+# run_mixomics(my_otu_matrix = immunocompromised_otu_rare.m, 
+#              my_metadata = immunocompromised_metadata.df, 
+#              prefix = "immunocompromised_",
+#              use_shapes = T,
+#              outcome_variable = "Number_of_meds",
+#              my_levels = c("1","2","3"))
 
 
 # Compare cohorts

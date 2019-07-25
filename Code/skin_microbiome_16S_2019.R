@@ -106,6 +106,8 @@ dir.create(file.path("./Result_figures/abundance_analysis_plots/boxplots/Project
 
 dir.create(file.path("./Result_figures", "DESeq_plots"), showWarnings = FALSE)
 dir.create(file.path("./Result_figures/DESeq_plots/boxplots"), showWarnings = FALSE, recursive = T)
+dir.create(file.path("./Result_figures/DESeq_plots/boxplots/sampletype_final_genus"), showWarnings = FALSE, recursive = T)
+dir.create(file.path("./Result_figures/DESeq_plots/boxplots/sampletype_final_otu"), showWarnings = FALSE, recursive = T)
 
 dir.create(file.path("./Result_figures", "diversity_analysis"), showWarnings = FALSE)
 dir.create(file.path("./Result_figures", "exploratory_analysis"), showWarnings = FALSE)
@@ -498,7 +500,7 @@ otu_taxonomy_map.df <- project_otu_table.df[c("OTU.ID",
                                         "RepSeq")]
 
 # Can save this table for later use if required
-write.table(otu_taxonomy_map.df, file = "Result_tables/other/otu_taxonomy_map.df.csv", sep = ",", quote = F, row.names = F)
+write.table(otu_taxonomy_map.df, file = "Result_tables/other/otu_taxonomy_map.csv", sep = ",", quote = F, row.names = F)
 
 
 # Also save the unfiltered table, to avoid processing the original data table again 

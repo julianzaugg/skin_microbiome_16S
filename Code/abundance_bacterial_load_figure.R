@@ -124,9 +124,6 @@ rownames(metadata.df) <- metadata.df$Index
 # Remove samples for different lesion types (nasal,scar,scar_PL,KA,KA_PL,VV,VV_PL,SF,SF_PL,other,other_PL) from metadata and otu table
 metadata.df <- metadata.df[metadata.df$Sampletype %in% c("C","AK_PL","IEC_PL","SCC_PL","AK","IEC","SCC", "NLC"),]
 
-# Factorise discrete columns
-metadata.df$Sampletype_compromised_refined <- factor(metadata.df$Sampletype_compromised_refined)
-
 # Load filtered/processed abundance data with metadata
 genus_data.df <- read.csv("Result_tables/other/genus_counts_abundances_and_metadata.csv")
 
@@ -137,6 +134,9 @@ genus_data.df$Sampletype_pooled <- factor(genus_data.df$Sampletype_pooled, level
 genus_data.df$Sampletype_compromised_refined <- factor(genus_data.df$Sampletype_compromised_refined, levels = c("C","LC", "AK","SCC"))
 # genus_data.df$Sampletype_final <- factor(genus_data.df$Sampletype_final, levels = c("C","LC", "AK","SCC"))
 genus_data.df$Sampletype_final <- factor(genus_data.df$Sampletype_final, levels = c("SCC","AK","LC", "C"))
+
+# Only snapshot and immunocompromised samples
+genus_data.df <- subset(genus_data.df, Project == "immunocompromised" | Snapshot_sample == "yes")
 
 # ----------------------------------------------------------------------------------------
 # Subset to immunocompromised samples
@@ -251,5 +251,123 @@ my_legend_taxa <- cowplot::get_legend(just_legend_plot +
 # Make a grid of plots with the list of plots for both cohorts
 grid_plot <- plot_grid(plotlist = list(abundance_plot, NULL, BL_abundance_plot),ncol = 3,nrow=1, rel_widths = c(1,-.12,1),align = "hv")
 grid_plot <- plot_grid(grid_plot, my_legend_taxa, rel_heights = c(1,0.4), ncol = 1, nrow=2)
-ggsave(filename = "Result_figures/abundance_analysis_plots/sampletype_relative_abundaunce_and_bacterial_load.pdf", plot = grid_plot, width = 20, height = 6, units = "cm")
+ggsave(filename = "Result_figures/abundance_analysis_plots/immunocompromised_sampletype_relative_abundaunce_and_bacterial_load.pdf", plot = grid_plot, width = 20, height = 6, units = "cm")
+
+# ----------------------------------------------------------------------------------------
+# Immunocompetent
+
+# Subset to immunocompetent samples
+immunocompetent_data.df <- subset(genus_data.df, Project == "immunocompetent")
+
+# Remove samples that do not have a bacterial load CFU value
+# immunocompetent_data.df <- immunocompetent_data.df[!is.na(immunocompetent_data.df$Bacterial_load_CFU),]
+
+# Remove factorisation as we will re-assign later
+immunocompetent_data.df$taxonomy_genus <- as.character(immunocompetent_data.df$taxonomy_genus)
+
+# Generate full genus summary for each lesion type
+immunocompetent_genus_summary.df <- generate_taxa_summary(immunocompetent_data.df,
+                                                          taxa_column = "taxonomy_genus", 
+                                                          group_by_columns = c("Sampletype_final"))
+
+# Identify the top genus for each lesion type
+immunocompetent_top_genus_summary.df <- filter_summary_to_top_n(taxa_summary = immunocompetent_genus_summary.df, 
+                                                                grouping_variables = c("Sampletype_final"),
+                                                                abundance_column = "Mean_relative_abundance_rarefied",
+                                                                my_top_n = 6)
+
+# Take the full table and re-label any taxa not in the top to "Other"
+immunocompetent_data.df[!immunocompetent_data.df$taxonomy_genus %in% immunocompetent_top_genus_summary.df$taxonomy_genus,]$taxonomy_genus <- "Other"
+length(unique(immunocompetent_data.df$taxonomy_genus))
+
+# Create Family_Genus value. Will be the label used.
+immunocompetent_data.df$Family_Genus <- gsub(".*(f__.*)", "\\1",immunocompetent_data.df[,"taxonomy_genus"])
+# "d__Eukaryota;p__Opisthokonta;c__Nucletmycea;o__Fungi;D_9__Malasseziaceae;D_10__Malassezia" should become "d__Eukaryota;o__Fungi;D_10__Malassezia"
+immunocompetent_data.df[grep("Malassezi",immunocompetent_data.df$Family_Genus),]$Family_Genus <- "d__Eukaryota;o__Fungi;D_10__Malassezia"
+
+# Put the filtered / processed table back through the summary function to get the final Mean abundance values
+immunocompetent_genus_summary_processed.df <- generate_taxa_summary(immunocompetent_data.df,
+                                                                    taxa_column = "Family_Genus", 
+                                                                    group_by_columns = c("Sampletype_final"))
+
+# Before normalisation
+# immunocompetent_genus_summary_processed.df[c("Sampletype_compromised_refined","Family_Genus","Mean_relative_abundance_rarefied")]
+
+# Normalise the Mean_relative_abundance_rarefied values
+for (lesion in unique(immunocompetent_genus_summary_processed.df$Sampletype_final)){
+  immunocompetent_genus_summary_processed.df[immunocompetent_genus_summary_processed.df$Sampletype_final == lesion,]$Mean_relative_abundance_rarefied <- 
+    immunocompetent_genus_summary_processed.df[immunocompetent_genus_summary_processed.df$Sampletype_final == lesion,]$Mean_relative_abundance_rarefied / 
+    sum(immunocompetent_genus_summary_processed.df[immunocompetent_genus_summary_processed.df$Sampletype_final == lesion,]$Mean_relative_abundance_rarefied)
+}
+# After normalisation
+# immunocompetent_genus_summary_processed.df[c("Sampletype_final","Family_Genus","Mean_relative_abundance_rarefied")]
+
+# Calculate the mean bacterial loads for each lesion type
+immunocompetent_sf_mean_bacterial_loads.df <- immunocompetent_data.df %>% group_by(Sampletype_final) %>% dplyr::summarise(Mean_bacterial_load = mean(Bacterial_load_CFU)) %>% as.data.frame()
+rownames(immunocompetent_sf_mean_bacterial_loads.df) <- immunocompetent_sf_mean_bacterial_loads.df$Sampletype_final
+
+# Calculate abundance value proportional to bacterial load
+immunocompetent_genus_summary_processed.df$Mean_relative_abundance_rarefied_BL_proportional <-
+  apply(immunocompetent_genus_summary_processed.df, 1, function(x) as.numeric(x["Mean_relative_abundance_rarefied"]) * immunocompetent_sf_mean_bacterial_loads.df[x["Sampletype_final"],"Mean_bacterial_load"])
+
+# immunocompetent_genus_summary_processed.df[c("Sampletype_final","Mean_relative_abundance_rarefied", "Mean_relative_abundance_rarefied_BL_proportional")]
+
+# Get unique list of taxa, ensure "Other" is first
+most_abundant_taxa <- sort(unique(immunocompetent_genus_summary_processed.df$Family_Genus))
+most_abundant_taxa <- c("Other", most_abundant_taxa[!grepl("Other", most_abundant_taxa)])
+
+# Create palette
+# immunocompetent_genus_palette <- setNames(my_colour_palette_30_distinct[1:length(most_abundant_taxa)], most_abundant_taxa)
+immunocompetent_genus_palette <- setNames(my_colour_palette_12_soft[1:length(most_abundant_taxa)], most_abundant_taxa)
+immunocompetent_genus_palette["Other"] <- "grey"
+
+
+just_legend_plot <- ggplot(immunocompetent_genus_summary_processed.df, aes(x = Sampletype_final, y = Mean_relative_abundance_rarefied, fill = Family_Genus)) +
+  geom_bar(stat = "identity", colour = "black", lwd = .2) + 
+  coord_flip() +
+  scale_fill_manual(values = immunocompetent_genus_palette, name = "Taxonomy", guide = guide_legend(title.position = "top",nrow= 3)) +
+  xlab("Sample site") +
+  ylab("Mean relative abundance") +
+  common_theme 
+
+abundance_plot <- ggplot(immunocompetent_genus_summary_processed.df, aes(x = Sampletype_final, y = Mean_relative_abundance_rarefied*100, fill = Family_Genus)) +
+  geom_bar(stat = "identity", colour = "black", lwd = .2) + 
+  coord_flip() +
+  scale_fill_manual(values = immunocompetent_genus_palette, guide = F) +
+  scale_y_continuous(breaks = seq(0,100, by = 10)) +
+  xlab("Sample type") +
+  ylab("Mean relative abundance (%)") +
+  common_theme
+
+BL_abundance_plot <- ggplot(immunocompetent_genus_summary_processed.df, aes(x = Sampletype_final, y = Mean_relative_abundance_rarefied_BL_proportional, fill = Family_Genus)) +
+  geom_bar(stat = "identity", colour = "black", lwd = .2) + 
+  coord_flip() +
+  scale_fill_manual(values = immunocompetent_genus_palette,guide = F) +
+  scale_y_continuous(breaks = seq(0,30000, by = 5000), limits=c(0,30001)) +
+  # xlab("Sample site") +
+  xlab("") +
+  ylab("Mean relative abundance scaled by mean bacterial load (CFU)") +
+  
+  common_theme +
+  theme(axis.text.y = element_blank())
+
+
+# Extract the legend
+my_legend_taxa <- cowplot::get_legend(just_legend_plot + 
+                                        theme(
+                                          legend.position = "right",
+                                          legend.text = element_text(size = 6),
+                                          legend.title = element_text(size=7, face="bold"),
+                                          legend.justification = "center",
+                                          legend.direction = "horizontal",
+                                          legend.box.just = "bottom",
+                                          plot.margin = unit(c(0, 0, 0, 0), "cm")
+                                        )
+)
+
+# Make a grid of plots with the list of plots for both cohorts
+# grid_plot <- plot_grid(plotlist = list(abundance_plot, NULL, BL_abundance_plot),ncol = 3,nrow=1, rel_widths = c(1,-.12,1),align = "hv")
+grid_plot <- plot_grid(plotlist = list(abundance_plot, NULL, NULL),ncol = 3,nrow=1, rel_widths = c(1,-.12,1),align = "hv")
+grid_plot <- plot_grid(grid_plot, my_legend_taxa, rel_heights = c(1,0.4), ncol = 1, nrow=2)
+ggsave(filename = "Result_figures/abundance_analysis_plots/immunocompetent_sampletype_relative_abundaunce_and_bacterial_load.pdf", plot = grid_plot, width = 20, height = 6, units = "cm")
 
