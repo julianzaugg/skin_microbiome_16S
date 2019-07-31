@@ -182,7 +182,38 @@ immunocompromised_data.df <- subset(otu_data.df, Project == "immunocompromised")
 immunocompromised_taxa_summary.df <- generate_taxa_summary(mydata = immunocompromised_data.df, taxa_column = "Inferred_species",group_by_columns = c("Sampletype_final","Sample"))
 immunocompetent_taxa_summary.df <- generate_taxa_summary(mydata = immunocompetent_data.df, taxa_column = "Inferred_species",group_by_columns = c("Sampletype_final","Sample"))
 
-generate_taxa_summary(mydata = immunocompromised_data.df, taxa_column = "Inferred_species",group_by_columns = c("Sampletype_final","Sample")) %>% group_by(Sampletype_final,Inferred_species) %>% summarise(Count = n_distinct(Sample))
+# Calculate the number of samples per group
+generate_taxa_summary(mydata = immunocompromised_data.df, taxa_column = "Inferred_species",group_by_columns = c("Sampletype_final","Sample", "Patient"))
+
+immunocompromised_sample_counts_inferred_species.df <- generate_taxa_summary(mydata = immunocompromised_data.df, taxa_column = "Inferred_species",group_by_columns = c("Sampletype_final","Sample", "Patient")) %>% 
+  group_by(Sampletype_final) %>%
+  mutate(Total_number_of_samples_in_group = n_distinct(Sample), 
+         Total_number_of_patients_in_group = n_distinct(Patient)) %>%
+  group_by(Sampletype_final,Inferred_species) %>% 
+  summarise(Number_of_samples_present = n_distinct(Sample), 
+            Number_of_patients_present = n_distinct(Patient),
+            Total_number_of_samples_in_group = max(Total_number_of_samples_in_group),
+            Total_number_of_patients_in_group = max(Total_number_of_patients_in_group)) %>%
+  mutate(Percent_of_samples = round(Number_of_samples_present/Total_number_of_samples_in_group*100, 2), 
+         Percent_of_patients = round(Number_of_patients_present/Total_number_of_patients_in_group*100, 2)) %>%
+  as.data.frame()
+
+immunocompetent_sample_counts_inferred_species.df <-  generate_taxa_summary(mydata = immunocompetent_data.df, taxa_column = "Inferred_species",group_by_columns = c("Sampletype_final","Sample", "Patient")) %>% 
+  group_by(Sampletype_final) %>%
+  mutate(Total_number_of_samples_in_group = n_distinct(Sample), 
+         Total_number_of_patients_in_group = n_distinct(Patient)) %>%
+  group_by(Sampletype_final,Inferred_species) %>% 
+  summarise(Number_of_samples_present = n_distinct(Sample), 
+            Number_of_patients_present = n_distinct(Patient),
+            Total_number_of_samples_in_group = max(Total_number_of_samples_in_group),
+            Total_number_of_patients_in_group = max(Total_number_of_patients_in_group)) %>%
+  mutate(Percent_of_samples = round(Number_of_samples_present/Total_number_of_samples_in_group*100, 2), 
+         Percent_of_patients = round(Number_of_patients_present/Total_number_of_patients_in_group*100, 2)) %>%
+  as.data.frame()
+
+# Write per sample count summary to file
+write.csv(immunocompromised_sample_counts_inferred_species.df, file = "Result_tables/abundance_analysis_tables/immunocompromised_inferred_species_sample_counts.csv")
+write.csv(immunocompetent_sample_counts_inferred_species.df, file = "Result_tables/abundance_analysis_tables/immunocompetent_inferred_species_sample_counts.csv")
 
 immunocompromised_taxa_summary.df <- merge(immunocompromised_taxa_summary.df, metadata.df[c("Index","Patient", "Project")], by.x =  "Sample", by.y = "Index")
 immunocompetent_taxa_summary.df <- merge(immunocompetent_taxa_summary.df, metadata.df[c("Index","Patient", "Project")], by.x =  "Sample", by.y = "Index")
