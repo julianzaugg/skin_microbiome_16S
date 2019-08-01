@@ -140,12 +140,16 @@ metadata.df <- read.table("data/metadata_immunocompromised_competent.tsv", heade
 
 # ---------------------------------------------------------------------------
 # temp <- read.table("data/snapshot_temp.tsv", sep = "\t", header = T)
-# unlist(lapply(temp$Swab.ID[!temp$Swab.ID %in% metadata.df$Swab_ID], function(x) paste(x, grep(x,metadata.df$Swab_ID, value = T,invert = F))[1]))
-# temp[temp$Swab.ID == 1198,]
+# temp$Snapshot <- as.character(temp$Snapshot)
+# # unlist(lapply(temp$Swab.ID[!temp$Swab.ID %in% metadata.df$Swab_ID], function(x) paste(x, grep(x,metadata.df$Swab_ID, value = T,invert = F))[1]))
+# # temp[temp$Swab.ID == 1198,]
+# temp <- spread(temp,"Snapshot","Snapshot")
+# temp[c("SN1","SN2","SN3","SN4")][!is.na(temp[c("SN1","SN2","SN3","SN4")])] <- "yes"
 # dim(metadata.df)
 # metadata.df <- merge(metadata.df, temp, by.x = "Swab_ID", by.y = "Swab.ID",all.x = T)
+# # metadata.df <- merge(metadata.df, temp, by.x = "Swab_ID", by.y = "Swab.ID")
 # dim(metadata.df)
-# write.csv(metadata.df, file = "data/metadata_immunocompromised_competent_temp.csv",quote = F)
+# write.csv(metadata.df, file = "data/metadata_immunocompromised_competent_temp.csv",quote = F, row.names = F)
 # metadata.df[metadata.df$LIMS.ID %in% c("S8752","S8878","S8899","S8901","SA5412","S8753","S8879","S8900","S8902","SA5413","SA5478"),]
 # sort(as.numeric(as.character(temp$Swab.ID[!unlist(lapply(temp$Swab.ID, function(x) any(grepl(x, metadata.df$Swab_ID))))])))
 # ---------------------------------------------------------------------------
@@ -759,6 +763,8 @@ otu.m <- otu.m[rownames(otu_rel.m),]
 # TODO - write to file those samples that are removed
 # colSums(otu.m) < 5000
 
+otu_prior_to_removing_low_read_count_samples.m <- otu.m
+otu_prior_to_removing_low_read_count_samples_rel.m <- otu_rel.m
 dim(otu.m)
 # otu.m <- otu.m[,colSums(otu.m) >= 5000]
 otu.m <- otu.m[,colSums(otu.m) >= 4000]
@@ -914,7 +920,7 @@ n_MS_samples <- length(metadata.df[!grepl("MST", metadata.df$Patient),]$Index)
 # Number of samples for each Sampletype
 per_sampletype <- metadata.df %>% 
   group_by(Sampletype) %>%
-  summarise(Count = n()) %>%
+  dplyr::summarise(Count = n()) %>%
   mutate(Percent = round((Count/sum(Count))*100,2)) %>%
   arrange(desc(Percent)) %>%
   as.data.frame
@@ -940,7 +946,7 @@ per_sampletype$Sampletype <- factor(per_sampletype$Sampletype, levels = per_samp
 # Number of samples for each Sampletype_pooled
 per_sampletype_pooled <- metadata.df %>% 
   group_by(Sampletype_pooled) %>%
-  summarise(Count = n()) %>%
+  dplyr::summarise(Count = n()) %>%
   mutate(Percent = round((Count/sum(Count))*100,2)) %>%
   arrange(desc(Percent)) %>%
   as.data.frame
@@ -948,7 +954,7 @@ per_sampletype_pooled <- metadata.df %>%
 # Number of samples for each Sampletype_compromised_refined
 per_sampletype_compromised_refined <- metadata.df %>% 
   group_by(Sampletype_compromised_refined) %>%
-  summarise(Count = n()) %>%
+  dplyr::summarise(Count = n()) %>%
   mutate(Percent = round((Count/sum(Count))*100,2)) %>%
   arrange(desc(Percent)) %>%
   as.data.frame
@@ -957,7 +963,7 @@ per_sampletype_compromised_refined <- metadata.df %>%
 # Number of samples for each Sampletype for each patient
 per_patient_sampletype <- metadata.df %>% 
   group_by(Patient,Sampletype) %>%
-  summarise(Count = n()) %>%
+  dplyr::summarise(Count = n()) %>%
   mutate(Percent = round((Count/sum(Count))*100,2)) %>%
   arrange(Patient, desc(Percent)) %>%
   as.data.frame
@@ -965,7 +971,7 @@ per_patient_sampletype <- metadata.df %>%
 # Number of samples for each Sampletype_pooled for each patient
 per_patient_sampletype_pooled <- metadata.df %>% 
   group_by(Patient,Sampletype_pooled) %>%
-  summarise(Count = n()) %>%
+  dplyr::summarise(Count = n()) %>%
   mutate(Percent = round((Count/sum(Count))*100,2)) %>%
   arrange(Patient, desc(Percent)) %>%
   as.data.frame
@@ -974,7 +980,7 @@ per_patient_sampletype_pooled <- metadata.df %>%
 # Number of samples for each Sampletype for each cohort
 per_cohort_sampletype <- metadata.df %>% 
   group_by(Project,Sampletype) %>%
-  summarise(Count = n()) %>%
+  dplyr::summarise(Count = n()) %>%
   mutate(Percent = round((Count/sum(Count))*100,2)) %>%
   arrange(Project, desc(Percent)) %>%
   as.data.frame
@@ -982,20 +988,30 @@ per_cohort_sampletype <- metadata.df %>%
 # Number of samples for each Sampletype_pooled for each cohort
 per_cohort_sampletype_pooled <- metadata.df %>% 
   group_by(Project,Sampletype_pooled) %>%
-  summarise(Count = n()) %>%
+  dplyr::summarise(Count = n()) %>%
   mutate(Percent = round((Count/sum(Count))*100,2)) %>%
   arrange(Project, desc(Percent)) %>%
   as.data.frame
 
+# Number of samples for each Sampletype_pooled for each cohort
+per_cohort_sampletype_final <- metadata.df %>% 
+  group_by(Project,Sampletype_final) %>%
+  dplyr::summarise(Count = n()) %>%
+  mutate(Percent = round((Count/sum(Count))*100,2)) %>%
+  arrange(Project, desc(Percent)) %>%
+  as.data.frame
+
+
 write.csv(per_cohort_sampletype,"Result_tables/other/metadata_cohort_sampletype_counts.csv", row.names = F)
-write.csv(per_cohort_sampletype_pooled,"Result_tables/other/metadata_cohort_sampletype_pooled_counts.csv", row.names = F)
+# write.csv(per_cohort_sampletype_pooled,"Result_tables/other/metadata_cohort_sampletype_pooled_counts.csv", row.names = F)
+write.csv(per_cohort_sampletype_final,"Result_tables/other/metadata_cohort_sampletype_final_counts.csv", row.names = F)
 
 # Number of samples and patients for each Number_of_meds
 number_of_meds_summary.df <- 
   metadata.df %>% 
   filter(Project == "immunocompromised") %>%
   group_by(Number_of_meds) %>%
-  summarise(N_patients = n_distinct(Patient), N_samples = n_distinct(Index)) %>%
+  dplyr::summarise(N_patients = n_distinct(Patient), N_samples = n_distinct(Index)) %>%
   as.data.frame()
 
 write.csv(number_of_meds_summary.df,"Result_tables/other/number_of_meds_summary.csv", row.names = F)
@@ -1005,7 +1021,7 @@ fitzpatrick_skin_type_summary.df <-
   metadata.df %>% 
   filter(Project == "immunocompromised") %>%
   group_by(Fitzpatrick_skin_type) %>%
-  summarise(N_patients = n_distinct(Patient), N_samples = n_distinct(Index)) %>%
+  dplyr::summarise(N_patients = n_distinct(Patient), N_samples = n_distinct(Index)) %>%
   as.data.frame()
 
 write.csv(fitzpatrick_skin_type_summary.df,"Result_tables/other/Fitzpatrick_skin_type_summary.csv", row.names = F)
@@ -1015,7 +1031,7 @@ patient_group_summary.df <-
   metadata.df %>% 
   filter(Project == "immunocompromised") %>%
   group_by(Patient_group) %>%
-  summarise(N_patients = n_distinct(Patient), N_samples = n_distinct(Index)) %>%
+  dplyr::summarise(N_patients = n_distinct(Patient), N_samples = n_distinct(Index)) %>%
   as.data.frame()
 
 write.csv(patient_group_summary.df,"Result_tables/other/patient_group_summary.csv", row.names = F)
@@ -1037,60 +1053,86 @@ write.csv(patient_group_summary.df,"Result_tables/other/patient_group_summary.cs
 # ------------------------------------
 #           Reads stats
 
-# Rarefied counts                 = otu_rare_count.m 
-# Rarefied relative abundances    = otu_rare_rel.m
-# Relative abundances             = otu_rel.m
-# Counts                          = otu.m
-# Unfiltered counts               = otu_unfiltered.m
-# Unfiltered relative abundances  = otu_unfiltered_rel.m
+# Rarefied counts                                  = otu_rare_count.m 
+# Rarefied relative abundances                     = otu_rare_rel.m
+# Relative abundances                              = otu_rel.m
+# Counts (filtered)                                = otu.m
+# Unfiltered counts                                = otu_unfiltered.m
+# Unfiltered relative abundances                   = otu_unfiltered_rel.m
+# Counts (with low abundance samples)              = otu_prior_to_removing_low_read_count_samples.m
+# Relative abundances (with low abundance samples) = otu_prior_to_removing_low_read_count_samples_rel.m
+
 
 # Only focus on those samples that have passed QC.
 samples_passing_QC <- colnames(otu.m)
-stats.df <- data.frame(Sample = samples_passing_QC)
+samples_in_unfiltered <- colnames(otu_unfiltered.m)
+# stats.df <- data.frame(Sample = samples_passing_QC)
+stats.df <- data.frame(Sample = samples_in_unfiltered)
+rownames(stats.df) <- stats.df$Sample
 
-stats.df$Patient <- metadata.df[samples_passing_QC,"Patient"]
-stats.df$Project <- metadata.df[samples_passing_QC,"Project"]
-stats.df$Sampletype <- metadata.df[samples_passing_QC,"Sampletype"]
-stats.df$Sampletype_pooled <- metadata.df[samples_passing_QC,"Sampletype_pooled"]
-stats.df$Patient_group <- metadata.df[samples_passing_QC,"Patient_group"]
+stats.df$Sample_retained <- "no"
+stats.df[samples_passing_QC,]$Sample_retained <- "yes"
+samples_not_retained <- rownames(stats.df[stats.df$Sample_retained == "no",])
 
-stats.df[,"Original_read_counts"] <- colSums(otu_unfiltered.m[,samples_passing_QC])
-stats.df[,"Filtered_read_counts"] <- colSums(otu.m[,samples_passing_QC])
-stats.df[,"Filtered_rarefied_read_counts"] <- colSums(otu_rare_count.m[,samples_passing_QC])
+# stats.df$Patient <- metadata.df[samples_passing_QC,"Patient"]
+# stats.df$Project <- metadata.df[samples_passing_QC,"Project"]
+# stats.df$Sampletype <- metadata.df[samples_passing_QC,"Sampletype"]
+# stats.df$Sampletype_pooled <- metadata.df[samples_passing_QC,"Sampletype_pooled"]
+# stats.df$Patient_group <- metadata.df[samples_passing_QC,"Patient_group"]
+
+stats.df$Patient <- metadata.df[samples_in_unfiltered,"Patient"]
+stats.df$Project <- metadata.df[samples_in_unfiltered,"Project"]
+stats.df$Sampletype <- metadata.df[samples_in_unfiltered,"Sampletype"]
+# stats.df$Sampletype_pooled <- metadata.df[samples_in_unfiltered,"Sampletype_pooled"]
+stats.df$Sampletype_final <- metadata.df[samples_in_unfiltered,"Sampletype_final"]
+# stats.df$Patient_group <- metadata.df[samples_in_unfiltered,"Patient_group"]
+
+# stats.df[,"Original_read_counts"] <- colSums(otu_unfiltered.m[,samples_passing_QC]) # Read counts prior to filtering out taxonomy / contaminants / low abundance features
+stats.df[,"Original_read_counts"] <- colSums(otu_unfiltered.m[,samples_in_unfiltered]) # Read counts prior to filtering out taxonomy / contaminants / low abundance features
+
+stats.df[samples_passing_QC,"Filtered_read_counts"] <- colSums(otu.m[,samples_passing_QC])  # Read counts after filtering (contaminants, low read depth samples and low abundance features removed)
+stats.df[samples_not_retained,"Filtered_read_counts"] <- colSums(otu_prior_to_removing_low_read_count_samples.m[,rownames(stats.df[samples_not_retained,])])
+stats.df[samples_passing_QC,"Filtered_rarefied_read_counts"] <- colSums(otu_rare_count.m[,samples_passing_QC]) # "" and rarefied
 
 # Reads removed from filtering
-stats.df[,"Reads_removed_filtered"] <- stats.df[,"Original_read_counts"] - stats.df[,"Filtered_read_counts"]
-stats.df[,"Proportion_reads_removed_filtered"] <- stats.df[,"Reads_removed_filtered"] / stats.df[,"Original_read_counts"]
+stats.df[,"Reads_removed_from_filtering"] <- stats.df[,"Original_read_counts"] - stats.df[,"Filtered_read_counts"]
+stats.df[,"Proportion_reads_removed_from_filtering"] <- stats.df[,"Reads_removed_from_filtering"] / stats.df[,"Original_read_counts"]
 
 # Reads removed from filtering and rarefaction
-stats.df[,"Reads_removed_filtered_rarefied"] <- stats.df[,"Original_read_counts"] - stats.df[,"Filtered_rarefied_read_counts"]
-stats.df[,"Proportion_reads_removed_filtered_rarefied"] <- stats.df[,"Reads_removed_filtered_rarefied"] / stats.df[,"Original_read_counts"]
+stats.df[,"Reads_removed_from_filtering_rarefied"] <- stats.df[,"Original_read_counts"] - stats.df[,"Filtered_rarefied_read_counts"]
+stats.df[,"Proportion_reads_removed_from_filtering_rarefied"] <- stats.df[,"Reads_removed_from_filtering_rarefied"] / stats.df[,"Original_read_counts"]
 
 # ---------------------------------------------
 # Read counts and proportions original, unprocessed data. Summing each domain + unassigned should equal one
 
 # Proportion of reads that are mammal (generally human)
-stats.df[,"Mammal_read_count_original"] <- colSums(project_otu_table_unfiltered.df[grepl("Mammal", project_otu_table_unfiltered.df$taxonomy_species),samples_passing_QC])
+# stats.df[,"Mammal_read_count_original"] <- colSums(project_otu_table_unfiltered.df[grepl("Mammal", project_otu_table_unfiltered.df$taxonomy_species),samples_passing_QC])
+stats.df[,"Mammal_read_count_original"] <- colSums(project_otu_table_unfiltered.df[grepl("Mammal", project_otu_table_unfiltered.df$taxonomy_species),samples_in_unfiltered])
 stats.df[,"Mammal_proportion_original"] <- stats.df[,"Mammal_read_count_original"] / stats.df[,"Original_read_counts"]
 
 # Proportion of reads that are fungal
-stats.df[,"Fungal_read_count_original"] <- colSums(project_otu_table_unfiltered.df[grepl("Fungi", project_otu_table_unfiltered.df$taxonomy_species),samples_passing_QC])
+# stats.df[,"Fungal_read_count_original"] <- colSums(project_otu_table_unfiltered.df[grepl("Fungi", project_otu_table_unfiltered.df$taxonomy_species),samples_passing_QC])
+stats.df[,"Fungal_read_count_original"] <- colSums(project_otu_table_unfiltered.df[grepl("Fungi", project_otu_table_unfiltered.df$taxonomy_species),samples_in_unfiltered])
 stats.df[,"Fungal_proportion_original"] <- stats.df[,"Fungal_read_count_original"] / stats.df[,"Original_read_counts"]
 
 # Proportion of reads that are fungal
-stats.df[,"Bacterial_read_count_original"] <- colSums(project_otu_table_unfiltered.df[grepl("d__Bacteria", project_otu_table_unfiltered.df$Domain),samples_passing_QC])
+# stats.df[,"Bacterial_read_count_original"] <- colSums(project_otu_table_unfiltered.df[grepl("d__Bacteria", project_otu_table_unfiltered.df$Domain),samples_passing_QC])
+stats.df[,"Bacterial_read_count_original"] <- colSums(project_otu_table_unfiltered.df[grepl("d__Bacteria", project_otu_table_unfiltered.df$Domain),samples_in_unfiltered])
 stats.df[,"Bacterial_proportion_original"] <- stats.df[,"Bacterial_read_count_original"] / stats.df[,"Original_read_counts"]
 
 # Proportion of reads that are Archaea
-stats.df[,"Archaeal_read_count_original"] <- colSums(project_otu_table_unfiltered.df[grepl("d__Archaea", project_otu_table_unfiltered.df$Domain),samples_passing_QC])
+# stats.df[,"Archaeal_read_count_original"] <- colSums(project_otu_table_unfiltered.df[grepl("d__Archaea", project_otu_table_unfiltered.df$Domain),samples_passing_QC])
+stats.df[,"Archaeal_read_count_original"] <- colSums(project_otu_table_unfiltered.df[grepl("d__Archaea", project_otu_table_unfiltered.df$Domain),samples_in_unfiltered])
 stats.df[,"Archaeal_proportion_original"] <- stats.df[,"Archaeal_read_count_original"] / stats.df[,"Original_read_counts"]
 
 # Proportion of reads that are Eukaryota
-stats.df[,"Eukaryal_read_count_original"] <- colSums(project_otu_table_unfiltered.df[grepl("d__Eukaryota", project_otu_table_unfiltered.df$Domain),samples_passing_QC])
+# stats.df[,"Eukaryal_read_count_original"] <- colSums(project_otu_table_unfiltered.df[grepl("d__Eukaryota", project_otu_table_unfiltered.df$Domain),samples_passing_QC])
+stats.df[,"Eukaryal_read_count_original"] <- colSums(project_otu_table_unfiltered.df[grepl("d__Eukaryota", project_otu_table_unfiltered.df$Domain),samples_in_unfiltered])
 stats.df[,"Eukaryal_proportion_original"] <- stats.df[,"Eukaryal_read_count_original"] / stats.df[,"Original_read_counts"]
 
 # Proportion of reads that are Unassigned a taxonomy
-stats.df[,"Unassigned_read_count_original"] <- colSums(project_otu_table_unfiltered.df[grepl("Unassigned", project_otu_table_unfiltered.df$Domain),samples_passing_QC])
+# stats.df[,"Unassigned_read_count_original"] <- colSums(project_otu_table_unfiltered.df[grepl("Unassigned", project_otu_table_unfiltered.df$Domain),samples_passing_QC])
+stats.df[,"Unassigned_read_count_original"] <- colSums(project_otu_table_unfiltered.df[grepl("Unassigned", project_otu_table_unfiltered.df$Domain),samples_in_unfiltered])
 stats.df[,"Unassigned_proportion_original"] <- stats.df[,"Unassigned_read_count_original"] / stats.df[,"Original_read_counts"]
 
 # stats.df[,"Other_read_count_original"] <- colSums(project_otu_table_unfiltered.df[!grepl("d__Bacteria|d__Archaea|d__Eukaryota|Unassigned", project_otu_table_unfiltered.df$Domain),samples_passing_QC])
@@ -1100,17 +1142,24 @@ stats.df[,"Unassigned_proportion_original"] <- stats.df[,"Unassigned_read_count_
 
 # -------------------------------------
 # Read counts and proportions filtered data
-temp <- otu_taxonomy_map.df[otu_taxonomy_map.df$OTU.ID %in% rownames(otu.m),]
+# temp <- otu_taxonomy_map.df[otu_taxonomy_map.df$OTU.ID %in% rownames(otu.m),]
+# otu_prior_to_removing_low_read_count_samples.m should be the same as otu.m except the low abundance samples have not been removed
+temp <- otu_taxonomy_map.df[otu_taxonomy_map.df$OTU.ID %in% rownames(otu_prior_to_removing_low_read_count_samples.m),]
 bacterial_otus_filtered <- temp[temp$Domain == "d__Bacteria",]$OTU.ID
 fungal_otus_filtered <- temp[grepl("Fungi", temp$taxonomy_species),]$OTU.ID
+# names(colSums(otu_prior_to_removing_low_read_count_samples.m[!rownames(otu_prior_to_removing_low_read_count_samples.m) %in% rownames(otu.m),])[colSums(otu_prior_to_removing_low_read_count_samples.m[!rownames(otu_prior_to_removing_low_read_count_samples.m) %in% rownames(otu.m),]) > 0]) %in% colnames(otu.m)
 
 # Proportion of reads in the filtered data that are bacterial
-stats.df[,"Bacterial_read_count_filtered"] <- colSums(otu.m[which(rownames(otu.m) %in% bacterial_otus_filtered),samples_passing_QC])
-stats.df[,"Bacterial_proportion_filtered"] <- stats.df[,"Bacterial_read_count_filtered"] / stats.df[,"Filtered_read_counts"]
+# stats.df[samples_passing_QC,"Bacterial_read_count_after_filtering"] <- colSums(otu.m[which(rownames(otu.m) %in% bacterial_otus_filtered),samples_passing_QC])
+# temp <- stats.df
+stats.df[,"Bacterial_read_count_after_filtering"] <- colSums(otu_prior_to_removing_low_read_count_samples.m[which(rownames(otu_prior_to_removing_low_read_count_samples.m) %in% bacterial_otus_filtered),])
+# summary(stats.df[samples_passing_QC,"Bacterial_read_count_after_filtering"] == temp[samples_passing_QC,"Bacterial_read_count_after_filtering"])
+stats.df[,"Bacterial_proportion_after_filtering"] <- stats.df[,"Bacterial_read_count_after_filtering"] / stats.df[,"Filtered_read_counts"]
 
 # Proportion of reads in the filtered data that are Fungal
-stats.df[,"Fungal_read_count_filtered"] <- colSums(otu.m[which(rownames(otu.m) %in% fungal_otus_filtered),samples_passing_QC])
-stats.df[,"Fungal_proportion_filtered"] <- stats.df[,"Fungal_read_count_filtered"] / stats.df[,"Filtered_read_counts"]
+# stats.df[,"Fungal_read_count_after_filtering"] <- colSums(otu.m[which(rownames(otu.m) %in% fungal_otus_filtered),samples_passing_QC])
+stats.df[,"Fungal_read_count_after_filtering"] <- colSums(otu_prior_to_removing_low_read_count_samples.m[which(rownames(otu_prior_to_removing_low_read_count_samples.m) %in% fungal_otus_filtered),])
+stats.df[,"Fungal_proportion_after_filtering"] <- stats.df[,"Fungal_read_count_after_filtering"] / stats.df[,"Filtered_read_counts"]
 
 # -------------------------------------
 # Read counts and proportions filtered + rarefied data
@@ -1119,30 +1168,37 @@ bacterial_otus_filtered_rarefied <- temp[temp$Domain == "d__Bacteria",]$OTU.ID
 fungal_otus_filtered_rarefied <- temp[grepl("Fungi", temp$taxonomy_species),]$OTU.ID
 
 # Proportion of reads in the filtered data that are bacterial
-stats.df[,"Bacterial_read_count_filtered_rarefied"] <- colSums(otu_rare_count.m[which(rownames(otu_rare_count.m) %in% bacterial_otus_filtered_rarefied),samples_passing_QC])
-stats.df[,"Bacterial_proportion_filtered_rarefied"] <- stats.df[,"Bacterial_read_count_filtered_rarefied"] / stats.df[,"Filtered_rarefied_read_counts"]
+stats.df[samples_passing_QC,"Bacterial_read_count_after_filtering_rarefied"] <- colSums(otu_rare_count.m[which(rownames(otu_rare_count.m) %in% bacterial_otus_filtered_rarefied),samples_passing_QC])
+stats.df[samples_passing_QC,"Bacterial_proportion_after_filtering_rarefied"] <- stats.df[samples_passing_QC,"Bacterial_read_count_after_filtering_rarefied"] / stats.df[samples_passing_QC,"Filtered_rarefied_read_counts"]
 
 # Proportion of reads in the filtered data that are Fungal
-stats.df[,"Fungal_read_count_filtered_rarefied"] <- colSums(otu_rare_count.m[which(rownames(otu_rare_count.m) %in% fungal_otus_filtered_rarefied),samples_passing_QC])
-stats.df[,"Fungal_proportion_filtered_rarefied"] <- stats.df[,"Fungal_read_count_filtered_rarefied"] / stats.df[,"Filtered_rarefied_read_counts"]
+stats.df[samples_passing_QC,"Fungal_read_count_after_filtering_rarefied"] <- colSums(otu_rare_count.m[which(rownames(otu_rare_count.m) %in% fungal_otus_filtered_rarefied),samples_passing_QC])
+stats.df[samples_passing_QC,"Fungal_proportion_after_filtering_rarefied"] <- stats.df[samples_passing_QC,"Fungal_read_count_after_filtering_rarefied"] / stats.df[samples_passing_QC,"Filtered_rarefied_read_counts"]
 
-# stats.df[,"Fungal_read_count_filtered"] <- colSums(project_otu_table.df[grepl("Fungi", project_otu_table.df$taxonomy_species),samples_passing_QC])
-# stats.df[,"Fungal_proportion_filtered"] <- stats.df[,"Fungal_read_count_filtered"] / stats.df[,"Filtered_read_counts"]
-# stats.df[,"Bacterial_read_count_filtered"] <- colSums(project_otu_table.df[grepl("d__Bacteria", project_otu_table.df$Domain),samples_passing_QC])
-# stats.df[,"Bacterial_proportion_filtered"] <- stats.df[,"Bacterial_read_count_filtered"] / stats.df[,"Filtered_read_counts"]
+# stats.df[,"Fungal_read_count_after_filtering"] <- colSums(project_otu_table.df[grepl("Fungi", project_otu_table.df$taxonomy_species),samples_passing_QC])
+# stats.df[,"Fungal_proportion_after_filtering"] <- stats.df[,"Fungal_read_count_after_filtering"] / stats.df[,"Filtered_read_counts"]
+# stats.df[,"Bacterial_read_count_after_filtering"] <- colSums(project_otu_table.df[grepl("d__Bacteria", project_otu_table.df$Domain),samples_passing_QC])
+# stats.df[,"Bacterial_proportion_after_filtering"] <- stats.df[,"Bacterial_read_count_after_filtering"] / stats.df[,"Filtered_read_counts"]
 
+## ------------------------------------------------------------------------------------
+## This will calculate the total number of features across all samples and the number of non-zero features in each sample
+# Can either calculate the feature numbers on just samples passing QC
+# stats.df[,"Features_total"] <- length(which(rowSums(otu_unfiltered.m[,samples_passing_QC]) > 0 ))
+# stats.df[,"Features_original"] <- apply(otu_unfiltered.m[,samples_passing_QC], 2, function(x) { length(which(x > 0)) } )
 
-stats.df[,"Features_total"] <- length(which(rowSums(otu_unfiltered.m[,samples_passing_QC]) > 0 ))
-stats.df[,"Features_original"] <- apply(otu_unfiltered.m[,samples_passing_QC], 2, function(x) { length(which(x > 0)) } )
+# Or calculate on all samples
+stats.df[,"Features_total"] <- length(which(rowSums(otu_unfiltered.m) > 0 ))
+stats.df[,"Features_original"] <- apply(otu_unfiltered.m, 2, function(x) { length(which(x > 0)) } )
+## ------------------------------------------------------------------------------------
+stats.df[samples_passing_QC,"Features_filtered"] <- apply(otu.m[,samples_passing_QC], 2, function(x) { length(which(x > 0)) } )
+stats.df[samples_not_retained,"Features_filtered"] <- apply(otu_prior_to_removing_low_read_count_samples.m[,samples_not_retained], 2, function(x) { length(which(x > 0)) } )
+stats.df[samples_passing_QC,"Features_filtered_rarefied"] <- apply(otu_rare_count.m[,samples_passing_QC], 2, function(x) { length(which(x > 0)) } )
 
-stats.df[,"Features_filtered"] <- apply(otu.m[,samples_passing_QC], 2, function(x) { length(which(x > 0)) } )
-stats.df[,"Features_filtered_rarefied"] <- apply(otu_rare_count.m[,samples_passing_QC], 2, function(x) { length(which(x > 0)) } )
+stats.df[,"Features_removed_from_filtering"] <- stats.df[,"Features_original"] - stats.df[,"Features_filtered"] 
+stats.df[,"Features_removed_from_filtering_rarefied"] <- stats.df[,"Features_original"] - stats.df[,"Features_filtered_rarefied"] 
 
-stats.df[,"Features_removed_filtered"] <- stats.df[,"Features_original"] - stats.df[,"Features_filtered"] 
-stats.df[,"Features_removed_filtered_rarefied"] <- stats.df[,"Features_original"] - stats.df[,"Features_filtered_rarefied"] 
-
-stats.df[,"Proportion_features_removed_filtered"] <- stats.df[,"Features_removed_filtered"] / stats.df[,"Features_original"]
-stats.df[,"Proportion_features_removed_filtered_rarefied"] <- stats.df[,"Features_removed_filtered_rarefied"] / stats.df[,"Features_original"]
+stats.df[,"Proportion_features_removed_from_filtering"] <- stats.df[,"Features_removed_from_filtering"] / stats.df[,"Features_original"]
+stats.df[,"Proportion_features_removed_from_filtering_rarefied"] <- stats.df[,"Features_removed_from_filtering_rarefied"] / stats.df[,"Features_original"]
 
 
 write.csv(stats.df, "Result_tables/other/QC_summary.csv", row.names = F, quote = F)
