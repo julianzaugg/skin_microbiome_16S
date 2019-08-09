@@ -130,8 +130,6 @@ dir.create(file.path("./Result_tables", "relative_abundance_tables"), showWarnin
 dir.create(file.path("./Result_tables", "stats_various"), showWarnings = FALSE)
 dir.create(file.path("./Result_tables", "contaminant_analysis"), showWarnings = FALSE)
 
-
-
 ###############################################################
 # Load the and process metadata
 
@@ -178,21 +176,44 @@ pool_3 <- c("AK_PL","IEC_PL","SCC_PL")
 pool_4 <- c("SCC", "IEC")
 
 # If AK, make AK; SCC and IEC is SCC and everything else is NLC
-# metadata.df$Sampletype_pooled <- factor(as.character(lapply(metadata.df$Sampletype, function(x) ifelse(x %in% pool_1, "NLC", ifelse(x %in% pool_4, "SCC", ifelse(x == "negative", "negative","AK"))))))
 metadata.df$Sampletype_pooled <- factor(as.character(lapply(metadata.df$Sampletype, function(x) ifelse(x %in% pool_1, "LC", ifelse(x %in% pool_4, "SCC", ifelse(x == "negative", "negative","AK"))))))
+
 # If AK or IEC, make AK; SCC is SCC and everything else is NLC
-metadata.df$Sampletype_pooled_IEC_in_AK <- factor(as.character(lapply(metadata.df$Sampletype, function(x) ifelse(x %in% pool_1, "LC", ifelse(x %in% pool_2, "AK", ifelse(x == "negative", "negative","SCC"))))))
+# metadata.df$Sampletype_pooled_IEC_in_AK <- factor(as.character(lapply(metadata.df$Sampletype, function(x) ifelse(x %in% pool_1, "LC", ifelse(x %in% pool_2, "AK", ifelse(x == "negative", "negative","SCC"))))))
 # AK is AK; IEC is IEC; SCC is SCC and everything else is NLC
-metadata.df$Sampletype_pooled_IEC_sep <- factor(as.character(lapply(metadata.df$Sampletype, function(x) ifelse(x %in% pool_1, "LC", ifelse(x == "AK", "AK", ifelse(x =="IEC", "IEC", ifelse(x == "negative", "negative","SCC")))))))
+# metadata.df$Sampletype_pooled_IEC_sep <- factor(as.character(lapply(metadata.df$Sampletype, function(x) ifelse(x %in% pool_1, "LC", ifelse(x == "AK", "AK", ifelse(x =="IEC", "IEC", ifelse(x == "negative", "negative","SCC")))))))
 # If AK or IEC, make AK; SCC is SCC; C is C and everything is NLC; 
-metadata.df$Sampletype_pooled_C_sep <- factor(as.character(lapply(metadata.df$Sampletype, function(x) ifelse(x %in% pool_3, "LC", 
-                                                                                                             ifelse(x %in% pool_2, "AK", 
-                                                                                                                    ifelse(x %in% c("C", "LC"), "C",ifelse(x == "negative", "negative","SCC")))))))
+# metadata.df$Sampletype_pooled_C_sep <- factor(as.character(lapply(metadata.df$Sampletype, function(x) ifelse(x %in% pool_3, "LC", 
+#                                                                                                              ifelse(x %in% pool_2, "AK", 
+#                                                                                                                     ifelse(x %in% c("C", "LC"), "C",ifelse(x == "negative", "negative","SCC")))))))
 # Create sampletype variable for publication.
 # Use the refined immunocompromised sampletypes and for the remaining use the Sampletype_pooled
 metadata.df$Sampletype_final <- as.character(metadata.df$Sampletype_compromised_refined)
 metadata.df[is.na(metadata.df$Sampletype_final),]$Sampletype_final <- as.character(metadata.df[is.na(metadata.df$Sampletype_final),]$Sampletype_pooled)
 metadata.df$Sampletype_final <- factor(metadata.df$Sampletype_final)
+
+# C_P (C1-3 and AK_PL) – P indicating photo-damaged; as Nancy said they are not direct AK controls this may be the more appropriate description
+# AK (AK)
+# SCC_PL (SCC_PL and IEC_PL)
+# SCC (SCC and IEC)
+# Then it’d be good to have the same figure with new grouping for the IS cohort:
+# C (swabs from proper control patients as indicated before)
+# C_P (all C and AK_PL from remaining patients)
+# AK (AK)
+# SCC_PL (SCC_PL and IEC_PL)
+# SCC (SCC and IEC)
+metadata.df$Sampletype_final_refined <- NA
+metadata.df[metadata.df$Project == "immunocompetent" & metadata.df$Sampletype %in% c("LC"),]$Sampletype_final_refined <- "C_P"
+metadata.df[metadata.df$Project == "immunocompetent" & metadata.df$Sampletype %in% c("AK"),]$Sampletype_final_refined <- "AK"
+metadata.df[metadata.df$Project == "immunocompetent" & metadata.df$Sampletype %in% c("SCC_PL", "IEC_PL"),]$Sampletype_final_refined <- "SCC_PL"
+metadata.df[metadata.df$Project == "immunocompetent" & metadata.df$Sampletype %in% c("SCC", "IEC"),]$Sampletype_final_refined <- "SCC"
+
+metadata.df[metadata.df$Project == "immunocompromised" & metadata.df$Sampletype %in% c("C", "AK_PL"),]$Sampletype_final_refined <- "C_P"
+metadata.df[metadata.df$Project == "immunocompromised" & metadata.df$Sampletype_compromised_refined %in% c("C"),]$Sampletype_final_refined <- "C"
+metadata.df[metadata.df$Project == "immunocompromised" & metadata.df$Sampletype %in% c("AK"),]$Sampletype_final_refined <- "AK"
+metadata.df[metadata.df$Project == "immunocompromised" & metadata.df$Sampletype %in% c("SCC_PL", "IEC_PL"),]$Sampletype_final_refined <- "SCC_PL"
+metadata.df[metadata.df$Project == "immunocompromised" & metadata.df$Sampletype %in% c("SCC", "IEC"),]$Sampletype_final_refined <- "SCC"
+metadata.df[metadata.df$Sampletype %in% c("negative"),]$Sampletype_final_refined <- "negative"
 
 # ------------------------------------
 # Assign grouping to samples based on whether a patient has a SCC. Or if not, an AK/IEC. Or if not, control.
@@ -216,8 +237,6 @@ metadata.df$Sampletype_final <- factor(metadata.df$Sampletype_final)
 # metadata.df[metadata.df$Patient %in% SCC_patients,"Patient_grouping"] <- "Has_SCC"
 
 # ------------------------------------
-
-
 
 
 ##############################
@@ -383,9 +402,15 @@ metadata.df$Sampletype_pooled_colour <- all_sample_colours
 all_sample_colours <- as.character(lapply(as.character(metadata.df$Sampletype_final), function(x) sampletype_colours[x]))
 metadata.df$Sampletype_final_colour <- all_sample_colours
 
+# Sampletype_final_refined
+sampletype_final_refined_values <- sort(factor(as.character(unique(metadata.df$Sampletype_final_refined)), levels = sort(unique(as.character(metadata.df$Sampletype_final_refined)))))
+sampletype_final_refined_colours <- setNames(lesion_palette_10[1:length(sampletype_final_refined_values)], sampletype_final_refined_values)
+all_sample_colours <- as.character(lapply(as.character(metadata.df$Sampletype_final_refined), function(x) sampletype_final_refined_colours[x]))
+metadata.df$Sampletype_final_refined_colour <- all_sample_colours
+
 # For Sampletype_pooled_IEC_sep Same Sampletype colours defined above
-all_sample_colours <- as.character(lapply(as.character(metadata.df$Sampletype_pooled_IEC_sep), function(x) sampletype_colours[x]))
-metadata.df$Sampletype_pooled_IEC_sep_colour <- all_sample_colours
+# all_sample_colours <- as.character(lapply(as.character(metadata.df$Sampletype_pooled_IEC_sep), function(x) sampletype_colours[x]))
+# metadata.df$Sampletype_pooled_IEC_sep_colour <- all_sample_colours
 
 
 # For Sampletype_compromised_refined
@@ -398,7 +423,6 @@ Sampletype_compromised_refined_colours["LC"] <- sampletype_colours["LC"]
 Sampletype_compromised_refined_colours["AK"] <- sampletype_colours["AK"]
 all_Sampletype_compromised_refined_colours <- as.character(lapply(as.character(metadata.df$Sampletype_compromised_refined), function(x) Sampletype_compromised_refined_colours[x]))
 metadata.df$Sampletype_compromised_refined_colour <- all_Sampletype_compromised_refined_colours
-
 
 # For Cohort (Project)
 project_values <- factor(as.character(unique(metadata.df$Project)))
@@ -1202,8 +1226,6 @@ stats.df[,"Proportion_features_removed_from_filtering_rarefied"] <- stats.df[,"F
 
 
 write.csv(stats.df, "Result_tables/other/QC_summary.csv", row.names = F, quote = F)
-
-
 
 
 # -------------------------------------------------------------------------------------------------------------------------------------

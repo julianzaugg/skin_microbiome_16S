@@ -94,12 +94,14 @@ otu_taxonomy_map.df <- read.csv("Result_tables/other/otu_taxonomy_map.csv", head
 
 # We are only interested in C,AK_PL,IEC_PL,SCC_PL,AK,IEC and SCC lesions. 
 # Remove samples for different lesion types (nasal,scar,scar_PL,KA,KA_PL,VV,VV_PL,SF,SF_PL,other,other_PL,negative) from metadata and otu table
-metadata.df <- metadata.df[metadata.df$Sampletype %in% c("C","AK_PL","IEC_PL","SCC_PL","AK","IEC","SCC", "NLC"),]
+# metadata.df <- metadata.df[metadata.df$Sampletype %in% c("C","AK_PL","IEC_PL","SCC_PL","AK","IEC","SCC", "NLC"),]
+metadata.df <- metadata.df[metadata.df$Sampletype %in% c("C","AK_PL","IEC_PL","SCC_PL","AK","IEC","SCC", "LC"),]
 
 # Factorise discrete columns
 metadata.df$Patient <- factor(metadata.df$Patient)
 metadata.df$Sampletype <- factor(metadata.df$Sampletype)
 metadata.df$Sampletype_pooled <- factor(metadata.df$Sampletype_pooled, levels = c("NLC", "AK","SCC"))
+metadata.df$Sampletype_final <- factor(metadata.df$Sampletype_final, levels = c("C","LC", "AK","SCC"))
 metadata.df$Project <- factor(metadata.df$Project)
 metadata.df$Patient_group <- factor(metadata.df$Patient_group, levels = c("Control", "AK","SCC"))
 metadata.df$Gender <- factor(metadata.df$Gender)
@@ -159,6 +161,12 @@ metadata.df$Index <- gsub("_J.*", "", metadata.df$Index)
 # in the main script, remove them from the metadata.df here
 samples_removed <- metadata.df$Index[!metadata.df$Index %in% colnames(otu_genus_rare_log.m)]
 metadata.df <- metadata.df[! metadata.df$Index %in% samples_removed,]
+
+# genus_data.df <- subset(genus_data.df, Project == "immunocompromised" | Snapshot_sample == "yes")
+metadata.df <- subset(metadata.df, Project == "immunocompromised" | Snapshot_sample_1 == "yes")
+# genus_data.df <- subset(genus_data.df, Project == "immunocompromised" | Snapshot_sample_2 == "yes")
+# genus_data.df <- subset(genus_data.df, Project == "immunocompromised" | Snapshot_sample_3 == "yes")
+# genus_data.df <- subset(genus_data.df, Project == "immunocompromised" | Snapshot_sample_4 == "yes")
 
 # Remove samples that are not in the metadata.
 # otu_rare_log.m <- otu_rare_log.m[,colnames(otu_rare_log.m) %in% metadata.df$Index]
@@ -393,8 +401,8 @@ make_heatmap(heatmap_family_rel.m,
 )
 
 # family, immunocompromised
-discrete_variables <- c("Patient","Sampletype_pooled","Number_of_meds","Fitzpatrick_skin_type","Patient_group")
-discrete_variables <- c("Patient","Sampletype_pooled")
+# discrete_variables <- c("Patient","Sampletype_final","Number_of_meds","Fitzpatrick_skin_type","Patient_group")
+discrete_variables <- c("Patient","Sampletype_final")
 make_heatmap(heatmap_family_rel.m, 
              subset(metadata.df, Project == "immunocompromised"),
              filename = paste0("Result_figures/heatmaps/family_relative_abundance_immunocompromised_clustered.pdf"),
@@ -422,13 +430,13 @@ make_heatmap(heatmap_family_rel.m,
 
 
 # family, immunocompetent
-discrete_variables <- c("Patient","Sampletype_pooled")
+discrete_variables <- c("Patient","Sampletype_final")
 make_heatmap(heatmap_family_rel.m, 
              subset(metadata.df, Project == "immunocompetent"),
              filename = paste0("Result_figures/heatmaps/family_relative_abundance_immunocompetent_clustered.pdf"),
              variables = discrete_variables,
              plot_height = 10,
-             plot_width = 100,
+             plot_width = 20,
              cluster_columns = T,
              my_breaks = c(0, 0.001, 0.005,0.05, seq(.1,1,.1)),
              legend_title = "Relative abundance %",
@@ -439,8 +447,8 @@ make_heatmap(heatmap_family_rel.m,
              filename = paste0("Result_figures/heatmaps/family_relative_abundance_immunocompetent.pdf"),
              variables = discrete_variables,
              plot_height = 10,
-             plot_width = 100,
-             cluster_columns = T,
+             plot_width = 20,
+             cluster_columns = F,
              my_breaks = c(0, 0.001, 0.005,0.05, seq(.1,1,.1)),
              legend_title = "Relative abundance %",
              palette_choice = 'purple'

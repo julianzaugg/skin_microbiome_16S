@@ -53,7 +53,8 @@ otu_rare.m <- filter_matrix_rows(otu_rare.m,0)
 head(melt(sort(colSums(otu_rare.m))))
 
 # We are only interested in C,AK_PL,IEC_PL,SCC_PL,AK,IEC, NLC and SCC lesions. 
-metadata.df <- metadata.df[metadata.df$Sampletype %in% c("C","AK_PL","IEC_PL","SCC_PL","AK","IEC","SCC", "NLC"),]
+# metadata.df <- metadata.df[metadata.df$Sampletype %in% c("C","AK_PL","IEC_PL","SCC_PL","AK","IEC","SCC", "NLC"),]
+metadata.df <- metadata.df[metadata.df$Sampletype %in% c("C","AK_PL","IEC_PL","SCC_PL","AK","IEC","SCC", "LC"),]
 
 # Filter to immunocompromised or snapshot samples
 metadata.df <- subset(metadata.df, Project == "immunocompromised" | Snapshot_sample == "yes")
