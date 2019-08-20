@@ -163,10 +163,11 @@ otu_data.df$Inferred_species <- unlist(lapply(otu_data.df$OTU.ID, function(x) if
                                               as.character(inferred_species_data.df[as.character(x),"Inferred_species"]), "Other Staphyloccocus")))
 
 # Only want immunocompromised and the snapshot immunocompetent samples
-otu_data.df <- subset(otu_data.df, Project == "immunocompromised" | Snapshot_sample == "yes")
+otu_data.df <- subset(otu_data.df, Project == "immunocompromised" | Snapshot_sample_1 == "yes")
 
 # otu_data.df$Sampletype_final <- factor(otu_data.df$Sampletype_final, levels = c("C", "LC", "AK", "SCC"))
-otu_data.df$Sampletype_final <- factor(otu_data.df$Sampletype_final, levels = c("SCC", "AK", "LC", "C"))
+# otu_data.df$Sampletype_final <- factor(otu_data.df$Sampletype_final, levels = c("SCC", "AK", "LC", "C"))
+otu_data.df$Sampletype_final_refined <- factor(otu_data.df$Sampletype_final_refined, levels = c("C", "C_P", "AK", "SCC_PL", "SCC"))
 
 # Cohort specific data 
 immunocompetent_data.df <- subset(otu_data.df, Project == "immunocompetent")
@@ -179,17 +180,17 @@ immunocompromised_data.df <- subset(otu_data.df, Project == "immunocompromised")
 
 # Get the abundances etc of each inferred species for each sample. The sum of the Summed_relative_abundance(_rarefied) values for each sample should equal 
 # the abundance of g__Staphylococcus within the sample as a whole!
-immunocompromised_taxa_summary.df <- generate_taxa_summary(mydata = immunocompromised_data.df, taxa_column = "Inferred_species",group_by_columns = c("Sampletype_final","Sample"))
-immunocompetent_taxa_summary.df <- generate_taxa_summary(mydata = immunocompetent_data.df, taxa_column = "Inferred_species",group_by_columns = c("Sampletype_final","Sample"))
+immunocompromised_taxa_summary.df <- generate_taxa_summary(mydata = immunocompromised_data.df, taxa_column = "Inferred_species",group_by_columns = c("Sampletype_final_refined","Sample"))
+immunocompetent_taxa_summary.df <- generate_taxa_summary(mydata = immunocompetent_data.df, taxa_column = "Inferred_species",group_by_columns = c("Sampletype_final_refined","Sample"))
 
 # Calculate the number of samples per group
-generate_taxa_summary(mydata = immunocompromised_data.df, taxa_column = "Inferred_species",group_by_columns = c("Sampletype_final","Sample", "Patient"))
+generate_taxa_summary(mydata = immunocompromised_data.df, taxa_column = "Inferred_species",group_by_columns = c("Sampletype_final_refined","Sample", "Patient"))
 
-immunocompromised_sample_counts_inferred_species.df <- generate_taxa_summary(mydata = immunocompromised_data.df, taxa_column = "Inferred_species",group_by_columns = c("Sampletype_final","Sample", "Patient")) %>% 
-  group_by(Sampletype_final) %>%
+immunocompromised_sample_counts_inferred_species.df <- generate_taxa_summary(mydata = immunocompromised_data.df, taxa_column = "Inferred_species",group_by_columns = c("Sampletype_final_refined","Sample", "Patient")) %>% 
+  group_by(Sampletype_final_refined) %>%
   mutate(Total_number_of_samples_in_group = n_distinct(Sample), 
          Total_number_of_patients_in_group = n_distinct(Patient)) %>%
-  group_by(Sampletype_final,Inferred_species) %>% 
+  group_by(Sampletype_final_refined,Inferred_species) %>% 
   summarise(Number_of_samples_present = n_distinct(Sample), 
             Number_of_patients_present = n_distinct(Patient),
             Total_number_of_samples_in_group = max(Total_number_of_samples_in_group),
@@ -198,11 +199,11 @@ immunocompromised_sample_counts_inferred_species.df <- generate_taxa_summary(myd
          Percent_of_patients = round(Number_of_patients_present/Total_number_of_patients_in_group*100, 2)) %>%
   as.data.frame()
 
-immunocompetent_sample_counts_inferred_species.df <-  generate_taxa_summary(mydata = immunocompetent_data.df, taxa_column = "Inferred_species",group_by_columns = c("Sampletype_final","Sample", "Patient")) %>% 
-  group_by(Sampletype_final) %>%
+immunocompetent_sample_counts_inferred_species.df <-  generate_taxa_summary(mydata = immunocompetent_data.df, taxa_column = "Inferred_species",group_by_columns = c("Sampletype_final_refined","Sample", "Patient")) %>% 
+  group_by(Sampletype_final_refined) %>%
   mutate(Total_number_of_samples_in_group = n_distinct(Sample), 
          Total_number_of_patients_in_group = n_distinct(Patient)) %>%
-  group_by(Sampletype_final,Inferred_species) %>% 
+  group_by(Sampletype_final_refined,Inferred_species) %>% 
   summarise(Number_of_samples_present = n_distinct(Sample), 
             Number_of_patients_present = n_distinct(Patient),
             Total_number_of_samples_in_group = max(Total_number_of_samples_in_group),
@@ -233,12 +234,12 @@ write.csv(x = immunocompetent_taxa_summary.df %>%
 # sum(subset(immunocompromised_taxa_summary.df, Sample == "SA6595_J1427")$Summed_relative_abundance_rarefied)
 # temp <- immunocompromised_taxa_summary.df %>% group_by(Sampletype_final, Sample) %>% summarise(Summed_relative_abundance_rarefied = sum(Summed_relative_abundance_rarefied))
 # Re-assign colours
-temp <- unique(immunocompromised_data.df[c("Sampletype_final", "Sampletype_final_colour")])
-colour_palette <- setNames(as.character(temp$Sampletype_final_colour), temp$Sampletype_final)
+temp <- unique(immunocompromised_data.df[c("Sampletype_final_refined", "Sampletype_final_refined_colour")])
+colour_palette <- setNames(as.character(temp$Sampletype_final_refined_colour), temp$Sampletype_final_refined)
 immunocompromised_temp.df <- immunocompromised_taxa_summary.df
 immunocompetent_temp.df <- immunocompetent_taxa_summary.df
-immunocompromised_temp.df$Sampletype_final <- factor(immunocompromised_temp.df$Sampletype_final, levels = c("C", "LC", "AK", "SCC"))
-immunocompetent_temp.df$Sampletype_final <- factor(immunocompetent_temp.df$Sampletype_final, levels = c("C","LC", "AK", "SCC"))
+immunocompromised_temp.df$Sampletype_final <- factor(immunocompromised_temp.df$Sampletype_final_refined, levels = c("C", "C_P", "AK", "SCC_PL", "SCC"))
+immunocompetent_temp.df$Sampletype_final <- factor(immunocompetent_temp.df$Sampletype_final_refined, levels = c("C", "C_P", "AK", "SCC_PL", "SCC"))
 immunocompromised_temp.df$Sampletype_final_colour <- unlist(lapply(immunocompromised_temp.df$Sampletype_final, function(x) colour_palette[[x]]))
 immunocompetent_temp.df$Sampletype_final_colour <- unlist(lapply(immunocompetent_temp.df$Sampletype_final, function(x) colour_palette[[x]]))
 unique(immunocompromised_temp.df[c("Sampletype_final","Sampletype_final_colour")])

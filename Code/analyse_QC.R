@@ -1,4 +1,5 @@
 library(dplyr)
+library(reshape2)
 library(ggplot2)
 
 
@@ -41,36 +42,36 @@ qc_results.df <- qc_results.df[!qc_results.df$Sampletype == "negative",]
 # length(unique(qc_results.df$Patient[which(!grepl("MST", qc_results.df$Patient))]))
 
 qc_results.df %>%
-  group_by(Project, Sampletype_pooled) %>%
+  group_by(Project, Sampletype_final) %>%
   summarise(N_patient = n_distinct(Patient), N_sample = n_distinct(Sample)) %>%
   as.data.frame()
 
 #10 samples, 9 patients CORRECT
-# sort(subset(qc_results.df, Project == "immunocompromised" & Sampletype_pooled == "SCC")$Patient)
+# sort(subset(qc_results.df, Project == "immunocompromised" & Sampletype_final == "SCC")$Patient)
 
 
 # How many reads were lost from rarefaction and filtering
-qc_results.df$Reads_removed_filtered_rarefied
+qc_results.df$Reads_removed_from_filtering_rarefied
 
 # Proportionally how many reads were lost from rarefaction
-qc_results.df$Proportion_reads_removed_filtered_rarefied
+qc_results.df$Proportion_reads_removed_from_filtering_rarefied
 
 # How many samples does rarefaction remove reads from (difference between filtered and rarefied, NOT original and rarefied)
 length(which(qc_results.df$Filtered_rarefied_read_counts - qc_results.df$Filtered_read_counts < 0)) # 127 samples
-
+# summary(qc_results.df$Filtered_rarefied_read_counts - qc_results.df$Filtered_read_counts < 0)
 # How many samples does rarefaction remove reads from (difference between original and rarefied)
 length(which(qc_results.df$Filtered_rarefied_read_counts - qc_results.df$Original_read_counts < 0)) # 1017 samples
 
 # Proportion of reads lost in samples due to rarefaction
 temp <- qc_results.df[which(qc_results.df$Filtered_rarefied_read_counts - qc_results.df$Filtered_read_counts < 0),] 
-proportions <- with(temp,sort(round(unique(Proportion_reads_removed_filtered_rarefied - Proportion_reads_removed_filtered) * 100,2)))
+proportions <- with(temp,sort(round(unique(Proportion_reads_removed_from_filtering_rarefied - Proportion_reads_removed_from_filtering) * 100,2)))
 median(proportions)
 min(proportions)
 max(proportions)
 
 # Number of features lost from rarefaction
-with(temp, Features_removed_filtered_rarefied - Features_removed_filtered) 
-proportions <- with(temp,sort(round(unique(Proportion_features_removed_filtered_rarefied - Proportion_features_removed_filtered) * 100,2)))
+with(temp, Features_removed_from_filtering_rarefied - Features_removed_from_filtering) 
+proportions <- with(temp,sort(round(unique(Proportion_features_removed_from_filtering_rarefied - Proportion_features_removed_from_filtering) * 100,2)))
 median(proportions)
 max(proportions)
 
@@ -83,20 +84,20 @@ max(proportions)
 # Proportion of reads for each 'Domain' for both projects, before filtering and rarefection.
 # Using the same sample order, also plot the number of reads for each sample
 
-domain_proportions.df <- qc_results.df[c("Sample","Sampletype_pooled", "Project", 
+domain_proportions.df <- qc_results.df[c("Sample","Sampletype_final","Sample_retained", "Project", 
                                          "Bacterial_proportion_original", 
                                          "Archaeal_proportion_original", 
                                          "Unassigned_proportion_original",
                                          "Mammal_proportion_original",
                                          "Fungal_proportion_original")]
 
-# domain_proportions.df <- qc_results.df[c("Sample","Sampletype_pooled", "Project", "Bacterial_proportion_original", "Archaeal_proportion_original", "Unassigned_proportion_original","Eukaryal_proportion_original")]
+# domain_proportions.df <- qc_results.df[c("Sample","Sampletype_final", "Project", "Bacterial_proportion_original", "Archaeal_proportion_original", "Unassigned_proportion_original","Eukaryal_proportion_original")]
 domain_proportions.df <- domain_proportions.df[order(domain_proportions.df$Bacterial_proportion_original),]
 sample_order <- domain_proportions.df$Sample
-# names(domain_proportions.df) <- c("Sample", "Sampletype_pooled", "Project", "Bacteria", "Archaea", "Unassigned", "Eukarya")
-names(domain_proportions.df) <- c("Sample", "Sampletype_pooled", "Project", "Bacteria", "Archaea", "Unassigned", "Mammalia", "Fungal")
+# names(domain_proportions.df) <- c("Sample", "Sampletype_final", "Project", "Bacteria", "Archaea", "Unassigned", "Eukarya")
+names(domain_proportions.df) <- c("Sample", "Sampletype_final","Sample_retained", "Project", "Bacteria", "Archaea", "Unassigned", "Mammalia", "Fungal")
 domain_proportions.df$Other <- 1 - rowSums(domain_proportions.df[c("Bacteria", "Archaea", "Unassigned", "Mammalia", "Fungal")])
-domain_proportions.df <- melt(domain_proportions.df,id.vars = c("Sample", "Sampletype_pooled", "Project"), variable.name = "Domain", value.name = "Abundance")
+domain_proportions.df <- melt(domain_proportions.df,id.vars = c("Sample", "Sampletype_final","Sample_retained", "Project"), variable.name = "Domain", value.name = "Abundance")
 # domain_proportions.df$Domain <- factor(domain_proportions.df$Domain, levels = c("Archaea","Bacteria","Eukarya", "Unassigned"))
 domain_proportions.df$Domain <- factor(domain_proportions.df$Domain, levels = c("Archaea","Bacteria","Fungal","Mammalia", "Unassigned", "Other"))
 domain_proportions.df$Sample <- factor(domain_proportions.df$Sample, levels = sample_order)
@@ -105,7 +106,9 @@ domain_proportions.df$Sample <- factor(domain_proportions.df$Sample, levels = sa
 domain_colours <- setNames(c(rev(my_colour_pallete_12_soft[1:5]), "grey60"),c("Archaea","Bacteria","Fungal","Mammalia", "Unassigned", "Other")) 
 
 myplot <- ggplot(subset(domain_proportions.df, Project == "immunocompromised"), aes(x = Sample, y = Abundance, fill = Domain)) + 
+  # geom_bar(stat ="identity", aes(colour = Sample_retained)) + 
   geom_bar(stat ="identity") + 
+  # annotate(geom = "point", x = seq(1,length(unique(domain_proportions.df$Sample))), y = -0.03, size=1,stroke= 0) +
   xlab("Sample") +
   ylab("Abundance") +
   scale_fill_manual(values = domain_colours) +
@@ -113,7 +116,9 @@ myplot <- ggplot(subset(domain_proportions.df, Project == "immunocompromised"), 
   common_theme +
   theme(axis.text.x = element_text(angle = 90, size = 4, vjust = 0.5),
         axis.line = element_line(size = .3),
-        axis.ticks = element_line(size = .3)) 
+        axis.ticks = element_line(size = .3))
+
+# annotate(geom='point', x = seq(1,length(unique(patient_data$Sample)), 1), y = -0.03, size=1,stroke= 0, shape = all_sample_shapes, color ="black", fill = all_sample_colours)
   
 ggsave(filename = "Result_figures/exploratory_analysis/immunocompromised_domain_proportions__original.pdf", 
        plot = myplot,
@@ -135,24 +140,24 @@ myplot <- ggplot(subset(domain_proportions.df, Project == "immunocompetent"), ae
 
 ggsave(filename = "Result_figures/exploratory_analysis/immunocompetent_domain_proportions__original.pdf", 
        plot = myplot,
-       width = 60,
+       width = 80,
        height = 10,
        units = "cm")
 
 # Now for read counts, keep same order
-# domain_read_counts.df <- qc_results.df[c("Sample","Sampletype_pooled", "Project", "Bacterial_read_count_original", "Archaeal_read_count_original", "Unassigned_read_count_original","Eukaryal_read_count_original")]
-domain_read_counts.df <- qc_results.df[c("Sample","Sampletype_pooled", "Project", 
+# domain_read_counts.df <- qc_results.df[c("Sample","Sampletype_final", "Project", "Bacterial_read_count_original", "Archaeal_read_count_original", "Unassigned_read_count_original","Eukaryal_read_count_original")]
+domain_read_counts.df <- qc_results.df[c("Sample","Sampletype_final", "Project", 
                                          "Bacterial_read_count_original", 
                                          "Archaeal_read_count_original", 
                                          "Unassigned_read_count_original",
                                          "Mammal_read_count_original", 
                                          "Fungal_read_count_original")]
-# names(domain_read_counts.df) <- c("Sample", "Sampletype_pooled", "Project", "Bacteria", "Archaea", "Unassigned", "Eukarya")
-names(domain_read_counts.df) <- c("Sample", "Sampletype_pooled", "Project", "Bacteria", "Archaea", "Unassigned", "Mammalia", "Fungal")
+# names(domain_read_counts.df) <- c("Sample", "Sampletype_final", "Project", "Bacteria", "Archaea", "Unassigned", "Eukarya")
+names(domain_read_counts.df) <- c("Sample", "Sampletype_final", "Project", "Bacteria", "Archaea", "Unassigned", "Mammalia", "Fungal")
 
 # summary(qc_results.df$Sample == domain_read_counts.df$Sample)
 domain_read_counts.df$Other <- qc_results.df$Original_read_counts - rowSums(domain_read_counts.df[c("Bacteria", "Archaea", "Unassigned", "Mammalia", "Fungal")])
-domain_read_counts.df <- melt(domain_read_counts.df,id.vars = c("Sample", "Sampletype_pooled", "Project"), variable.name = "Domain", value.name = "Read_count")
+domain_read_counts.df <- melt(domain_read_counts.df,id.vars = c("Sample", "Sampletype_final", "Project"), variable.name = "Domain", value.name = "Read_count")
 # domain_read_counts.df$Domain <- factor(domain_read_counts.df$Domain, levels = c("Archaea","Bacteria","Eukarya", "Unassigned"))
 domain_read_counts.df$Domain <- factor(domain_read_counts.df$Domain, levels = c("Archaea","Bacteria","Fungal","Mammalia", "Unassigned", "Other"))
 domain_read_counts.df$Sample <- factor(domain_read_counts.df$Sample, levels = sample_order)
@@ -187,19 +192,20 @@ myplot <- ggplot(subset(domain_read_counts.df, Project == "immunocompetent"), ae
 
 ggsave(filename = "Result_figures/exploratory_analysis/immunocompetent_domain_read_counts__original.pdf", 
        plot = myplot,
-       width = 60,
+       width = 80,
        height = 10,
        units = "cm")
 
 # -------------------------------------------------------------------------------------------
 # Proportion of reads for each 'Domain' for both projects, AFTER filtering and rarefection.
-qc_results.df$Fungal_proportion_filtered
-domain_proportions.df <- qc_results.df[c("Sample","Sampletype_pooled", "Project", "Bacterial_proportion_filtered_rarefied", "Fungal_proportion_filtered_rarefied")]
-domain_proportions.df <- domain_proportions.df[order(domain_proportions.df$Bacterial_proportion_filtered_rarefied),]
+qc_results.df$Fungal_proportion_after_filtering
+domain_proportions.df <- qc_results.df[c("Sample","Sampletype_final", "Project", "Bacterial_proportion_after_filtering_rarefied", "Fungal_proportion_after_filtering_rarefied")]
+domain_proportions.df <- domain_proportions.df[which(!is.na(domain_proportions.df$Bacterial_proportion_after_filtering_rarefied)),]
+domain_proportions.df <- domain_proportions.df[order(domain_proportions.df$Bacterial_proportion_after_filtering_rarefied),]
 sample_order <- domain_proportions.df$Sample
-names(domain_proportions.df) <- c("Sample", "Sampletype_pooled", "Project", "Bacteria", "Fungal")
+names(domain_proportions.df) <- c("Sample", "Sampletype_final", "Project", "Bacteria", "Fungal")
 
-domain_proportions.df <- melt(domain_proportions.df,id.vars = c("Sample", "Sampletype_pooled", "Project"), variable.name = "Domain", value.name = "Abundance")
+domain_proportions.df <- melt(domain_proportions.df,id.vars = c("Sample", "Sampletype_final", "Project"), variable.name = "Domain", value.name = "Abundance")
 domain_proportions.df$Domain <- factor(domain_proportions.df$Domain, levels = c("Bacteria","Fungal"))
 domain_proportions.df$Sample <- factor(domain_proportions.df$Sample, levels = sample_order)
 
@@ -239,12 +245,13 @@ ggsave(filename = "Result_figures/exploratory_analysis/immunocompetent_domain_pr
        units = "cm")
 
 # Now for read counts, keep same order
-domain_read_counts.df <- qc_results.df[c("Sample","Sampletype_pooled", "Project", 
-                                         "Bacterial_read_count_filtered_rarefied",
-                                         "Fungal_read_count_filtered_rarefied")]
-names(domain_read_counts.df) <- c("Sample", "Sampletype_pooled", "Project", "Bacteria","Fungal")
+domain_read_counts.df <- qc_results.df[c("Sample","Sampletype_final", "Project", 
+                                         "Bacterial_read_count_after_filtering_rarefied",
+                                         "Fungal_read_count_after_filtering_rarefied")]
+domain_read_counts.df <- domain_read_counts.df[which(!is.na(domain_read_counts.df$Bacterial_read_count_after_filtering_rarefied)),]
+names(domain_read_counts.df) <- c("Sample", "Sampletype_final", "Project", "Bacteria","Fungal")
 
-domain_read_counts.df <- melt(domain_read_counts.df,id.vars = c("Sample", "Sampletype_pooled", "Project"), variable.name = "Domain", value.name = "Read_count")
+domain_read_counts.df <- melt(domain_read_counts.df,id.vars = c("Sample", "Sampletype_final", "Project"), variable.name = "Domain", value.name = "Read_count")
 domain_read_counts.df$Domain <- factor(domain_read_counts.df$Domain, levels = c("Archaea","Bacteria","Fungal"))
 domain_read_counts.df$Sample <- factor(domain_read_counts.df$Sample, levels = sample_order)
 
