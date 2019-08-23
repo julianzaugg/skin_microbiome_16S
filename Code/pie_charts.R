@@ -55,21 +55,10 @@ common_theme <- theme(
 setwd("/Users/julianzaugg/Desktop/ACE/major_projects/skin_microbiome_16S/")
 
 # Just load the combined metadata and abundance tables for simplicity
-# otu_data.df <- read.csv("Result_tables/other/OTU_counts_abundances_and_metadata.csv")
-# species_data.df <- read.csv("Result_tables/other/specie_counts_abundances_and_metadata.csv")
 genus_data.df <- read.csv("Result_tables/other/genus_counts_abundances_and_metadata.csv")
-# family_data.df <- read.csv("Result_tables/other/family_counts_abundances_and_metadata.csv")
-# order_data.df <- read.csv("Result_tables/other/order_counts_abundances_and_metadata.csv")
-# class_data.df <- read.csv("Result_tables/other/class_counts_abundances_and_metadata.csv")
-# phylum_data.df <- read.csv("Result_tables/other/phylum_counts_abundances_and_metadata.csv")
 
 # Remove negative samples
-# species_data.df <- subset(species_data.df, Sampletype != "negative")
 genus_data.df <- subset(genus_data.df, Sampletype != "negative")
-# family_data.df <- subset(family_data.df, Sampletype != "negative")
-# order_data.df <- subset(order_data.df, Sampletype != "negative")
-# class_data.df <- subset(class_data.df, Sampletype != "negative")
-# phylum_data.df <- subset(phylum_data.df, Sampletype != "negative")
 
 # FIXME Make simpler taxonomy strings
 genus_data.df$Family_Genus <- as.character(genus_data.df$taxonomy_genus)
@@ -79,7 +68,7 @@ genus_data.df$Family_Genus <- gsub("(d__Eukaryota).*(o__.*)D.*;(D_10__.*)", "\\1
 genus_data_all.df <- genus_data.df
 
 # Filter to immunocompromised or snapshot samples
-genus_data.df <- subset(genus_data.df, Project == "immunocompromised" | Snapshot_sample == "yes")
+genus_data.df <- subset(genus_data.df, Project == "immunocompromised" | Snapshot_sample_1 == "yes")
 
 
 immunocompromised_genus_data.df <- subset(genus_data.df, Project == "immunocompromised")
@@ -207,7 +196,7 @@ make_pie_graph <- function(mydata, taxonomy_column, mytitle = NULL,  mysubtitle 
   
   
   pie_chart <- ggplot(taxa_summary.df,aes(x ="", y= normalised_mean_abundance, fill = taxa_label)) + 
-    geom_bar(width = 1, stat = "identity", color = "white",size = .2) +
+    geom_bar(width = 1, stat = "identity", color = "black",size = .2) +
     coord_polar("y", start=0) +
     scale_fill_manual(values = taxa_colours.l, name = "Taxonomy") +
     # geom_text(aes(y = lab.ypos, label = pie_label), color = "white", size =3) +
@@ -224,7 +213,7 @@ make_pie_graph <- function(mydata, taxonomy_column, mytitle = NULL,  mysubtitle 
   pie_chart
 } 
 # -------------------------------------------------------
-# immunocompromised and immunocompetent Sampletype_final
+# immunocompromised and immunocompetent Sampletype_final_refined
 immunocompromised_lesions_top_genus <- c()
 immunocompetent_lesions_top_genus <- c()
 immunocompromised_lesions_forearm_top_genus <-c()
@@ -235,27 +224,27 @@ forearm_swab_ids <- c("1383","1385","1470","1561","1599","1647","1649")
 forearm_indices <- c("R1383_J1425", "SA6550_J1427", "R1368_J1477", "R1460_J1425", "R1498_J1425", "SB4909_J1426", "SB4911_J1426")
 
 # Get the top # genera for immunocompromised cohort
-for (lesion in unique(immunocompromised_genus_data.df$Sampletype_final)){
+for (lesion in unique(immunocompromised_genus_data.df$Sampletype_final_refined)){
   if (is.na(lesion)) {next}
-  data_subset <- subset(immunocompromised_genus_data.df, Sampletype_final == lesion)
+  data_subset <- subset(immunocompromised_genus_data.df, Sampletype_final_refined == lesion)
   taxa_summary <- generate_taxa_summary(data_subset, taxa_column = "Family_Genus",abundance_column = "Relative_abundance_rarefied")
-  immunocompromised_lesions_top_genus <- unique(c(immunocompromised_lesions_top_genus, get_top_taxa(taxa_summary,my_top_n = 10)))
+  immunocompromised_lesions_top_genus <- unique(c(immunocompromised_lesions_top_genus, get_top_taxa(taxa_summary,my_top_n = 9)))
 }
 
 
 # Get the top # genera for immunocompetent cohort
-for (lesion in unique(immunocompetent_genus_data.df$Sampletype_final)){
+for (lesion in unique(immunocompetent_genus_data.df$Sampletype_final_refined)){
   if (is.na(lesion)) {next}
-  data_subset <- subset(immunocompetent_genus_data.df, Sampletype_final == lesion)
+  data_subset <- subset(immunocompetent_genus_data.df, Sampletype_final_refined == lesion)
   taxa_summary <- generate_taxa_summary(data_subset, taxa_column = "Family_Genus",abundance_column = "Relative_abundance_rarefied")
-  immunocompetent_lesions_top_genus <- unique(c(immunocompetent_lesions_top_genus, get_top_taxa(taxa_summary,my_top_n = 10)))
+  immunocompetent_lesions_top_genus <- unique(c(immunocompetent_lesions_top_genus, get_top_taxa(taxa_summary,my_top_n = 9)))
 }
 
-for (lesion in unique(immunocompetent_genus_data_all.df$Sampletype_final)){
+for (lesion in unique(immunocompetent_genus_data_all.df$Sampletype_final_refined)){
   if (is.na(lesion)) {next}
-  data_subset <- subset(immunocompetent_genus_data_all.df, Sampletype_final == lesion)
+  data_subset <- subset(immunocompetent_genus_data_all.df, Sampletype_final_refined == lesion)
   taxa_summary <- generate_taxa_summary(data_subset, taxa_column = "Family_Genus",abundance_column = "Relative_abundance_rarefied")
-  immunocompetent_all_lesions_top_genus <- unique(c(immunocompetent_all_lesions_top_genus, get_top_taxa(taxa_summary,my_top_n = 10)))
+  immunocompetent_all_lesions_top_genus <- unique(c(immunocompetent_all_lesions_top_genus, get_top_taxa(taxa_summary,my_top_n = 9)))
 }
 
 
@@ -266,18 +255,18 @@ for (lesion in unique(immunocompetent_genus_data_all.df$Sampletype_final)){
 # Get the top genera for immunocompromised cohort, forearm only
 immunocompromised_forearm.df <- immunocompromised_genus_data.df[immunocompromised_genus_data.df$Swab_ID %in% forearm_swab_ids,]
 immunocompromised_forearm.df <- subset(immunocompromised_forearm.df, Sampletype_final == "SCC") # ensure only SCC samples
-immunocompromised_forearm.df$Sampletype_final <- factor(immunocompromised_forearm.df$Sampletype_final)
+immunocompromised_forearm.df$Sampletype_final_refined <- factor(immunocompromised_forearm.df$Sampletype_final_refined)
 
-for (lesion in unique(immunocompromised_forearm.df$Sampletype_final)){
+for (lesion in unique(immunocompromised_forearm.df$Sampletype_final_refined)){
   if (is.na(lesion)) {next}
-  data_subset <- subset(immunocompromised_forearm.df, Sampletype_final == lesion)
+  data_subset <- subset(immunocompromised_forearm.df, Sampletype_final_refined == lesion)
   taxa_summary <- generate_taxa_summary(data_subset, taxa_column = "Family_Genus",abundance_column = "Relative_abundance_rarefied")
-  immunocompromised_lesions_forearm_top_genus <- unique(c(immunocompromised_lesions_top_genus, get_top_taxa(taxa_summary,my_top_n = 10)))
+  immunocompromised_lesions_forearm_top_genus <- unique(c(immunocompromised_lesions_top_genus, get_top_taxa(taxa_summary,my_top_n = 9)))
 }
 
 # Combine lists for both cohorts and get unique set
-# both_cohorts_lesions_top_genus <- unique(c(immunocompromised_lesions_top_genus, immunocompetent_lesions_top_genus, immunocompromised_lesions_forearm_top_genus))
-both_cohorts_lesions_top_genus <- unique(c(immunocompromised_lesions_top_genus, immunocompetent_lesions_top_genus, immunocompromised_lesions_forearm_top_genus,immunocompetent_all_lesions_top_genus))
+both_cohorts_lesions_top_genus <- unique(c(immunocompromised_lesions_top_genus, immunocompetent_lesions_top_genus, immunocompromised_lesions_forearm_top_genus))
+# both_cohorts_lesions_top_genus <- unique(c(immunocompromised_lesions_top_genus, immunocompetent_lesions_top_genus, immunocompromised_lesions_forearm_top_genus,immunocompetent_all_lesions_top_genus))
 
 # Create palette based on unique set
 # both_cohorts_genus_palette <- setNames(my_colour_palette_206_distinct[1:length(both_cohorts_lesions_top_genus)], both_cohorts_lesions_top_genus)
@@ -295,31 +284,31 @@ for (cohort in c("immunocompromised", "immunocompetent", "immunocompromised_fore
   else {
     dataset <- immunocompetent_genus_data.df
     }
-  for (lesion in unique(dataset$Sampletype_final)){
+  for (lesion in unique(dataset$Sampletype_final_refined)){
     if (is.na(lesion)) {next}
-    data_subset <- subset(dataset, Sampletype_final == lesion)
+    data_subset <- subset(dataset, Sampletype_final_refined == lesion)
     n_patients <- length(unique(data_subset$Patient))
     n_samples <- length(unique(data_subset$Sample))
     my_title <- paste0(cohort,", ", lesion) 
     my_subtitle <- paste0("# samples = ", n_samples, "\n# patients = ", n_patients)
     # Pie chart based on only the top #
-    myplot <- make_pie_graph(data_subset, "Family_Genus", mytitle = my_title, mysubtitle = my_subtitle, n_taxa =10, my_colour_list = both_cohorts_genus_palette) 
+    myplot <- make_pie_graph(data_subset, "Family_Genus", mytitle = my_title, mysubtitle = my_subtitle, n_taxa =9, my_colour_list = both_cohorts_genus_palette) 
     outname <- paste0(cohort, "_", lesion, "_sampletype_final_top_genera_pie_chart.pdf") 
-    ggsave(myplot, filename = paste0("Result_figures/abundance_analysis_plots/piecharts/",outname), height = 15, width =25, units = "cm")
+    ggsave(myplot, filename = paste0("Result_figures/abundance_analysis_plots/pie_charts/",outname), height = 15, width =25, units = "cm")
   }
 }
 
-for (lesion in unique(immunocompetent_genus_data_all.df$Sampletype_final)){
+for (lesion in unique(immunocompetent_genus_data_all.df$Sampletype_final_refined)){
   if (is.na(lesion)) {next}
-  data_subset <- subset(immunocompetent_genus_data_all.df, Sampletype_final == lesion)
+  data_subset <- subset(immunocompetent_genus_data_all.df, Sampletype_final_refined == lesion)
   n_patients <- length(unique(data_subset$Patient))
   n_samples <- length(unique(data_subset$Sample))
   my_title <- paste0("immunocompetent all, ", lesion) 
   my_subtitle <- paste0("# samples = ", n_samples, "\n# patients = ", n_patients)
   # Pie chart based on only the top #
-  myplot <- make_pie_graph(data_subset, "Family_Genus", mytitle = my_title, mysubtitle = my_subtitle, n_taxa =10, my_colour_list = both_cohorts_genus_palette) 
+  myplot <- make_pie_graph(data_subset, "Family_Genus", mytitle = my_title, mysubtitle = my_subtitle, n_taxa =9, my_colour_list = both_cohorts_genus_palette) 
   outname <- paste0("immunocompetent_all_", lesion, "_sampletype_final_top_genera_pie_chart.pdf") 
-  ggsave(myplot, filename = paste0("Result_figures/abundance_analysis_plots/piecharts/",outname), height = 15, width =25, units = "cm")
+  ggsave(myplot, filename = paste0("Result_figures/abundance_analysis_plots/pie_charts/",outname), height = 15, width =25, units = "cm")
 }
 
 

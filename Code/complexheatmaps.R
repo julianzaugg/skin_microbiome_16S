@@ -367,9 +367,7 @@ make_heatmap <- function(myheatmap_matrix,
   
   pdf(filename,height=plot_height,width=plot_width)
   draw(hm, annotation_legend_list = c(hm_legend))
-  
   dev.off()
-  
 }
 
 # Define the discrete variables

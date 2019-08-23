@@ -1479,7 +1479,7 @@ species_combined <- create_combined_dataframe(counts.df = otu_species.df,
                                               counts_rare.df = otu_species_rare.df,
                                               abundances.df = otu_species_rel.df,
                                               abundances_rare.df = otu_species_rel_rare.df,
-                                              mylevel = "taxonomy_species",
+                                              mylevel = "Species",
                                               mymetadata = metadata.df,
                                               otu_map.df = reduced_tax_map)
 
@@ -1487,7 +1487,7 @@ genus_combined <- create_combined_dataframe(counts.df = otu_genus.df,
                                             counts_rare.df = otu_genus_rare.df,
                                             abundances.df = otu_genus_rel.df,
                                             abundances_rare.df = otu_genus_rel_rare.df,
-                                            mylevel = "taxonomy_genus",
+                                            mylevel = "Genus",
                                             mymetadata = metadata.df,
                                             otu_map.df = reduced_tax_map)
 
@@ -1495,7 +1495,7 @@ family_combined <- create_combined_dataframe(counts.df = otu_family.df,
                                              counts_rare.df = otu_family_rare.df,
                                              abundances.df = otu_family_rel.df,
                                              abundances_rare.df = otu_family_rel_rare.df,
-                                             mylevel = "taxonomy_family",
+                                             mylevel = "Family",
                                              mymetadata = metadata.df,
                                              otu_map.df = reduced_tax_map)
 
@@ -1503,7 +1503,7 @@ order_combined <- create_combined_dataframe(counts.df = otu_order.df,
                                             counts_rare.df = otu_order_rare.df,
                                             abundances.df = otu_order_rel.df,
                                             abundances_rare.df = otu_order_rel_rare.df,
-                                            mylevel = "taxonomy_order",
+                                            mylevel = "Order",
                                             mymetadata = metadata.df,
                                             otu_map.df = reduced_tax_map)
 
@@ -1511,7 +1511,7 @@ class_combined <- create_combined_dataframe(counts.df = otu_class.df,
                                             counts_rare.df = otu_class_rare.df,
                                             abundances.df = otu_class_rel.df,
                                             abundances_rare.df = otu_class_rel_rare.df,
-                                            mylevel = "taxonomy_class",
+                                            mylevel = "Class",
                                             mymetadata = metadata.df,
                                             otu_map.df = reduced_tax_map)
 
@@ -1519,7 +1519,7 @@ phylum_combined <- create_combined_dataframe(counts.df = otu_phylum.df,
                                              counts_rare.df = otu_phylum_rare.df,
                                              abundances.df = otu_phylum_rel.df,
                                              abundances_rare.df = otu_phylum_rel_rare.df,
-                                             mylevel = "taxonomy_phylum",
+                                             mylevel = "Phylum",
                                              mymetadata = metadata.df,
                                              otu_map.df = reduced_tax_map)
 
@@ -1530,147 +1530,4 @@ write.table(family_combined, file = "Result_tables/other/Family_counts_abundance
 write.table(order_combined, file = "Result_tables/other/Order_counts_abundances_and_metadata.csv", sep = ",", quote = F, col.names = T, row.names = F)
 write.table(class_combined, file = "Result_tables/other/Class_counts_abundances_and_metadata.csv", sep = ",", quote = F, col.names = T, row.names = F)
 write.table(phylum_combined, file = "Result_tables/other/Phylum_counts_abundances_and_metadata.csv", sep = ",", quote = F, col.names = T, row.names = F)
-
-
-# create_combined_dataframe <- function(counts_df, rel_mat, counts_rare, rel_rare_mat, mymetadata, mylevel = "OTU",otu_map_df = NULL){
-#   counts <- clean_df(counts_df)
-#   rel_abundances <- as.data.frame(rel_mat)
-#   rare_counts <- clean_df(counts_rare)
-#   rel_rare_abundances <- as.data.frame(rel_rare_mat)
-#   
-#   # Ensure ordering is the same
-#   rel_abundances <- rel_abundances[rownames(counts),]
-#   rare_counts <- rare_counts[rownames(counts),]
-#   rel_rare_abundances <- rel_rare_abundances[rownames(counts),]
-#   
-#   # head(counts)[,1:3]
-#   # head(rel_abundances)[,1:3]
-#   # head(rare_counts)[,1:3]
-#   # head(rel_rare_abundances)[,1:3]
-#   # melt(as.matrix(counts), variable.name = "sample", value.name = "Read_count")
-#   
-#   # Combine the datasets. Passing as.matrix(counts) captures the rownames as a column. This can be rename after
-#   combined_data <- cbind(melt(as.matrix(counts), variable.name = "sample", value.name = "Read_count"), 
-#                          melt(rel_abundances, value.name = "Relative_abundance")[,2, drop = F], 
-#                          melt(rare_counts, value.name = "Read_count_rarefied")[,2, drop = F],
-#                          melt(rel_rare_abundances, value.name = "Relative_abundance_rarefied")[,2, drop = F])
-#   
-#   # Remove samples with a read count of zero
-#   combined_data <- combined_data[combined_data$Read_count > 0,]
-#   
-#   # Calculate logged read counts
-#   combined_data$Read_count_logged <- log(combined_data$Read_count, 10)
-#   combined_data$Read_count_rarefied_logged <- log(combined_data$Read_count_rarefied, 10)
-#   
-#   # Fix the Var2 column
-#   names(combined_data)[2] <- "Sample"
-#   
-#   # Merge with metadata. Assumes an Index column matching Sample
-#   combined_data <- merge(combined_data, mymetadata, by.x = "Sample", by.y = "Index")
-#   
-#   if (mylevel == "OTU.ID"){
-#     names(combined_data)[names(combined_data) == "Var1"] <- "OTU.ID"
-#     combined_data <- merge(combined_data, otu_map_df, by.x = "OTU.ID", by.y = "OTU.ID")
-#   }
-#   else if (mylevel == "Species"){
-#     names(combined_data)[names(combined_data) == "Var1"] <- "taxonomy_species"
-#     otu_map_reduced_df <- unique(otu_map_df[,c("Domain","Phylum", "Class", "Order", "Family", "Genus", "Species", "taxonomy_species")])
-#     combined_data <- merge(combined_data, otu_map_reduced_df, by.x = "taxonomy_species", by.y = "taxonomy_species")
-#   }
-#   else if (mylevel == "Genus"){
-#     names(combined_data)[names(combined_data) == "Var1"] <- "taxonomy_genus"
-#     otu_map_reduced_df <- unique(otu_map_df[,c("Domain","Phylum", "Class", "Order", "Family", "Genus", "taxonomy_genus")])
-#     combined_data <- merge(combined_data, otu_map_reduced_df, by.x = "taxonomy_genus", by.y = "taxonomy_genus")
-#   }
-#   else if (mylevel == "Family"){
-#     names(combined_data)[names(combined_data) == "Var1"] <- "taxonomy_family"
-#     otu_map_reduced_df <- unique(otu_map_df[,c("Domain","Phylum", "Class", "Order", "Family", "taxonomy_family")])
-#     combined_data <- merge(combined_data, otu_map_reduced_df, by.x = "taxonomy_family", by.y = "taxonomy_family")
-#   }
-#   else if (mylevel == "Order"){
-#     names(combined_data)[names(combined_data) == "Var1"] <- "taxonomy_order"
-#     otu_map_reduced_df <- unique(otu_map_df[,c("Domain","Phylum", "Class", "Order", "taxonomy_order")])
-#     combined_data <- merge(combined_data, otu_map_reduced_df, by.x = "taxonomy_order", by.y = "taxonomy_order")
-#   }
-#   else if (mylevel == "Class"){
-#     names(combined_data)[names(combined_data) == "Var1"] <- "taxonomy_class"
-#     otu_map_reduced_df <- unique(otu_map_df[,c("Domain","Phylum", "Class", "taxonomy_class")])
-#     combined_data <- merge(combined_data, otu_map_reduced_df, by.x = "taxonomy_class", by.y = "taxonomy_class")
-#   }
-#   else if (mylevel == "Phylum"){
-#     names(combined_data)[names(combined_data) == "Var1"] <- "taxonomy_phylum"
-#     otu_map_reduced_df <- unique(otu_map_df[,c("Domain","Phylum", "taxonomy_phylum")])
-#     combined_data <- merge(combined_data, otu_map_reduced_df, by.x = "taxonomy_phylum", by.y = "taxonomy_phylum")
-#   }
-#   return(combined_data)
-# }
-
-reduced_tax_map <- otu_taxonomy_map.df
-reduced_tax_map$RepSeq <- NULL
-
-otu_combined <- create_combined_dataframe(otu.df, 
-                                  otu_rel.m,
-                                  otu_rare.df, 
-                                  otu_rel_rare.m,
-                                  mylevel = "OTU.ID",
-                                  mymetadata = metadata.df,
-                                  otu_map_df = reduced_tax_map)
-
-species_combined <- create_combined_dataframe(otu_species.df, 
-                                             otu_species_rel.m,
-                                             otu_species_rare.df, 
-                                             otu_species_rel_rare.m,
-                                             mylevel = "Species",
-                                             mymetadata = metadata.df,
-                                             otu_map_df = reduced_tax_map)
-
-genus_combined <- create_combined_dataframe(otu_genus.df, 
-                                             otu_genus_rel.m,
-                                             otu_genus_rare.df, 
-                                             otu_genus_rel_rare.m,
-                                             mylevel = "Genus",
-                                             mymetadata = metadata.df,
-                                             otu_map_df = reduced_tax_map)
-
-family_combined <- create_combined_dataframe(otu_family.df, 
-                                             otu_family_rel.m,
-                                             otu_family_rare.df, 
-                                             otu_family_rel_rare.m,
-                                             mylevel = "Family",
-                                             mymetadata = metadata.df,
-                                             otu_map_df = reduced_tax_map)
-
-
-order_combined <- create_combined_dataframe(otu_order.df, 
-                                             otu_order_rel.m,
-                                             otu_order_rare.df, 
-                                             otu_order_rel_rare.m,
-                                             mylevel = "Order",
-                                             mymetadata = metadata.df,
-                                             otu_map_df = reduced_tax_map)
-
-class_combined <- create_combined_dataframe(otu_class.df, 
-                                  otu_class_rel.m,
-                                  otu_class_rare.df, 
-                                  otu_class_rel_rare.m,
-                                  mylevel = "Class",
-                                  mymetadata = metadata.df,
-                                  otu_map_df = reduced_tax_map)
-
-
-phylum_combined <- create_combined_dataframe(otu_phylum.df, 
-                                  otu_phylum_rel.m,
-                                  otu_phylum_rare.df, 
-                                  otu_phylum_rel_rare.m,
-                                  mylevel = "Phylum",
-                                  mymetadata = metadata.df,
-                                  otu_map_df = reduced_tax_map)
-
-write.table(otu_combined, file = "Result_tables/other/OTU_counts_abundances_and_metadata.csv", sep = ",", quote = F, col.names = T, row.names = F)
-write.table(species_combined, file = "Result_tables/other/specie_counts_abundances_and_metadata.csv", sep = ",", quote = F, col.names = T, row.names = F)
-write.table(genus_combined, file = "Result_tables/other/genus_counts_abundances_and_metadata.csv", sep = ",", quote = F, col.names = T, row.names = F)
-write.table(family_combined, file = "Result_tables/other/family_counts_abundances_and_metadata.csv", sep = ",", quote = F, col.names = T, row.names = F)
-write.table(order_combined, file = "Result_tables/other/order_counts_abundances_and_metadata.csv", sep = ",", quote = F, col.names = T, row.names = F)
-write.table(class_combined, file = "Result_tables/other/class_counts_abundances_and_metadata.csv", sep = ",", quote = F, col.names = T, row.names = F)
-write.table(phylum_combined, file = "Result_tables/other/phylum_counts_abundances_and_metadata.csv", sep = ",", quote = F, col.names = T, row.names = F)
 

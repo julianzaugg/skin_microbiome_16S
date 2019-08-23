@@ -5,6 +5,7 @@ library(ggplot2)
 # library(plyr)
 library(dplyr)
 library(tidyr)
+library(cowplot)
 
 common_theme <- theme(
   panel.border = element_blank(), 
@@ -165,9 +166,9 @@ otu_data.df$Inferred_species <- unlist(lapply(otu_data.df$OTU.ID, function(x) if
 # Only want immunocompromised and the snapshot immunocompetent samples
 otu_data.df <- subset(otu_data.df, Project == "immunocompromised" | Snapshot_sample_1 == "yes")
 
-# otu_data.df$Sampletype_final <- factor(otu_data.df$Sampletype_final, levels = c("C", "LC", "AK", "SCC"))
-# otu_data.df$Sampletype_final <- factor(otu_data.df$Sampletype_final, levels = c("SCC", "AK", "LC", "C"))
-otu_data.df$Sampletype_final_refined <- factor(otu_data.df$Sampletype_final_refined, levels = c("C", "C_P", "AK", "SCC_PL", "SCC"))
+# otu_data.df$Sampletype_final <- factor(otu_data.df$Sampletype_final_refined, levels = c("C", "LC", "AK", "SCC"))
+# otu_data.df$Sampletype_final <- factor(otu_data.df$Sampletype_final_refined, levels = c("SCC", "AK", "LC", "C"))
+otu_data.df$Sampletype_final_refined <- factor(otu_data.df$Sampletype_final_refined, levels = rev(c("C", "C_P", "AK", "SCC_PL", "SCC")))
 
 # Cohort specific data 
 immunocompetent_data.df <- subset(otu_data.df, Project == "immunocompetent")
@@ -230,23 +231,25 @@ write.csv(x = immunocompetent_taxa_summary.df %>%
           file = "Result_tables/abundance_analysis_tables/immunocompetent_inferred_species_summary.csv", quote = F, row.names = F)
 
 # ----------------------------------------------------------------------------------------
-# Make boxplots showing the abundance distribution each inferred species
+# Make boxplots showing the abundance distribution each inferred species, NOT the distribution of individual features within each species group
 # sum(subset(immunocompromised_taxa_summary.df, Sample == "SA6595_J1427")$Summed_relative_abundance_rarefied)
-# temp <- immunocompromised_taxa_summary.df %>% group_by(Sampletype_final, Sample) %>% summarise(Summed_relative_abundance_rarefied = sum(Summed_relative_abundance_rarefied))
+# temp <- immunocompromised_taxa_summary.df %>% group_by(Sampletype_final_refined, Sample) %>% summarise(Summed_relative_abundance_rarefied = sum(Summed_relative_abundance_rarefied))
 # Re-assign colours
 temp <- unique(immunocompromised_data.df[c("Sampletype_final_refined", "Sampletype_final_refined_colour")])
 colour_palette <- setNames(as.character(temp$Sampletype_final_refined_colour), temp$Sampletype_final_refined)
 immunocompromised_temp.df <- immunocompromised_taxa_summary.df
 immunocompetent_temp.df <- immunocompetent_taxa_summary.df
-immunocompromised_temp.df$Sampletype_final <- factor(immunocompromised_temp.df$Sampletype_final_refined, levels = c("C", "C_P", "AK", "SCC_PL", "SCC"))
-immunocompetent_temp.df$Sampletype_final <- factor(immunocompetent_temp.df$Sampletype_final_refined, levels = c("C", "C_P", "AK", "SCC_PL", "SCC"))
-immunocompromised_temp.df$Sampletype_final_colour <- unlist(lapply(immunocompromised_temp.df$Sampletype_final, function(x) colour_palette[[x]]))
-immunocompetent_temp.df$Sampletype_final_colour <- unlist(lapply(immunocompetent_temp.df$Sampletype_final, function(x) colour_palette[[x]]))
-unique(immunocompromised_temp.df[c("Sampletype_final","Sampletype_final_colour")])
-unique(immunocompetent_temp.df[c("Sampletype_final","Sampletype_final_colour")])
+immunocompromised_temp.df$Sampletype_final_refined <- factor(immunocompromised_temp.df$Sampletype_final_refined, levels = c("C", "C_P", "AK", "SCC_PL", "SCC"))
+immunocompetent_temp.df$Sampletype_final_refined <- factor(immunocompetent_temp.df$Sampletype_final_refined, levels = c("C", "C_P", "AK", "SCC_PL", "SCC"))
+immunocompromised_temp.df$Sampletype_final_refined_colour <- unlist(lapply(immunocompromised_temp.df$Sampletype_final_refined, function(x) colour_palette[[x]]))
+immunocompetent_temp.df$Sampletype_final_refined_colour <- unlist(lapply(immunocompetent_temp.df$Sampletype_final_refined, function(x) colour_palette[[x]]))
+unique(immunocompromised_temp.df[c("Sampletype_final_refined","Sampletype_final_refined_colour")])
+unique(immunocompetent_temp.df[c("Sampletype_final_refined","Sampletype_final_refined_colour")])
 
+# Use Summed_relative_abundance_rarefied as it will be the sum of the abundances of each feature within the inferred species groups
 immunocompromised_temp.df$Summed_relative_abundance_rarefied <- round(immunocompromised_temp.df$Summed_relative_abundance_rarefied * 100, 3)
 immunocompetent_temp.df$Summed_relative_abundance_rarefied <- round(immunocompetent_temp.df$Summed_relative_abundance_rarefied * 100, 3)
+
 roundUp <- function(x, to = 10) {
   # myvalue <- 10^ceiling(log10(x))
   myvalue <- to*(x%/%to + as.logical(x%%to))
@@ -254,6 +257,10 @@ roundUp <- function(x, to = 10) {
   myvalue
 }
 roundUp(.1)
+
+
+immunocompromised_data.df[immunocompromised_data.df$Sample == "R1431_J1425",]
+immunocompromised_data.df[immunocompromised_data.df$Sample == "R1455_J1425",]
 
 for (cohort in c("immunocompromised", "immunocompetent")){
   if (cohort == "immunocompromised"){
@@ -276,7 +283,8 @@ for (cohort in c("immunocompromised", "immunocompetent")){
     } else if(max_y_scale > 10 & max_y_scale < 30){
       mysteps = 1
     }
-    myplot <- generate_abundance_boxplot(data_subset,variable = "Sampletype_final", metric = "Summed_relative_abundance_rarefied",variable_colours_available = T) +
+    
+    myplot <- generate_abundance_boxplot(data_subset,variable = "Sampletype_final_refined", metric = "Summed_relative_abundance_rarefied",variable_colours_available = T) +
       scale_y_continuous(breaks = seq(0,max_y_scale,mysteps))  +
       ylab("Relative abundance (%)") +
       labs(title = cohort,
@@ -294,36 +302,36 @@ for (cohort in c("immunocompromised", "immunocompetent")){
 
 # Now calculate the mean abundance of each inferred Staphylococcus species across all samples. This is now the mean of the summed values
 immunocompromised_taxa_summary.df <- immunocompromised_taxa_summary.df %>% 
-  group_by(Sampletype_final, Inferred_species) %>% 
+  group_by(Sampletype_final_refined, Inferred_species) %>% 
   dplyr::summarise(Mean_relative_abundance_rarefied = mean(Summed_relative_abundance_rarefied)) %>%
   as.data.frame()
 
 immunocompetent_taxa_summary.df <- immunocompetent_taxa_summary.df %>% 
-  group_by(Sampletype_final, Inferred_species) %>% 
+  group_by(Sampletype_final_refined, Inferred_species) %>% 
   dplyr::summarise(Mean_relative_abundance_rarefied = mean(Summed_relative_abundance_rarefied)) %>%
   as.data.frame()
 
 
-# immunocompromised_taxa_summary.df <- immunocompromised_taxa_summary.df %>% group_by(Sampletype_final, Inferred_species) %>% dplyr::summarise(Mean_relative_abundance_rarefied = sum(Summed_relative_abundance_rarefied))
-# immunocompromised_taxa_summary.df <- immunocompromised_taxa_summary.df %>% group_by(Sampletype_final) %>% dplyr::summarise(Mean_relative_abundance_rarefied = sum(Summed_relative_abundance_rarefied))
+# immunocompromised_taxa_summary.df <- immunocompromised_taxa_summary.df %>% group_by(Sampletype_final_refined, Inferred_species) %>% dplyr::summarise(Mean_relative_abundance_rarefied = sum(Summed_relative_abundance_rarefied))
+# immunocompromised_taxa_summary.df <- immunocompromised_taxa_summary.df %>% group_by(Sampletype_final_refined) %>% dplyr::summarise(Mean_relative_abundance_rarefied = sum(Summed_relative_abundance_rarefied))
 # immunocompromised_taxa_summary.df
 # ------------------
 # This should equal...
-# immunocompromised_taxa_summary.df <- immunocompromised_taxa_summary.df %>% group_by(Sampletype_final, Sample) %>% dplyr::summarise(Summed_relative_abundance_rarefied = sum(Summed_relative_abundance_rarefied))
-# immunocompromised_taxa_summary.df %>% group_by(Sampletype_final) %>% dplyr::summarise(Mean_relative_abundance_rarefied = mean(Summed_relative_abundance_rarefied))
+# immunocompromised_taxa_summary.df <- immunocompromised_taxa_summary.df %>% group_by(Sampletype_final_refined, Sample) %>% dplyr::summarise(Summed_relative_abundance_rarefied = sum(Summed_relative_abundance_rarefied))
+# immunocompromised_taxa_summary.df %>% group_by(Sampletype_final_refined) %>% dplyr::summarise(Mean_relative_abundance_rarefied = mean(Summed_relative_abundance_rarefied))
 # This..
-# immunocompromised_genus_summary.df[grepl("g__Staph", immunocompromised_genus_summary.df$taxonomy_label),c("Sampletype_final","Mean_relative_abundance_rarefied")]
-# immunocompromised_genus_summary.df[grepl("g__Staph", immunocompromised_genus_summary.df$taxonomy_label),c("Sampletype_final","Summed_relative_abundance_rarefied")]
+# immunocompromised_genus_summary.df[grepl("g__Staph", immunocompromised_genus_summary.df$taxonomy_label),c("Sampletype_final_refined","Mean_relative_abundance_rarefied")]
+# immunocompromised_genus_summary.df[grepl("g__Staph", immunocompromised_genus_summary.df$taxonomy_label),c("Sampletype_final_refined","Summed_relative_abundance_rarefied")]
 # ------------------
 
 # Normalise the mean abundances
-immunocompromised_taxa_summary.df <- immunocompromised_taxa_summary.df %>% group_by(Sampletype_final) %>% mutate(Normalised_mean_relative_abundance = Mean_relative_abundance_rarefied/sum(Mean_relative_abundance_rarefied)) %>% as.data.frame()
-immunocompetent_taxa_summary.df <- immunocompetent_taxa_summary.df %>% group_by(Sampletype_final) %>% mutate(Normalised_mean_relative_abundance = Mean_relative_abundance_rarefied/sum(Mean_relative_abundance_rarefied)) %>% as.data.frame()
+immunocompromised_taxa_summary.df <- immunocompromised_taxa_summary.df %>% group_by(Sampletype_final_refined) %>% mutate(Normalised_mean_relative_abundance = Mean_relative_abundance_rarefied/sum(Mean_relative_abundance_rarefied)) %>% as.data.frame()
+immunocompetent_taxa_summary.df <- immunocompetent_taxa_summary.df %>% group_by(Sampletype_final_refined) %>% mutate(Normalised_mean_relative_abundance = Mean_relative_abundance_rarefied/sum(Mean_relative_abundance_rarefied)) %>% as.data.frame()
 
 # Order taxonomy by the abundance. This is only approximate.
-immunocompromised_taxa_summary.df <- immunocompromised_taxa_summary.df %>% group_by(Sampletype_final) %>% arrange(Normalised_mean_relative_abundance) %>% as.data.frame()
+immunocompromised_taxa_summary.df <- immunocompromised_taxa_summary.df %>% group_by(Sampletype_final_refined) %>% arrange(Normalised_mean_relative_abundance) %>% as.data.frame()
 immunocompromised_taxa_summary.df$Inferred_species <- factor(immunocompromised_taxa_summary.df$Inferred_species, levels = unique(immunocompromised_taxa_summary.df$Inferred_species))
-immunocompetent_taxa_summary.df <- immunocompetent_taxa_summary.df %>% group_by(Sampletype_final) %>% arrange(Normalised_mean_relative_abundance) %>% as.data.frame()
+immunocompetent_taxa_summary.df <- immunocompetent_taxa_summary.df %>% group_by(Sampletype_final_refined) %>% arrange(Normalised_mean_relative_abundance) %>% as.data.frame()
 immunocompetent_taxa_summary.df$Inferred_species <- factor(immunocompetent_taxa_summary.df$Inferred_species, levels = unique(immunocompetent_taxa_summary.df$Inferred_species))
 
 # Combine the cohorts
@@ -340,7 +348,7 @@ inferred_species_list <- c("Other Staphyloccocus", inferred_species_list[!grepl(
 both_cohorts_palette <- setNames(my_colour_palette_12_soft[1:length(inferred_species_list)], inferred_species_list)
 both_cohorts_palette["Other Staphyloccocus"] <- "grey"
 
-legend_plot <- ggplot(both_cohorts_taxa_summary.df, aes(x = Sampletype_final, y = Normalised_mean_relative_abundance*100, fill = Inferred_species)) +
+legend_plot <- ggplot(both_cohorts_taxa_summary.df, aes(x = Sampletype_final_refined, y = Normalised_mean_relative_abundance*100, fill = Inferred_species)) +
   facet_wrap(~Project, scales = "free") +
   geom_bar(stat = "identity", colour = "black", lwd = .2) +
   coord_flip() +
@@ -350,7 +358,7 @@ legend_plot <- ggplot(both_cohorts_taxa_summary.df, aes(x = Sampletype_final, y 
   ylab("Normalised mean relative abundance (%)") +
   common_theme
 
-immunocompromised_plot <- ggplot(immunocompromised_taxa_summary.df, aes(x = Sampletype_final, y = Normalised_mean_relative_abundance*100, fill = Inferred_species)) +
+immunocompromised_plot <- ggplot(immunocompromised_taxa_summary.df, aes(x = Sampletype_final_refined, y = Normalised_mean_relative_abundance*100, fill = Inferred_species)) +
   geom_bar(stat = "identity", colour = "black", lwd = .2) + 
   coord_flip() +
   scale_fill_manual(values = both_cohorts_palette, name = "Inferred Staphylococcus species", guide = F) +
@@ -364,7 +372,7 @@ immunocompromised_plot <- ggplot(immunocompromised_taxa_summary.df, aes(x = Samp
 
 immunocompromised_plot
 
-immunocompetent_plot <- ggplot(immunocompetent_taxa_summary.df, aes(x = Sampletype_final, y = Normalised_mean_relative_abundance*100, fill = Inferred_species)) +
+immunocompetent_plot <- ggplot(immunocompetent_taxa_summary.df, aes(x = Sampletype_final_refined, y = Normalised_mean_relative_abundance*100, fill = Inferred_species)) +
   geom_bar(stat = "identity", colour = "black", lwd = .2) + 
   coord_flip() +
   scale_fill_manual(values = both_cohorts_palette, name = "Inferred Staphylococcus species", guide = F) +
