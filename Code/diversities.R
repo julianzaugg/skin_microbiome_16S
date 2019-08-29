@@ -139,12 +139,12 @@ metadata.df <- read.csv("Result_tables/other/processed_metadata.csv", sep =",", 
 metadata.df <- metadata.df[!metadata.df$Sampletype == "negative",]
 
 # Set order of variables
-metadata.df$Sampletype_pooled <- factor(metadata.df$Sampletype_pooled, levels = c("LC", "AK", "SCC"))
-metadata.df$Sampletype_compromised_refined <- factor(metadata.df$Sampletype_compromised_refined, levels = c("C", "LC", "AK", "SCC"))
+# metadata.df$Sampletype_pooled <- factor(metadata.df$Sampletype_pooled, levels = c("LC", "AK", "SCC"))
+# metadata.df$Sampletype_compromised_refined <- factor(metadata.df$Sampletype_compromised_refined, levels = c("C", "LC", "AK", "SCC"))
 metadata.df$Sampletype_final <- factor(metadata.df$Sampletype_final, levels = c("C", "LC", "AK", "SCC"))
-metadata.df$Patient_group <- factor(metadata.df$Patient_group, levels = c("Control", "AK", "SCC"))
-metadata.df$Number_of_meds <- factor(metadata.df$Number_of_meds, levels = c("1", "2", "3"))
-metadata.df$Fitzpatrick_skin_type <- factor(metadata.df$Fitzpatrick_skin_type, levels = c("1", "2", "3", "4"))
+# metadata.df$Patient_group <- factor(metadata.df$Patient_group, levels = c("Control", "AK", "SCC"))
+# metadata.df$Number_of_meds <- factor(metadata.df$Number_of_meds, levels = c("1", "2", "3"))
+# metadata.df$Fitzpatrick_skin_type <- factor(metadata.df$Fitzpatrick_skin_type, levels = c("1", "2", "3", "4"))
 
 # Set the Index to be the rowname
 rownames(metadata.df) <- metadata.df$Index

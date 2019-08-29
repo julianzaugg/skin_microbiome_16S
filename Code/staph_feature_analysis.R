@@ -166,8 +166,6 @@ otu_data.df$Inferred_species <- unlist(lapply(otu_data.df$OTU.ID, function(x) if
 # Only want immunocompromised and the snapshot immunocompetent samples
 otu_data.df <- subset(otu_data.df, Project == "immunocompromised" | Snapshot_sample_1 == "yes")
 
-# otu_data.df$Sampletype_final <- factor(otu_data.df$Sampletype_final_refined, levels = c("C", "LC", "AK", "SCC"))
-# otu_data.df$Sampletype_final <- factor(otu_data.df$Sampletype_final_refined, levels = c("SCC", "AK", "LC", "C"))
 otu_data.df$Sampletype_final_refined <- factor(otu_data.df$Sampletype_final_refined, levels = rev(c("C", "C_P", "AK", "SCC_PL", "SCC")))
 
 # Cohort specific data 

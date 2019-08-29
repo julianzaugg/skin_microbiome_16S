@@ -132,6 +132,8 @@ rownames(metadata.df) <- metadata.df$Index
 MS010_lesions_of_interest_info <- read.table("data/MS010_SCC_longitudinal.tsv", sep = "\t", header = T)
 
 swab_ids <- sort(with(MS010_lesions_of_interest_info,c(SCC, Matching_LC)))
+#remove 348 and 349 as they are a different lesion
+swab_ids <- swab_ids[! swab_ids %in% c(348, 349)]
 
 metadata.df <- metadata.df[!metadata.df$Sampletype == "negative",]
 
@@ -150,21 +152,17 @@ genus_data.df$taxonomy_label <- with(genus_data.df, paste0(Domain,";", Class,";"
 
 # Subset to swabs of interest
 MS010_data.df <- subset(genus_data.df, Swab_ID %in% swab_ids)
-# MS010_data.df <- genus_data.df
 
-MS010_taxa_summary.df <- generate_taxa_summary(mydata = MS010_data.df, taxa_column = "taxonomy_label", group_by_columns = c("Sample", "Date_sampled"))
+MS010_taxa_summary.df <- generate_taxa_summary(mydata = MS010_data.df, taxa_column = "taxonomy_label", group_by_columns = c("Sample", "Date_sampled", "Sampletype_final_refined"))
 
-sum(subset(MS010_data.df, Sample == "S8559_J311")$Relative_abundance_rarefied)
+# subset(MS010_taxa_summary.df, Sample == "S8559_J311")
+# sum(subset(MS010_taxa_summary.df, Sample == "S8559_J311")$Summed_relative_abundance_rarefied)
 
-subset(MS010_taxa_summary.df, Sample == "S8559_J311")
-sum(subset(MS010_taxa_summary.df, Sample == "S8559_J311")$Summed_relative_abundance_rarefied)
-
-
-# Identify the top genus for each lesion type
+# Identify the top genus for each sample
 MS010_top_taxa_summary.df <- filter_summary_to_top_n(taxa_summary = MS010_taxa_summary.df, 
                                                                   grouping_variables = c("Sample","Date_sampled"),
                                                                   abundance_column = "Mean_relative_abundance_rarefied",
-                                                                  my_top_n = 9)
+                                                                  my_top_n = 6)
 
 # Create palette based on unique set
 genus_palette <- setNames(my_colour_palette_30_distinct[1:length(unique(MS010_top_taxa_summary.df$taxonomy_label))], unique(MS010_top_taxa_summary.df$taxonomy_label))
@@ -173,22 +171,38 @@ genus_palette["Other"] <- "grey"
 # Take the full table and re-label any taxa not in the top to "Other"
 MS010_taxa_summary.df[!MS010_taxa_summary.df$taxonomy_label %in% MS010_top_taxa_summary.df$taxonomy_label,]$taxonomy_label <- "Other"
 
-
-# Normalise the Mean_relative_abundance_rarefied values within each lesion
-# MS010_taxa_summary.df <- MS010_taxa_summary.df %>% group_by(Date_sampled,Sample) %>% mutate(Normalised_mean_relative_abundance = Mean_relative_abundance_rarefied/sum(Mean_relative_abundance_rarefied)) %>% as.data.frame()
-
 # Need a single entry for the Other group
-MS010_taxa_summary.df <- MS010_taxa_summary.df %>% group_by(Sample,Date_sampled, taxonomy_label) %>% dplyr::summarise(Relative_abundance_rarefied = sum(Summed_relative_abundance_rarefied)) %>% as.data.frame()
+MS010_taxa_summary.df <- MS010_taxa_summary.df %>% group_by(Sample,Date_sampled,Sampletype_final_refined, taxonomy_label) %>% dplyr::summarise(Relative_abundance_rarefied = sum(Summed_relative_abundance_rarefied)) %>% as.data.frame()
 
 MS010_taxa_summary.df %>% group_by(Sample) %>% summarise(total = sum(Relative_abundance_rarefied))
 
 
-ggplot(MS010_taxa_summary.df, aes(x = Sample, y = Relative_abundance_rarefied*100, fill = taxonomy_label)) +
+# Set order of labels
+# "11.06.2015" "09.07.2015" "29.07.2015" "03.09.2015" "10.02.2016" 
+MS010_taxa_summary.df <- MS010_taxa_summary.df %>% group_by(Sampletype_final_refined) %>% arrange(Relative_abundance_rarefied) %>% as.data.frame()
+MS010_taxa_summary.df <- tidyr::separate(data= MS010_taxa_summary.df, col = "Date_sampled", into = c("Day", "Month", "Year"), sep = "/", remove = F)
+MS010_taxa_summary.df <- MS010_taxa_summary.df[with(MS010_taxa_summary.df, order(Year, Month,Day,Sampletype_final_refined, decreasing = T)),]
+MS010_taxa_summary.df$Label <- with(MS010_taxa_summary.df, paste(paste0(Day, "/", Month, "/", Year), Sample, Sampletype_final_refined, sep =", "))
+MS010_taxa_summary.df$Label <- factor(MS010_taxa_summary.df$Label, levels = unique(MS010_taxa_summary.df$Label))
+
+my_levels <- c(as.character(unique(MS010_taxa_summary.df$taxonomy_label))[as.character(unique(MS010_taxa_summary.df$taxonomy_label)) != "Other"], "Other")
+MS010_taxa_summary.df$taxonomy_label <- factor(MS010_taxa_summary.df$taxonomy_label, levels = my_levels)
+
+myplot <- ggplot(MS010_taxa_summary.df, aes(x = Label, y = Relative_abundance_rarefied*100, fill = taxonomy_label)) +
   geom_bar(stat = "identity", colour = "black", lwd = .2) +
-  # geom_text(aes(label = value_label), position = position_stack(vjust = 0.5), size = 2,color = "grey10") + 
+  # geom_text(aes(label = Relative_abundance_rarefied*100), position = position_stack(vjust = 0.5), size = 2,color = "grey10") +
   coord_flip() +
-  scale_fill_manual(values = genus_palette, guide = F) +
+  # scale_fill_manual(values = genus_palette, guide = F) +
+  scale_fill_manual(values = genus_palette, name = "Taxonomy", guide = guide_legend(title.position = "top",nrow= 5)) +
   scale_y_continuous(breaks = seq(0,100, by = 10)) +
-  xlab("Sample type") +
+  xlab("Sample") +
   ylab("Relative abundance (%)") +
-  common_theme
+  common_theme + theme(legend.position = "bottom", 
+                       legend.justification = "center",
+                       legend.direction = "horizontal",
+                       legend.box.just = "bottom",
+                       legend.text = element_text(size = 6),
+                       legend.title = element_text(size=7, face="bold")
+                       )
+
+ggsave(filename = "Result_figures/abundance_analysis_plots/MS010_taxa_summary.pdf", plot = myplot, height = 8, width = 25, units = "cm")
