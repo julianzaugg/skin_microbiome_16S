@@ -4,6 +4,7 @@ library(vegan)
 library(ggplot2)
 library(ggfortify)
 
+source("Code/helper_functions.R")
 ############################################################
 # Various colour colour_palettes
 my_colour_palette <- c("#8dd3c7","#ffffb3","#bebada","#fb8072", "#80b1d3", "#fdb462","#b3de69","#fccde5","#d9d9d9","#bc80bd","#ccebc5", "#cc0000")
@@ -18,24 +19,6 @@ lesion_colour_palette_7 <- c("#8558d6","#6ee268","#d247ad","#c9d743","#d7453e","
 patient_colour_palette_45 <- c("#d64530","#585fb1","#795d97","#9e4773","#3f6921","#71692c","#a2b93c","#d571cc","#9b3e97","#33947a","#98ad66","#448a4e","#869ae0","#5ce7af","#e085a3","#dfdc87","#d19be2","#5cb735","#e38269","#3db6c0","#50b565","#50902c","#a98a2c","#dde84a","#db3d76","#5fe485","#7c8329","#b3e791","#6fe965","#5ebce9","#3c86c1","#2a6a45","#65b688","#6651d1","#af4ed3","#df872f","#56e4db","#737cea","#ac464b","#dd37b5","#995b2b","#daac6f","#92e2be","#a2e24b","#e0be3a")
 my_colour_palette_10_distinct <- c("#8eec45","#0265e8","#f6a800","#bf6549","#486900","#c655a0","#00d1b6","#ff4431","#aeb85c","#7e7fc8")
 ######################## Functions #########################
-
-# Function that calculates the geometric mean with some error-protection bits. 
-# DESeq2 does not appear to work (will throw an error) if every OTU (or genus or genome etc.) 
-# contains at least one count of zero in every row of the count data.
-# Specifically, the function "dds<-DESeq(dds, betaPrior = FALSE)" will fail
-# One way to address this is to use the function below as input to DESeq2 to transform the data.
-# Calculate the geometric means prior to estimating the size factors
-gm_mean = function(x, na.rm=TRUE){
-  # The geometric mean, with some error-protection bits.
-  exp(sum(log(x[x > 0 & !is.na(x)]), na.rm=na.rm) / length(x))
-}
-
-# Center log ratio transform
-clr = function(x, base=2){
-  x <- log((x / gm_mean(x)), base)
-  x[!is.finite(x) | is.na(x)] <- 0.0
-  return(x)
-}
 
 # For each rowname (OTU), get the corresponding taxonomy_species
 # Assumes "OTU.ID" and "taxonomy_species" columns in the provided map dataframe

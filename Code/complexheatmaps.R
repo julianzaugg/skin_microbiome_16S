@@ -12,6 +12,7 @@ library(reshape2)
 # library(pheatmap)
 library(grid)
 
+source("Code/helper_functions.R")
 
 
 # --------------------
@@ -214,6 +215,9 @@ make_heatmap <- function(myheatmap_matrix,
                          heatmap_width = 10,
                          plot_height =10,
                          plot_width =10,
+                         column_title_size = 10,
+                         row_title_size = 10,
+                         annotation_name_size = 10,
                          variables = NULL, # Annotations
                          cluster_columns = T,
                          cluster_rows = T,
@@ -221,25 +225,24 @@ make_heatmap <- function(myheatmap_matrix,
                          my_palette = NULL,
                          palette_choice = NULL,
                          legend_title = NULL,
+                         column_title = "Sample",
+                         row_title = "Taxa",
+                         legend_labels = NULL,
+                         my_annotation_palette = NULL,
                          ...
-                         ){
+){
   
   # Assign internal objects
   internal_heatmap_matrix.m <- myheatmap_matrix
   internal_metadata.df <- mymetadata
-  
   # Order/filter the heatmap matrix to order/entries of metadata
   internal_heatmap_matrix.m <- internal_heatmap_matrix.m[,rownames(internal_metadata.df)]
-  
   # Order the heatmap matrix by the variables
-  internal_heatmap_matrix.m <- internal_heatmap_matrix.m[,do.call(order, internal_metadata.df[variables])]
-  
+  internal_heatmap_matrix.m <- internal_heatmap_matrix.m[,do.call(order, internal_metadata.df[,variables,drop=F])]
   # Order the metadata by the variables
-  internal_metadata.df <- internal_metadata.df[do.call(order, internal_metadata.df[variables]),]
-
+  internal_metadata.df <- internal_metadata.df[do.call(order, internal_metadata.df[,variables,drop=F]),,drop=F]
   # Create metadata just containing the variables
   metadata_just_variables <- internal_metadata.df[,variables, drop = F]
-  
   # Check that rownames match colnames
   if (!all(rownames(internal_metadata.df) == colnames(internal_heatmap_matrix.m))){
     stop("Row names in metadata do not match column names in matrix")
@@ -252,10 +255,16 @@ make_heatmap <- function(myheatmap_matrix,
     var_colour_name <- paste0(myvar, "_colour")
     # Assumes there is a colour column for each variable in the metadata
     # If there is no colour column, create one and assign from palette
-    internal_colour_palette_10_distinct <- c("#8eec45","#0265e8","#f6a800","#bf6549","#486900","#c655a0","#00d1b6","#ff4431","#aeb85c","#7e7fc8")
+    # internal_colour_palette_10_distinct <- c("#8eec45","#0265e8","#f6a800","#bf6549","#486900","#c655a0","#00d1b6","#ff4431","#aeb85c","#7e7fc8")
+    # internal_colour_palette_10_distinct <- my_colour_palette_20_distinct
+    if (is.null(my_annotation_palette)){
+      internal_colour_palette <- my_colour_palette_206_distinct
+    } else{
+      internal_colour_palette <- my_annotation_palette
+    }
     if (!var_colour_name %in% names(internal_metadata.df)){
       myvar_values <- factor(as.character(sort(unique(internal_metadata.df[,myvar]))))
-      myvar_colours <- setNames(internal_colour_palette_10_distinct[1:length(myvar_values)], myvar_values)
+      myvar_colours <- setNames(internal_colour_palette[1:length(myvar_values)], myvar_values)
       all_variable_colours <- as.character(lapply(as.character(internal_metadata.df[,myvar]), function(x) myvar_colours[x]))
       internal_metadata.df[,paste0(myvar,"_colour")] <- all_variable_colours
     }
@@ -274,7 +283,9 @@ make_heatmap <- function(myheatmap_matrix,
                           which = "column",
                           col = colour_lists,
                           gp = gpar(col = "black",lwd =.2),
-                          gap = unit(.1,"cm"))
+                          gap = unit(.1,"cm"),
+                          show_annotation_name = T,
+                          annotation_name_gp = gpar(fontsize = annotation_name_size))
   
   if (is.null(my_palette)){
     if (is.null(palette_choice)) {palette_choice <- "blue"}
@@ -288,7 +299,7 @@ make_heatmap <- function(myheatmap_matrix,
       my_palette <- colorRampPalette(c("white", "#fded86","#fde86e", "#f9d063", "#f5b857","#f0a04b","#eb8a40", "#e77235","#e35b2c", "#c74e29","#9d4429","#753c2c","#4c3430"))
     } 
   } else{
-    my_palette
+    my_palette <- colorRampPalette(my_palette)
   }
   
   if (!is.null(my_breaks)){
@@ -328,17 +339,19 @@ make_heatmap <- function(myheatmap_matrix,
                 # heatmap_width = unit(15,"cm"),
                 
                 # Titles
-                column_title = "Sample",
+                column_title = column_title,
                 column_title_side = "bottom",
-                row_title = "Taxa",
+                column_title_gp = gpar(fontsize = column_title_size),
+                row_title = row_title,
                 row_title_side = "left",
+                row_title_gp = gpar(fontsize = row_title_size),
                 
                 # Clustering
                 cluster_columns = cluster_columns,
                 cluster_rows = cluster_rows,
                 clustering_method_columns = "average",
                 clustering_method_rows = "average",
-                show_column_dend = F, 
+                show_column_dend = T, 
                 show_row_dend = F,
                 
                 # Borders
@@ -352,18 +365,29 @@ make_heatmap <- function(myheatmap_matrix,
   )
   
   # Legend appearance
-  
+  if (is.null(legend_labels)){
+    my_labels <- internal_breaks
+  } else{
+    my_labels <- legend_labels
+  }
   hm_legend <- Legend(col_fun = col_fun,
+                      labels = my_labels,
                       at = internal_breaks,
+                      labels_gp = gpar(fontsize = 6),
+                      
                       title_position = "leftcenter-rot",
+                      title_gp = gpar(fontsize = 6),
                       # grid_width= unit(.1, "cm"),
                       # title = "Relative abundance (%)",
                       title = legend_title,
+                      # legend_height = unit(7,"cm"),
+                      # title_gp = gpar(fontsize = 10),
                       direction = "vertical",
                       # title_position = "topcenter",
                       border = "black",
                       # legend_width = unit(7,"cm"),
-                      )
+                      
+  )
   
   pdf(filename,height=plot_height,width=plot_width)
   draw(hm, annotation_legend_list = c(hm_legend))
@@ -714,3 +738,55 @@ make_heatmap(patient_deseq_heatmap_otu_rel_competent.m,
 )
 
 
+
+# ---------------------------------------------------------------------------
+# Make heatmaps for top taxa, using mean abundance
+df2matrix <- function(mydataframe){
+  mymatrix <- mydataframe
+  rownames(mymatrix) <- mydataframe[,1]
+  mymatrix[,1] <- NULL
+  mymatrix <- as.matrix(mymatrix)
+  mymatrix
+}
+# Get the top 10 taxa per project and just show those in the plot
+genus_data.df <- read.csv("Result_tables/other/Genus_counts_abundances_and_metadata.csv",header = T)
+genus_data.df <- subset(genus_data.df, Sampletype_final_refined != "negative")
+immunocompetent_genus_data.df <- subset(genus_data.df, Project == "immunocompetent" & Snapshot_sample_5 == "yes")
+immunocompromised_genus_data.df <- subset(genus_data.df, Project == "immunocompromised")
+
+immunocompromised_genus_taxa_summary.df <- generate_taxa_summary(mydata = immunocompromised_genus_data.df,
+                                               taxa_column = "taxonomy_genus",
+                                               group_by_columns = c("Project", "Sampletype_final_refined"))
+
+immunocompromised_genus_taxa_summary_filtered.df <- filter_summary_to_top_n(taxa_summary = immunocompromised_genus_taxa_summary.df, 
+                                                          grouping_variables = c("Sampletype_final_refined"),
+                                                          abundance_column = "Mean_relative_abundance",
+                                                          my_top_n = 9)
+
+temp <- immunocompromised_genus_taxa_summary.df[c("Sampletype_final_refined", "taxonomy_genus","Mean_relative_abundance")]
+temp <- temp[temp$taxonomy_genus %in% immunocompromised_genus_taxa_summary_filtered.df$taxonomy_genus,]
+temp <- temp %>% spread(Sampletype_final_refined, Mean_relative_abundance,fill = 0)
+temp <- df2matrix(temp)
+
+
+temp_metadata.df <- unique(metadata.df[,c("Sampletype_final_refined", "Sampletype_final_refined_colour"), drop = F])
+rownames(temp_metadata.df) <- temp_metadata.df$Sampletype_final_refined
+temp_metadata.df$Sampletype_final_refined <- factor(temp_metadata.df$Sampletype_final_refined, levels = c("C", "C_P", "AK", "SCC_PL", "SCC"))
+
+make_heatmap(temp*100, 
+             mymetadata = temp_metadata.df,
+             filename = paste0("Result_figures/test.pdf"),
+             variables = c("Sampletype_final_refined"),
+             column_title = "",
+             annotation_name_size = 0,
+             plot_height = 5,
+             plot_width = 8,
+             cluster_columns = T,
+             cluster_rows = T,
+             column_title_size = 10,
+             row_title_size = 10,
+             legend_labels = c(c(0, 0.001, 0.005,0.05, seq(.1,.5,.1))*100, "> 60"),
+             my_breaks = c(0, 0.001, 0.005,0.05, seq(.1,.6,.1))*100,
+             legend_title = "Mean relative abundance %",
+             palette_choice = 'purple'
+)
