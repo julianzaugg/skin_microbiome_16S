@@ -135,25 +135,44 @@ make_heatmap(heatmap.m*100,
 
 
 library(vegan)
-heatmap_clr.m <- clr(heatmap.m)
+heatmap.m <- negative_taxa_summary.df[c("Sample", "taxonomy_label","Max_read_count")]
+# heatmap.m <- heatmap.m[heatmap.m$taxonomy_label %in% negative_genus_data_filtered.df$taxonomy_label,]
+heatmap.m <- heatmap.m %>% spread(Sample, Max_read_count,fill = 0)
+
+heatmap_clr.m <- clr(df2matrix(heatmap.m))
 heatmap_clr.m[which(heatmap_clr.m < 0)] <- 0
 
 temp <- rda(t(heatmap_clr.m), data = heatmap_metadata.df) # ~1 makes it unconstrained
 
+my_relabeller_function <- function(my_labels){
+  unlist(lapply(my_labels, 
+                function(x) {
+                  phylostring <- unlist(strsplit(x, split = ";"))
+                  # paste(phylostring[2],phylostring[3], phylostring[6], sep = ";")
+                  paste(phylostring[3], phylostring[6], sep = ";")
+                }))
+}
+heatmap_metadata.df$Project_Job.ID <- with(heatmap_metadata.df, paste0(Project, "__",Job.ID))
+
 generate_pca(temp, mymetadata = heatmap_metadata.df,
-             plot_height = 5, plot_width = 5,
-             legend_x = -6, legend_y = 4,
-             point_size = .7, point_line_thickness = 0.3,point_alpha =.7,
-             legend_title = "Sample type",
-             plot_title = "Both cohorts, all lesion types",
-             limits = c(-5,5,-5,5),
+             plot_height = 6, plot_width = 6,
+             legend_x = 3, legend_y = -2,
+             point_size = .7, point_line_thickness = 0.3,point_alpha =1,
+             legend_title = "",
+             legend_cex = .5,
+             plot_title = "",
+             # limits = c(-9,10,-4,4),
              plot_spiders = F,
              plot_ellipses = F,
-             plot_hulls = F,
+             plot_hulls = T,
              use_shapes = T,
              ellipse_border_width = .5,
+             include_legend = T,
              label_ellipse = F, ellipse_label_size = .5,
-             colour_palette = my_colour_palette_206_distinct,
-             variable_to_plot = "Job.ID", legend_cols = 1,
-             variable_colours_available = T,
-             my_levels = c("LC", "AK", "SCC"))
+             colour_palette = my_colour_palette_15,
+             variable_to_plot = "Project_Job.ID", legend_cols = 1,
+             variable_colours_available = F,
+             num_top_species = 3,
+             plot_arrows = F,arrow_alpha = .2, arrow_colour = "grey20",arrow_scalar = 3,arrow_thickness = .5,
+             label_arrows = T, arrow_label_size = .4, arrow_label_colour = "black", arrow_label_font_type = 1,
+             filename = paste0("Result_figures/ordination_plots/Negative_samples_genus_pca.pdf"))
