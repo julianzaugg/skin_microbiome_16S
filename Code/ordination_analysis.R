@@ -130,10 +130,11 @@ otu_rare_clr_filtered.m <- clr(otu_rare_filtered.m)
 otu_clr_filtered.m <- clr(otu_filtered.m)
 otu_rare_clr_rel_filtered.m <- clr(t(t(otu_rare_filtered.m)/colSums(otu_rare_filtered.m)))
 
-# If there are negative values, assign them a value of zero
-otu_rare_clr_filtered.m[which(otu_rare_clr_filtered.m < 0)] <- 0
-otu_clr_filtered.m[which(otu_clr_filtered.m < 0)] <- 0
-otu_rare_clr_rel_filtered.m[which(otu_rare_clr_rel_filtered.m < 0)] <- 0
+# EDIT 1/11/19 - no sure why I did the following. May only be required for permanova and/or jaccard distances
+# If there are negative values, assign them a value of zero, 
+# otu_rare_clr_filtered.m[which(otu_rare_clr_filtered.m < 0)] <- 0
+# otu_clr_filtered.m[which(otu_clr_filtered.m < 0)] <- 0
+# otu_rare_clr_rel_filtered.m[which(otu_rare_clr_rel_filtered.m < 0)] <- 0
 
 # Determine which samples are missing metadata and remove them
 # variables_of_interest <- c("Sampletype", "Patient","Sampletype_pooled", "Project", "Sampletype_pooled_IEC_sep", "Sampletype_pooled_C_sep")
