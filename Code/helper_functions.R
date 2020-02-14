@@ -80,9 +80,7 @@ df2matrix <- function(mydataframe){
   mymatrix
 }
 
-# Taxonomy-sample matrix to dataframe convertor
-# Just converts a matrix where the row name is a taxonomy label (really can be anything)
-m2df <- function(mymatrix, column_name = "taxonomy"){
+m2df <- function(mymatrix, column_name = "Row_variable"){
   mydf <- as.data.frame(mymatrix)
   cur_names <- names(mydf)
   mydf[, column_name] <- rownames(mydf)

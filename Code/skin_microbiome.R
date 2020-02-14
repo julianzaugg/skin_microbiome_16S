@@ -43,6 +43,15 @@ library(gplots)
 
 library(seqinr) # For writing fasta files
 
+# if (!requireNamespace("BiocManager", quietly = TRUE))
+# install.packages("BiocManager")
+# BiocManager::install("decontam")
+library(decontam)
+
+# install.packages("devtools") #Installs devtools (if not already installed)
+# devtools::install_github("donaldtmcknight/microDecon") #Installs microDecon
+library(microDecon)
+
 # ------------------------------------------------------------------------------------------------------------------
 # ------------------------------------------------------------------------------------------------------------------
 # Define various colour palettes
@@ -63,27 +72,13 @@ lesion_palette_10 <- c("#d4a33e","#5ca876","#687fc9","#ce5944","#51b2d0","#9b62c
 # Cohort / Project
 #335fa5 - blue
 #c12a2a - red
-project_palette_2 <- c("#335fa5", "#c12a2a")
+cohort_palette_2 <- c("#335fa5", "#c12a2a")
 
 # Length of suppression pallete
 length_of_suppression_palette <- c("#78a34a","#a464c4","#ce624c")
 
 # ------------------------------------------------------------------------------------------------------------------
 # ------------------------------------------------------------------------------------------------------------------
-# 
-# matrix2df <- function(mymatrix, column_name){
-#   out <- as.data.frame(mymatrix)
-#   out_names <- colnames(out)
-#   out$placeholder <- rownames(out)
-#   rownames(out) <- NULL
-#   names(out)[length(names(out))] <- column_name
-#   out <- out[,c(column_name, out_names)]
-#   return(out)
-# }
-
-
-
-####################################
 
 common_theme <- theme(
   panel.border = element_blank(), 
@@ -123,14 +118,13 @@ dir.create(file.path(".", "Result_objects"), showWarnings = FALSE)
 
 dir.create(file.path("./Result_figures", "abundance_analysis_plots"), showWarnings = FALSE)
 dir.create(file.path("./Result_figures/abundance_analysis_plots/boxplots"), showWarnings = FALSE, recursive = T)
-dir.create(file.path("./Result_figures/abundance_analysis_plots/boxplots/Project_sampletype_final_refined"), showWarnings = FALSE, recursive = T)
+dir.create(file.path("./Result_figures/abundance_analysis_plots/boxplots/Project_lesion_type_refined"), showWarnings = FALSE, recursive = T)
 dir.create(file.path("./Result_figures/abundance_analysis_plots/boxplots/Project"), showWarnings = FALSE, recursive = T)
-# dir.create(file.path("./Result_figures/abundance_analysis_plots/boxplots/Project_sampletype_final"), showWarnings = FALSE, recursive = T)
 
 dir.create(file.path("./Result_figures", "DESeq_plots"), showWarnings = FALSE)
 dir.create(file.path("./Result_figures/DESeq_plots/boxplots"), showWarnings = FALSE, recursive = T)
-dir.create(file.path("./Result_figures/DESeq_plots/boxplots/sampletype_final_refined_genus"), showWarnings = FALSE, recursive = T)
-dir.create(file.path("./Result_figures/DESeq_plots/boxplots/sampletype_final_refined_otu"), showWarnings = FALSE, recursive = T)
+dir.create(file.path("./Result_figures/DESeq_plots/boxplots/lesion_type_refined_genus"), showWarnings = FALSE, recursive = T)
+dir.create(file.path("./Result_figures/DESeq_plots/boxplots/lesion_type_refined_otu"), showWarnings = FALSE, recursive = T)
 
 dir.create(file.path("./Result_figures", "diversity_analysis"), showWarnings = FALSE)
 dir.create(file.path("./Result_figures", "exploratory_analysis"), showWarnings = FALSE)
@@ -138,6 +132,7 @@ dir.create(file.path("./Result_figures", "heatmaps"), showWarnings = FALSE)
 dir.create(file.path("./Result_figures", "mixomics"), showWarnings = FALSE)
 dir.create(file.path("./Result_figures", "ordination_plots"), showWarnings = FALSE)
 dir.create(file.path("./Result_figures", "contaminant_analysis"), showWarnings = FALSE)
+dir.create(file.path("./Result_tables", "correlation_analysis"), showWarnings = FALSE)
 
 dir.create(file.path("./Result_tables", "abundance_analysis_tables"), showWarnings = FALSE)
 dir.create(file.path("./Result_tables", "count_tables"), showWarnings = FALSE)
@@ -154,6 +149,16 @@ dir.create(file.path("./Result_tables", "combined_counts_abundances_and_metadata
 dir.create(file.path("./Result_tables", "relative_abundance_tables"), showWarnings = FALSE)
 dir.create(file.path("./Result_tables", "stats_various"), showWarnings = FALSE)
 dir.create(file.path("./Result_tables", "contaminant_analysis"), showWarnings = FALSE)
+
+
+dir.create(file.path("./Result_figures/correlation_analysis", "networks"), showWarnings = FALSE,recursive = T)
+dir.create(file.path("./Result_figures/correlation_analysis", "corrplots"), showWarnings = FALSE,recursive = T)
+dir.create(file.path("./Result_figures/correlation_analysis", "by_feature"), showWarnings = FALSE,recursive = T)
+
+dir.create(file.path("./Result_tables/correlation_analysis", "networks"), showWarnings = FALSE,recursive = T)
+dir.create(file.path("./Result_tables/correlation_analysis", "corrplots"), showWarnings = FALSE,recursive = T)
+dir.create(file.path("./Result_tables/correlation_analysis", "by_feature"), showWarnings = FALSE,recursive = T)
+
 
 # ------------------------------------------------------------------------------------------------------------------
 # ------------------------------------------------------------------------------------------------------------------
@@ -281,50 +286,28 @@ create_combined_dataframe_no_rare <- function(counts.df, abundances.df, mymetada
 # Load the and process metadata
 metadata.df <- read.table("data/metadata_immunocompromised_competent.tsv", header = T, sep = "\t")
 
+# Re-assign the index coloumn to the internal + Job ID. This will match the read files, which 
+# were re-named to handle repeats
+metadata.df$Index <- with(metadata.df,paste0(Internal_name, "_", Job_ID))
+
 # Make empty cells NA
 metadata.df[metadata.df == ''] <- NA
 
-# Change SwabCo to negative as they are the same
-levels(metadata.df$Sampletype)[match("SwabCo",levels(metadata.df$Sampletype))] <- "negative"
+# Change lesion types that are labelled SwabCo to negative (as they are negative)
+levels(metadata.df$Lesion_type)[match("SwabCo",levels(metadata.df$Lesion_type))] <- "negative"
 
 # Make the index the rowname
 rownames(metadata.df) <- metadata.df$Index
 
-# We are only interested in a samples with the following lesion types. Filter the metadata to these samples.
+# Remove samples with no specified cohort
+metadata.df <- subset(metadata.df, !is.na(Cohort))
+
+# Filter to samples that are the following lesion types.
 metadata_unfiltered.df <- metadata.df
-metadata.df <- metadata.df[metadata.df$Sampletype %in% c("C","AK_PL","IEC_PL","SCC_PL","AK","IEC","SCC", "negative", "NLC"),]
-
-# Create new pooled lesion types variables
-# pool_1 <- c("C","AK_PL","IEC_PL","SCC_PL", "NLC")
-# pool_2 <- c("AK","IEC")
-# pool_3 <- c("AK_PL","IEC_PL","SCC_PL")
-# pool_4 <- c("SCC", "IEC")
-
-# If AK, make AK; SCC and IEC is SCC and everything else is NLC
-# metadata.df$Sampletype_pooled <- factor(as.character(lapply(metadata.df$Sampletype, function(x) ifelse(x %in% pool_1, "LC", ifelse(x %in% pool_4, "SCC", ifelse(x == "negative", "negative","AK"))))))
-
-# ---------------------------------------------------------------------------------------------------------------------------------------
-# Create Sampletype_final variable. This is a less refined version than that created in the next section. May not be used for publication.
-# Use the refined immunocompromised sampletypes and for the remaining use the Sampletype_pooled
-# metadata.df$Sampletype_final <- as.character(metadata.df$Sampletype_compromised_refined)
-# metadata.df[is.na(metadata.df$Sampletype_final),]$Sampletype_final <- as.character(metadata.df[is.na(metadata.df$Sampletype_final),]$Sampletype_pooled)
-# metadata.df$Sampletype_final <- factor(metadata.df$Sampletype_final)
-
-metadata.df$Sampletype_final <- NA
-
-metadata.df[metadata.df$Project == "immunocompetent" & metadata.df$Sampletype %in% c("LC", "NLC", "SCC_PL", "IEC_PL"),]$Sampletype_final <- "LC"
-metadata.df[metadata.df$Project == "immunocompetent" & metadata.df$Sampletype %in% c("AK"),]$Sampletype_final <- "AK"
-metadata.df[metadata.df$Project == "immunocompetent" & metadata.df$Sampletype %in% c("SCC", "IEC"),]$Sampletype_final <- "SCC"
-
-metadata.df[metadata.df$Project == "immunocompromised" & metadata.df$Sampletype_compromised_refined %in% c("C"),]$Sampletype_final <- "C"
-metadata.df[metadata.df$Project == "immunocompromised" & metadata.df$Sampletype_compromised_refined %in% c("LC"),]$Sampletype_final <- "LC"
-metadata.df[metadata.df$Project == "immunocompromised" & metadata.df$Sampletype_compromised_refined %in% c("AK"),]$Sampletype_final <- "AK"
-metadata.df[metadata.df$Project == "immunocompromised" & metadata.df$Sampletype_compromised_refined %in% c("SCC"),]$Sampletype_final <- "SCC"
-metadata.df[metadata.df$Sampletype %in% c("negative"),]$Sampletype_final <- "negative"
-metadata.df$Sampletype_final <- factor(metadata.df$Sampletype_final)
+metadata.df <- metadata.df[metadata.df$Lesion_type %in% c("C","AK_PL","IEC_PL","SCC_PL","AK","IEC","SCC", "negative", "NLC"),]
 
 # ---------------------------------------------
-# Create Sampletype_final_refined variable. This will likely be used for publication.
+# Create Lesion_final_refined variable. This will likely be used for publication.
 # For the immunocompetent cohort:
 # C_P (C1-3 and AK_PL) – P indicating photo-damaged; as Nancy said they are not direct AK controls this may be the more appropriate description
 # AK (AK)
@@ -337,19 +320,25 @@ metadata.df$Sampletype_final <- factor(metadata.df$Sampletype_final)
 # AK (AK)
 # SCC_PL (SCC_PL and IEC_PL)
 # SCC (SCC and IEC)
-metadata.df$Sampletype_final_refined <- NA
-metadata.df[metadata.df$Project == "immunocompetent" & metadata.df$Sampletype %in% c("LC", "NLC"),]$Sampletype_final_refined <- "C_P"
-metadata.df[metadata.df$Project == "immunocompetent" & metadata.df$Sampletype %in% c("AK"),]$Sampletype_final_refined <- "AK"
-metadata.df[metadata.df$Project == "immunocompetent" & metadata.df$Sampletype %in% c("SCC_PL", "IEC_PL"),]$Sampletype_final_refined <- "SCC_PL"
-metadata.df[metadata.df$Project == "immunocompetent" & metadata.df$Sampletype %in% c("SCC", "IEC"),]$Sampletype_final_refined <- "SCC"
+metadata.df$Lesion_type_refined <- NA
+metadata.df[metadata.df$Cohort == "immunocompetent" & metadata.df$Lesion_type %in% c("C","LC", "NLC", "AK_PL"),]$Lesion_type_refined <- "C_P"
+metadata.df[metadata.df$Cohort == "immunocompetent" & metadata.df$Lesion_type %in% c("AK"),]$Lesion_type_refined <- "AK"
+metadata.df[metadata.df$Cohort == "immunocompetent" & metadata.df$Lesion_type %in% c("SCC_PL", "IEC_PL"),]$Lesion_type_refined <- "SCC_PL"
+metadata.df[metadata.df$Cohort == "immunocompetent" & metadata.df$Lesion_type %in% c("SCC", "IEC"),]$Lesion_type_refined <- "SCC"
 
-metadata.df[metadata.df$Project == "immunocompromised" & metadata.df$Sampletype %in% c("C", "AK_PL"),]$Sampletype_final_refined <- "C_P"
-metadata.df[metadata.df$Project == "immunocompromised" & metadata.df$Sampletype_compromised_refined %in% c("C"),]$Sampletype_final_refined <- "C"
-metadata.df[metadata.df$Project == "immunocompromised" & metadata.df$Sampletype %in% c("AK"),]$Sampletype_final_refined <- "AK"
-metadata.df[metadata.df$Project == "immunocompromised" & metadata.df$Sampletype %in% c("SCC_PL", "IEC_PL"),]$Sampletype_final_refined <- "SCC_PL"
-metadata.df[metadata.df$Project == "immunocompromised" & metadata.df$Sampletype %in% c("SCC", "IEC"),]$Sampletype_final_refined <- "SCC"
-metadata.df[metadata.df$Sampletype %in% c("negative"),]$Sampletype_final_refined <- "negative"
-metadata.df$Sampletype_final_refined <- factor(metadata.df$Sampletype_final_refined)
+metadata.df[metadata.df$Cohort == "immunocompromised" & metadata.df$Lesion_type %in% c("C", "AK_PL"),]$Lesion_type_refined <- "C_P"
+metadata.df[metadata.df$Cohort == "immunocompromised" & metadata.df$Lesion_type_compromised_refined %in% c("C"),]$Lesion_type_refined <- "C"
+metadata.df[metadata.df$Cohort == "immunocompromised" & metadata.df$Lesion_type %in% c("AK"),]$Lesion_type_refined <- "AK"
+metadata.df[metadata.df$Cohort == "immunocompromised" & metadata.df$Lesion_type %in% c("SCC_PL", "IEC_PL"),]$Lesion_type_refined <- "SCC_PL"
+metadata.df[metadata.df$Cohort == "immunocompromised" & metadata.df$Lesion_type %in% c("SCC", "IEC"),]$Lesion_type_refined <- "SCC"
+metadata.df[metadata.df$Lesion_type %in% c("negative"),]$Lesion_type_refined <- "negative"
+metadata.df$Lesion_type_refined <- factor(metadata.df$Lesion_type_refined)
+
+# unique(metadata.df$Lesion_type)
+# summary(metadata.df$Lesion_type)
+# unique(metadata.df$Lesion_type_refined)
+# summary(metadata.df$Lesion_type_refined)
+# metadata.df[is.na(metadata.df$Lesion_type_refined),]
 
 # ------------------------------------------------------------------------------------------------------------
 # Assign grouping to samples based on whether a patient has a SCC. Or if not, an AK/IEC. Or if not, control.
@@ -375,13 +364,13 @@ metadata.df$Sampletype_final_refined <- factor(metadata.df$Sampletype_final_refi
 # ------------------------------------------------------------------------------------------------------------
 # Remove unnessary columns / variables from metadata
 names(metadata.df)
-metadata.df <- metadata.df %>% select(-Sampletype_2, 
-                       -Sampletype_compromised_refined, 
+metadata.df <- metadata.df %>% select( 
+                       -Lesion_type_compromised_refined, 
                        -Patient_group,
                        -Patient_group_other,
-                       -Patient_ID_number,
-                       -Age,
-                       -Gender,
+                       # -Patient_ID_number,
+                       # -Age,
+                       # -Gender,
                        -Fitzpatrick_skin_type,
                        -Swab_category_other,
                        -Swab_photo,
@@ -390,27 +379,60 @@ metadata.df <- metadata.df %>% select(-Sampletype_2,
 # names(metadata.df)
 ##############################
 # Load and process the OTU table
-project_otu_table.df <- read.csv("data/acepipe_immunocompromised_competent/features_statistics.csv")
+# project_otu_table.df <- read.csv("data/acepipe_immunocompromised_competent/features_statistics.csv")
+# project_otu_table.df <- read.csv("data/acepipe_080120/features_statistics.csv")
+project_otu_table.df <- read.csv("data/feature_statistics/feature_statistics_single_qc_combined.csv")
+
+# Remove spaces after semicolon in taxonomy string
+project_otu_table.df$Taxon <- gsub("; ", ";", project_otu_table.df$Taxon)
 
 # Fix name of first column
 names(project_otu_table.df)[1] <- "OTU.ID"
 
-# Fix names of r and b samples
+# b samples = repeat samples 
+# r samples = plate control samples (to check for variation between sequencing)
+
+# Fix names of r and b samples (may not be required if manually fixed)
 # grep("R([1-4]_)", names(project_otu_table.df),value = T)
 names(project_otu_table.df) <- gsub("R([1-4]_)","r\\1", names(project_otu_table.df))
 
-# grep("B(_)", names(project_otu_table.df),value = T)
+# grep("B(_)", names(project_otu_table.df),value = T) (may not be required if manually fixed)
 names(project_otu_table.df) <- gsub("B(_)","b\\1", names(project_otu_table.df))
 
+# ------------------------------------------------------------------------------------
+# Not required as of 14/02/20
 #Fix the _J607 samples where read files did not have the r4 included. These are described in the metadata
-samples_to_fix <- as.character(metadata.df[!is.na(metadata.df$Internal_name),]$Internal_name)
-for (s2f in samples_to_fix){
-  pattern <- paste("(",s2f,")", "(_J607)", sep ="")
-  names(project_otu_table.df) <- gsub(pattern, "\\1r4\\2", names(project_otu_table.df))
-}
+# samples_to_fix <- as.character(metadata.df[grep("r4", metadata.df$Internal_name, value =F),]$Sequencing_ID)
+# samples_to_fix
+# grep(samples_to_fix[4],names(project_otu_table.df), value =T)
+# names(project_otu_table.df) %in% metadata.df$Internal_name
 
-# Remove the Internal_name column
+# for (s2f in samples_to_fix){
+  # pattern <- paste("(",s2f,")", "(_J607)", sep ="")
+  # print(pattern)
+  # gsub(pattern, "\\1r4\\2", names(project_otu_table.df))
+# }
+# samples_to_fix <- as.character(metadata.df[!is.na(metadata.df$Internal_name),]$Internal_name)
+# for (s2f in samples_to_fix){
+#   pattern <- paste("(",s2f,")", "(_J607)", sep ="")
+#   names(project_otu_table.df) <- gsub(pattern, "\\1r4\\2", names(project_otu_table.df))
+# }
+# ------------------------------------------------------------------------------------
+
+# Remove the Internal_name column (no longer required at this point)
 metadata.df <- metadata.df %>% select(-Internal_name)
+
+
+# ------------------------------------------------------------------------------------------
+# There were a number of samples from the immunocompromised cohort 
+# that were repeated that were marked for discarding (see metadata). Remove these samples.
+# Some are retained to combine with repeats, either the original run produced enough reads
+# or both runs produced enough reads
+discard_samples <- as.character(subset(metadata_unfiltered.df, Discard_sample == "yes")$Index)
+sum(project_otu_table.df$SA6544_J1476)
+project_otu_table.df <- project_otu_table.df[,!colnames(project_otu_table.df) %in% discard_samples]
+grep("SA6528", colnames(project_otu_table.df), value =T)
+# ------------------------------------------------------------------------------------------
 
 # Get the sample ids from the OTU table
 sample_ids_original <- grep("R[0-9].*|S[AB][0-9].*|S[0-9].*", names(project_otu_table.df), value = T)
@@ -422,6 +444,7 @@ print(paste0("There are ", length(sample_ids_original), " samples in the data"))
 # The immunocompetent study from 2018 has repeat samples that should be combined.
 # For example, S4284_J220 + S4284b_J220 = S4284_J220
 # Go through the samples in the project table and combine as necessary (sum and remove b sample)
+# Some of the immunocompromised samples are also combined here
 
 # First get the b samples S4284b_J220
 repeat_samples.v <- grep("b_", sample_ids, value = T)
@@ -445,18 +468,19 @@ for (sample in original_samples.v){
     sum_repeat <- sum(project_otu_table.df[,matching_repeat_sample])
     project_otu_table.df[,sample] <- project_otu_table.df[,sample] + project_otu_table.df[,matching_repeat_sample]
     sum_base_post <- sum(project_otu_table.df[,sample])
-    # print(paste(sample_base, sample, matching_repeat_sample, sum_base_prior, sum_repeat, sum_base_post))
+    print(paste(sample_base, sample, matching_repeat_sample, sum_base_prior, sum_repeat, sum_base_post))
   }
 }
 
 # And now remove all the repeat 'b' samples from the project table
 project_otu_table.df <- project_otu_table.df[,!colnames(project_otu_table.df) %in% repeat_samples.v]
 
+
 # Reassign the sample_ids 
 n_samples_before <- length(sample_ids)
 sample_ids <- grep("R[0-9].*|S[AB][0-9].*|S[0-9].*", names(project_otu_table.df), value = T)
 
-paste0("There are ", length(sample_ids), " samples in the data after consolidating immunocompetent samples. This is a loss of ", n_samples_before, "-", length(sample_ids)," = ", n_samples_before - length(sample_ids), " samples")
+paste0("There are ", length(sample_ids), " samples in the data after consolidating immunocompetent and (some) immunocompromised samples. This is a loss of ", n_samples_before, "-", length(sample_ids)," = ", n_samples_before - length(sample_ids), " samples")
 
 # ------------------------------------------------------------------------------------------------------------------------------
 # ------------------------------------------------------------------------------------------------------------------------------
@@ -475,27 +499,24 @@ project_otu_table.df[is.na(project_otu_table.df)] <- "Unassigned"
 
 # Replace D_# at beginning of taxon rank string to corresponding taxa label, e.g. D_0 = d (domain) D_1 = p (phylum), etc.
 # This doesn't work (well) for non-bacterial entries, which have more than the standard 7 levels
-project_otu_table.df$Domain <- as.character(lapply(project_otu_table.df$Domain, FUN = function(x) gsub("D_0", "d", x)))
-project_otu_table.df$Phylum <- as.character(lapply(project_otu_table.df$Phylum, FUN = function(x) gsub("D_1", "p", x)))
-project_otu_table.df$Class <- as.character(lapply(project_otu_table.df$Class, FUN = function(x) gsub("D_2", "c", x)))
-project_otu_table.df$Order <- as.character(lapply(project_otu_table.df$Order, FUN = function(x) gsub("D_3", "o", x)))
-project_otu_table.df$Family <- as.character(lapply(project_otu_table.df$Family, FUN = function(x) gsub("D_4", "f", x)))
-project_otu_table.df$Genus <- as.character(lapply(project_otu_table.df$Genus, FUN = function(x) gsub("D_5", "g", x)))
-project_otu_table.df$Species <- as.character(lapply(project_otu_table.df$Species, FUN = function(x) gsub("D_6", "s", x)))
+# project_otu_table.df$Domain <- as.character(lapply(project_otu_table.df$Domain, FUN = function(x) gsub("D_0", "d", x)))
+# project_otu_table.df$Phylum <- as.character(lapply(project_otu_table.df$Phylum, FUN = function(x) gsub("D_1", "p", x)))
+# project_otu_table.df$Class <- as.character(lapply(project_otu_table.df$Class, FUN = function(x) gsub("D_2", "c", x)))
+# project_otu_table.df$Order <- as.character(lapply(project_otu_table.df$Order, FUN = function(x) gsub("D_3", "o", x)))
+# project_otu_table.df$Family <- as.character(lapply(project_otu_table.df$Family, FUN = function(x) gsub("D_4", "f", x)))
+# project_otu_table.df$Genus <- as.character(lapply(project_otu_table.df$Genus, FUN = function(x) gsub("D_5", "g", x)))
+# project_otu_table.df$Species <- as.character(lapply(project_otu_table.df$Species, FUN = function(x) gsub("D_6", "s", x)))
 
-# Recreate the full taxonomy string with the 'prettier' taxa labels
+# Create taxonomy strings for phylum, class, order, family, genus and specie levels
 project_otu_table.df$taxonomy_species <- with(project_otu_table.df, paste(Domain, Phylum, Class, Order, Family, Genus, Species, sep =";"))
-
-# Also create a taxonomy string up to the genus level, since species are very rarely characterised at the Specie level in amplicon data
 project_otu_table.df$taxonomy_genus <- with(project_otu_table.df, paste(Domain, Phylum, Class, Order, Family, Genus, sep =";"))
-
-# And just for easier plotting later, create taxonomy strings for phylum, class, order and family levels
 project_otu_table.df$taxonomy_family <- with(project_otu_table.df, paste(Domain, Phylum, Class, Order, Family, sep =";"))
 project_otu_table.df$taxonomy_order <- with(project_otu_table.df, paste(Domain, Phylum, Class, Order, sep =";"))
 project_otu_table.df$taxonomy_class <- with(project_otu_table.df, paste(Domain, Phylum, Class, sep =";"))
 project_otu_table.df$taxonomy_phylum <- with(project_otu_table.df, paste(Domain, Phylum, sep =";"))
 
-# Store a version of the unfiltered project table
+# Store a version of the unfiltered* project table
+# *Samples specified to be discarded have been removed and repeat samples consolidated
 project_otu_table_unfiltered.df <- project_otu_table.df
 
 # ------------------------------------------------------------------------------------------
@@ -511,12 +532,13 @@ if ( length(missing_samples.v) == 0) {
   print("Samples missing from OTU table")
 }
 # Are these missing samples in the filtered metadata? What about the unfiltered metadata?
-# summary(metadata.df[metadata.df$Index %in% missing_samples.v,]$Sampletype)
-# summary(metadata_unfiltered.df[metadata_unfiltered.df$Index  %in% missing_samples.v,]$Sampletype)
+# summary(metadata.df[metadata.df$Index %in% missing_samples.v,]$Lesion_type)
+# summary(metadata_unfiltered.df[metadata_unfiltered.df$Index  %in% missing_samples.v,]$Lesion_type)
 # metadata_unfiltered.df[missing_samples.v,]
 
 # Also the reverse, are there samples in the metadata missing from the data (possibly filtered earlier)
 missing_samples_metadata.v <- as.character(metadata.df$Index[!metadata.df$Index %in% sample_ids])
+missing_samples_metadata_unfiltered.v <- as.character(metadata_unfiltered.df$Index[!metadata_unfiltered.df$Index %in% sample_ids])
 # missing_samples_metadata.v <- as.character(metadata.df$Index[!metadata.df$Index %in% sample_ids_original])
 
 if ( length(missing_samples_metadata.v) == 0) {
@@ -524,7 +546,16 @@ if ( length(missing_samples_metadata.v) == 0) {
 } else {
   print("Samples missing from metadata")
 }
-# summary(missing_samples_metadata.v %in% repeat_samples.v) # You will see that most, if not all, are repeat samples that have already been added to the base sample
+# You will see that most are repeat samples that have already been added to the base sample
+summary(missing_samples_metadata.v %in% repeat_samples.v)
+summary(missing_samples_metadata_unfiltered.v %in% repeat_samples.v)
+
+# Other samples are missing because they had too few raw reads and didn't make it through the QIIME pipeline
+metadata.df[missing_samples_metadata.v[!missing_samples_metadata.v %in% repeat_samples.v],]$R1_read_count_raw
+metadata.df[missing_samples_metadata.v[!missing_samples_metadata.v %in% repeat_samples.v],]
+
+# And other samples were set to be discarded
+missing_samples_metadata.v[!missing_samples_metadata.v %in% repeat_samples.v][missing_samples_metadata.v[!missing_samples_metadata.v %in% repeat_samples.v] %in% rownames(metadata.df[which(!is.na(metadata.df$Discard_sample) & metadata.df$Discard_sample == "yes"),])]
 
 # Remove samples from the project table that are not in the metadata
 # dim(project_otu_table.df)
@@ -532,9 +563,9 @@ project_otu_table.df <- project_otu_table.df[, !colnames(project_otu_table.df) %
 # dim(project_otu_table.df)
 
 # Remove samples in the metadata that are not in the project table, e.g. repeat samples that have been merged at this point
-# dim(metadata.df)
+dim(metadata.df)
 metadata.df <- metadata.df[!metadata.df$Index %in% missing_samples_metadata.v,]
-# dim(metadata.df)
+dim(metadata.df)
 
 # Remove MS patient samples that were sequenced along with the immunocompromised samples
 MS_resequenced_samples <- metadata.df[grep("Sequenced during immunocompromised batch", metadata.df$Note),]$Index
@@ -542,59 +573,46 @@ metadata.df <- metadata.df[!metadata.df$Index %in% MS_resequenced_samples,]
 project_otu_table.df <- project_otu_table.df[,!names(project_otu_table.df) %in% MS_resequenced_samples]
 
 # Remove the Note column
-metadata.df <- metadata.df %>% select(-Note)
+# metadata.df <- metadata.df %>% select(-Note)
 
 # dim(metadata.df)
 # dim(project_otu_table.df)
+# names(project_otu_table.df)[!names(project_otu_table.df) %in% rownames(metadata.df)]
 
 # ------------------------------------------------------------------------------------------------
 # ------------------------------------------------------------------------------------------------
-# Assign unique colours for each discrete state, e.g. Sampletype
+# Assign unique colours for each discrete state for variables
+# names(metadata.df)
+# Lesion_type, Lesion_type_refined,Length_of_immunosuppression_group_1,Length_of_immunosuppression_group_2,
+# 
+# for (myvar in discrete_variables){
+#   myvar_values <- factor(as.character(sort(unique(metadata.df[,myvar]))))
+#   # myvar_colours <- setNames(my_colour_palette_soft_8[1:length(myvar_values)], myvar_values)
+#   myvar_colours <- setNames(my_colour_palette_15[1:length(myvar_values)], myvar_values)
+#   all_variable_colours <- as.character(lapply(as.character(metadata.df[,myvar]), function(x) myvar_colours[x]))
+#   metadata.df[,paste0(myvar,"_colour")] <- all_variable_colours
+# }
 
-# For Sampletype (NLC and C have different colours!!!)
-sampletype_values <- sort(factor(as.character(unique(metadata.df$Sampletype)), levels = sort(unique(as.character(metadata.df$Sampletype)))))
-sampletype_colours <- setNames(lesion_palette_10[1:length(sampletype_values)], sampletype_values)
+# For Lesion_type (NLC and C have different colours!!!)
+lesion_type_values <- sort(factor(as.character(unique(metadata.df$Lesion_type)), levels = sort(unique(as.character(metadata.df$Lesion_type)))))
+lesion_type_colours <- setNames(lesion_palette_10[1:length(lesion_type_values)], lesion_type_values)
 
-all_sample_colours <- as.character(lapply(as.character(metadata.df$Sampletype), function(x) sampletype_colours[x]))
-metadata.df$Sampletype_colour <- all_sample_colours
+all_sample_colours <- as.character(lapply(as.character(metadata.df$Lesion_type), function(x) lesion_type_colours[x]))
+metadata.df$Lesion_type_colour <- all_sample_colours
 
-# For Sampletype_pooled. Same Sampletype colours defined above
-# all_sample_colours <- as.character(lapply(as.character(metadata.df$Sampletype_pooled), function(x) sampletype_colours[x]))
-# metadata.df$Sampletype_pooled_colour <- all_sample_colours
+metadata.df$Lesion_type_refined
 
 # For Sampletype_final Same Sampletype colours defined above
-sampletype_final_values <- sort(factor(as.character(unique(metadata.df$Sampletype_final)), levels = sort(unique(as.character(metadata.df$Sampletype_final)))))
-sampletype_final_colours <- setNames(lesion_palette_10[1:length(sampletype_final_values)], sampletype_final_values)
-all_sample_colours <- as.character(lapply(as.character(metadata.df$Sampletype_final), function(x) sampletype_final_colours[x]))
-metadata.df$Sampletype_final_colour <- all_sample_colours
+lesion_type_refined_values <- sort(factor(as.character(unique(metadata.df$Lesion_type_refined)), levels = sort(unique(as.character(metadata.df$Lesion_type_refined)))))
+lesion_type_refined_colours <- setNames(lesion_palette_10[1:length(lesion_type_refined_values)], lesion_type_refined_values)
+all_sample_colours <- as.character(lapply(as.character(metadata.df$Lesion_type_refined), function(x) lesion_type_refined_colours[x]))
+metadata.df$Lesion_type_refined_colour <- all_sample_colours
 
-# Sampletype_final_refined
-sampletype_final_refined_values <- sort(factor(as.character(unique(metadata.df$Sampletype_final_refined)), levels = sort(unique(as.character(metadata.df$Sampletype_final_refined)))))
-sampletype_final_refined_colours <- setNames(lesion_palette_10[1:length(sampletype_final_refined_values)], sampletype_final_refined_values)
-all_sample_colours <- as.character(lapply(as.character(metadata.df$Sampletype_final_refined), function(x) sampletype_final_refined_colours[x]))
-metadata.df$Sampletype_final_refined_colour <- all_sample_colours
-
-# For Sampletype_pooled_IEC_sep Same Sampletype colours defined above
-# all_sample_colours <- as.character(lapply(as.character(metadata.df$Sampletype_pooled_IEC_sep), function(x) sampletype_colours[x]))
-# metadata.df$Sampletype_pooled_IEC_sep_colour <- all_sample_colours
-
-
-# For Sampletype_compromised_refined
-# Sampletype_compromised_refined_values <- factor(as.character(unique(metadata.df$Sampletype_compromised_refined)))
-# Sampletype_compromised_refined_values <- Sampletype_compromised_refined_values[!is.na(Sampletype_compromised_refined_values)]
-# Sampletype_compromised_refined_colours <- setNames(lesion_palette_10[1:length(Sampletype_compromised_refined_values)], Sampletype_compromised_refined_values)
-# Sampletype_compromised_refined_colours["SCC"] <- sampletype_colours["SCC"]
-# Sampletype_compromised_refined_colours["C"] <- sampletype_colours["C"]
-# Sampletype_compromised_refined_colours["LC"] <- sampletype_colours["LC"]
-# Sampletype_compromised_refined_colours["AK"] <- sampletype_colours["AK"]
-# all_Sampletype_compromised_refined_colours <- as.character(lapply(as.character(metadata.df$Sampletype_compromised_refined), function(x) Sampletype_compromised_refined_colours[x]))
-# metadata.df$Sampletype_compromised_refined_colour <- all_Sampletype_compromised_refined_colours
-
-# For Cohort (Project)
-project_values <- factor(as.character(unique(metadata.df$Project)))
-project_colours <- setNames(project_palette_2[1:length(project_values)], project_values)
-all_project_colours <- as.character(lapply(as.character(metadata.df$Project), function(x) project_colours[x]))
-metadata.df$Project_colour <- all_project_colours
+# For Cohort
+cohort_values <- factor(as.character(unique(metadata.df$Cohort)))
+cohort_colours <- setNames(cohort_palette_2[1:length(cohort_values)], cohort_values)
+all_cohort_olours <- as.character(lapply(as.character(metadata.df$Cohort), function(x) cohort_colours[x]))
+metadata.df$Cohort_colour <- all_cohort_olours
 
 # For Patient
 patient_values <- as.character(unique(metadata.df$Patient))
@@ -653,7 +671,6 @@ metadata.df$Length_of_immunosuppression_group_2_colour <- loi_group2_colours
 
 # ------------------------------------------------
 # ------------------------------------------------
-
 # Reassign the sample ids 
 sample_ids <- grep("R[0-9].*|S[AB][0-9].*|S[0-9].*", names(project_otu_table.df), value = T)
 
@@ -667,23 +684,21 @@ sample_ids <- grep("R[0-9].*|S[AB][0-9].*|S[0-9].*", names(project_otu_table.df)
 # Remove OTUs that are Unassigned
 # project_otu_table.df <- project_otu_table.df[project_otu_table.df$Taxon != "Unassigned",]
 
-# Discard anything not Bacterial or Fungal
-project_otu_table.df <- project_otu_table.df[grepl("D_0__Bacteria|D_3__Fungi", project_otu_table.df$Taxon),]
+fungal_phyla <- c("Basidiomycota","Ascomycota","Mucoromycota","Cryptomycota","Peronosporomycetes","Blastocladiomycota","Chytridiomycota","Zoopagomycota","Neocallimastigomycota")
+#"Aphelidea","LKM15" - unclear if these are fungal
+fungal_pattern <- paste0(fungal_phyla,collapse = "|p__")
+fungal_pattern <- gsub("^", "p__", fungal_pattern)
 
-# Discard Chloroplast entries
+# Discard anything not Bacterial or Archaeal or fungal
+project_otu_table.df <- project_otu_table.df[grepl(paste0("d__Bacteria|d__Archaea|",fungal_pattern), project_otu_table.df$Taxon),]
+
+# Discard anything that is Unassigned at the Phylum level
+project_otu_table.df <- project_otu_table.df[!project_otu_table.df$Phylum == "Unassigned",]
+
+# Discard chloroplast features
+project_otu_table.df <- project_otu_table.df[!grepl("o__Chloroplast", project_otu_table.df$Taxon,ignore.case = T),]
 # dim(project_otu_table.df)
-# D_3__Chloroplast distribution? Arachis?
-# project_otu_table.df <- project_otu_table.df[!grepl("D_3__Chloroplast", project_otu_table.df$Taxon),]
-
-# dim(project_otu_table.df)
-# unique(grep("D_3__Chloroplast", project_otu_table.df$Taxon, value = T))
-# "c__Oxyphotobacteria;o__Chloroplast"
-
-# Discard anything not Bacterial or Fungal or Unassigned
-# project_otu_table.df <- project_otu_table.df[grepl("D_0__Bacteria|D_3__Fungi|^Unassigned$", project_otu_table.df$Taxon),]
-
-# Discard anything not Bacterial
-# project_otu_table.df <- project_otu_table.df[grepl("D_0__Bacteria", project_otu_table.df$Taxon),]
+# dim(project_otu_table_unfiltered.df)
 # ------------------------------------------------
 
 # Remove old Taxon column
@@ -755,6 +770,15 @@ otu_unfiltered_rel.m[is.nan(otu_unfiltered_rel.m)] <- 0
 # colSums(otu_unfiltered.m)["SB4911_J1426"]
 # 1647 SB4909_J1426 REMOVED
 # 1649 SB4911_J1426 REMOVED
+
+# --------------------------------------------------------------------------------------------------------------------
+# --------------------------------------------------------------------------------------------------------------------
+# One simple approach to removing contaminants, or 'noise', is to simply remove low abundance features or
+# remove features that are present / more prevalent in the negative controls.
+# Alternatively (or in addition), packages like microdecon and decontam can be used to identity putative contamaninants
+# We are going to try multiple approaches.
+
+negative_sample_ids <- as.character(metadata.df[metadata.df$Lesion_type == "negative",]$Index)
 
 # ------------------------------------------------------------------------------------------------------------------------
 # ------------------------------------------------------------------------------------------------------------------------
@@ -1031,7 +1055,7 @@ contaminant_summary.df$Number_of_contaminant_features <- temp[rownames(contamina
 
 # Get the sampletype, project and patient metadata for each sample
 contaminant_summary.df$Sampletype_final_refined <- metadata.df[rownames(contaminant_summary.df),]$Sampletype_final_refined
-contaminant_summary.df$Project <- metadata.df[rownames(contaminant_summary.df),]$Project
+contaminant_summary.df$Cohort <- metadata.df[rownames(contaminant_summary.df),]$Cohort
 contaminant_summary.df$Patient <- metadata.df[rownames(contaminant_summary.df),]$Patient
 write.csv(x = contaminant_summary.df, file = "Result_tables/contaminant_analysis/samples_with_contaminants_summary.csv", row.names = F)
 
@@ -1060,8 +1084,8 @@ names(median_abundances.df)[2] <- "Median_abundance"
 temp <- contaminanted_samples_rel.df
 temp[temp > 0] <- 1
 
-in_n_immunocompromised_samples <- m2df(melt(apply(temp[,names(temp) %in% rownames(metadata.df[metadata.df$Project == "immunocompromised",])], 1, sum)), "OTU.ID")
-in_n_immunocompetent_samples <- m2df(melt(apply(temp[,names(temp) %in% rownames(metadata.df[metadata.df$Project == "immunocompetent",])], 1, sum)), "OTU.ID")
+in_n_immunocompromised_samples <- m2df(melt(apply(temp[,names(temp) %in% rownames(metadata.df[metadata.df$Cohort == "immunocompromised",])], 1, sum)), "OTU.ID")
+in_n_immunocompetent_samples <- m2df(melt(apply(temp[,names(temp) %in% rownames(metadata.df[metadata.df$Cohort == "immunocompetent",])], 1, sum)), "OTU.ID")
 in_n_samples.df <- m2df(melt(apply(temp, 1, sum)), "OTU.ID")
 names(in_n_samples.df)[2] <- "In_N_samples"
 names(in_n_immunocompromised_samples)[2] <- "In_N_immunocompromised_samples"
@@ -1410,12 +1434,12 @@ stats.df[samples_passing_QC,]$Sample_retained <- "yes"
 samples_not_retained <- rownames(stats.df[stats.df$Sample_retained == "no",])
 
 # stats.df$Patient <- metadata.df[samples_passing_QC,"Patient"]
-# stats.df$Project <- metadata.df[samples_passing_QC,"Project"]
+# stats.df$Cohort <- metadata.df[samples_passing_QC,"Project"]
 # stats.df$Sampletype <- metadata.df[samples_passing_QC,"Sampletype"]
 # stats.df$Patient_group <- metadata.df[samples_passing_QC,"Patient_group"]
 
 stats.df$Patient <- metadata.df[samples_in_unfiltered,"Patient"]
-stats.df$Project <- metadata.df[samples_in_unfiltered,"Project"]
+stats.df$Cohort <- metadata.df[samples_in_unfiltered,"Project"]
 stats.df$Sampletype <- metadata.df[samples_in_unfiltered,"Sampletype"]
 stats.df$Sampletype_final <- metadata.df[samples_in_unfiltered,"Sampletype_final"]
 stats.df$Sampletype_final_refined <- metadata.df[samples_in_unfiltered,"Sampletype_final_refined"]
