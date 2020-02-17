@@ -115,6 +115,9 @@ source("Code/helper_functions.R")
 dir.create(file.path(".", "Result_figures"), showWarnings = FALSE)
 dir.create(file.path(".", "Result_tables"), showWarnings = FALSE)
 dir.create(file.path(".", "Result_objects"), showWarnings = FALSE)
+dir.create(file.path(".", "Result_other"), showWarnings = FALSE)
+
+dir.create(file.path("./Result_other", "sequences"), showWarnings = FALSE,recursive = T)
 
 dir.create(file.path("./Result_figures", "abundance_analysis_plots"), showWarnings = FALSE)
 dir.create(file.path("./Result_figures/abundance_analysis_plots/boxplots"), showWarnings = FALSE, recursive = T)
@@ -379,8 +382,6 @@ metadata.df <- metadata.df %>% select(
 # names(metadata.df)
 ##############################
 # Load and process the OTU table
-# project_otu_table.df <- read.csv("data/acepipe_immunocompromised_competent/features_statistics.csv")
-# project_otu_table.df <- read.csv("data/acepipe_080120/features_statistics.csv")
 project_otu_table.df <- read.csv("data/feature_statistics/feature_statistics_single_qc_combined.csv")
 
 # Remove spaces after semicolon in taxonomy string
@@ -399,88 +400,13 @@ names(project_otu_table.df) <- gsub("R([1-4]_)","r\\1", names(project_otu_table.
 # grep("B(_)", names(project_otu_table.df),value = T) (may not be required if manually fixed)
 names(project_otu_table.df) <- gsub("B(_)","b\\1", names(project_otu_table.df))
 
-# ------------------------------------------------------------------------------------
-# Not required as of 14/02/20
-#Fix the _J607 samples where read files did not have the r4 included. These are described in the metadata
-# samples_to_fix <- as.character(metadata.df[grep("r4", metadata.df$Internal_name, value =F),]$Sequencing_ID)
-# samples_to_fix
-# grep(samples_to_fix[4],names(project_otu_table.df), value =T)
-# names(project_otu_table.df) %in% metadata.df$Internal_name
-
-# for (s2f in samples_to_fix){
-  # pattern <- paste("(",s2f,")", "(_J607)", sep ="")
-  # print(pattern)
-  # gsub(pattern, "\\1r4\\2", names(project_otu_table.df))
-# }
-# samples_to_fix <- as.character(metadata.df[!is.na(metadata.df$Internal_name),]$Internal_name)
-# for (s2f in samples_to_fix){
-#   pattern <- paste("(",s2f,")", "(_J607)", sep ="")
-#   names(project_otu_table.df) <- gsub(pattern, "\\1r4\\2", names(project_otu_table.df))
-# }
-# ------------------------------------------------------------------------------------
-
-# Remove the Internal_name column (no longer required at this point)
-metadata.df <- metadata.df %>% select(-Internal_name)
-
-
-# ------------------------------------------------------------------------------------------
-# There were a number of samples from the immunocompromised cohort 
-# that were repeated that were marked for discarding (see metadata). Remove these samples.
-# Some are retained to combine with repeats, either the original run produced enough reads
-# or both runs produced enough reads
-discard_samples <- as.character(subset(metadata_unfiltered.df, Discard_sample == "yes")$Index)
-sum(project_otu_table.df$SA6544_J1476)
-project_otu_table.df <- project_otu_table.df[,!colnames(project_otu_table.df) %in% discard_samples]
-grep("SA6528", colnames(project_otu_table.df), value =T)
-# ------------------------------------------------------------------------------------------
-
 # Get the sample ids from the OTU table
 sample_ids_original <- grep("R[0-9].*|S[AB][0-9].*|S[0-9].*", names(project_otu_table.df), value = T)
 sample_ids <- grep("R[0-9].*|S[AB][0-9].*|S[0-9].*", names(project_otu_table.df), value = T)
-
 print(paste0("There are ", length(sample_ids_original), " samples in the data"))
 
-# ------------------------------------------------------------------------------------------
-# The immunocompetent study from 2018 has repeat samples that should be combined.
-# For example, S4284_J220 + S4284b_J220 = S4284_J220
-# Go through the samples in the project table and combine as necessary (sum and remove b sample)
-# Some of the immunocompromised samples are also combined here
-
-# First get the b samples S4284b_J220
-repeat_samples.v <- grep("b_", sample_ids, value = T)
-
-# The base form of the repeat samples, e.g. S4284
-bases_repeat_samples.v <- gsub("_.*","",repeat_samples.v)
-
-# The plate control samples
-plate_control_samples.v <- grep("r[1-4]_", sample_ids, value = T)
-
-# Original samples
-original_samples.v <- sample_ids[!sample_ids %in% c("OTU.ID",plate_control_samples.v,repeat_samples.v)]
-bases_original_samples.v <- gsub("_.*","",original_samples.v)
-
-# Add the counts for 'b' samples to their 'original' counterpart
-for (sample in original_samples.v){
-  sample_base <- gsub("_.*","",sample)
-  if  (paste0(sample_base, 'b') %in% bases_repeat_samples.v){
-    matching_repeat_sample <- grep(sample_base, repeat_samples.v, value = T)
-    sum_base_prior <- sum(project_otu_table.df[,sample])
-    sum_repeat <- sum(project_otu_table.df[,matching_repeat_sample])
-    project_otu_table.df[,sample] <- project_otu_table.df[,sample] + project_otu_table.df[,matching_repeat_sample]
-    sum_base_post <- sum(project_otu_table.df[,sample])
-    print(paste(sample_base, sample, matching_repeat_sample, sum_base_prior, sum_repeat, sum_base_post))
-  }
-}
-
-# And now remove all the repeat 'b' samples from the project table
-project_otu_table.df <- project_otu_table.df[,!colnames(project_otu_table.df) %in% repeat_samples.v]
-
-
-# Reassign the sample_ids 
-n_samples_before <- length(sample_ids)
-sample_ids <- grep("R[0-9].*|S[AB][0-9].*|S[0-9].*", names(project_otu_table.df), value = T)
-
-paste0("There are ", length(sample_ids), " samples in the data after consolidating immunocompetent and (some) immunocompromised samples. This is a loss of ", n_samples_before, "-", length(sample_ids)," = ", n_samples_before - length(sample_ids), " samples")
+# Remove the Internal_name column (no longer required at this point)
+metadata.df <- metadata.df %>% select(-Internal_name)
 
 # ------------------------------------------------------------------------------------------------------------------------------
 # ------------------------------------------------------------------------------------------------------------------------------
@@ -514,6 +440,63 @@ project_otu_table.df$taxonomy_family <- with(project_otu_table.df, paste(Domain,
 project_otu_table.df$taxonomy_order <- with(project_otu_table.df, paste(Domain, Phylum, Class, Order, sep =";"))
 project_otu_table.df$taxonomy_class <- with(project_otu_table.df, paste(Domain, Phylum, Class, sep =";"))
 project_otu_table.df$taxonomy_phylum <- with(project_otu_table.df, paste(Domain, Phylum, sep =";"))
+
+# Store a version of the unfiltered project table
+# project_otu_table_unfiltered.df <- project_otu_table.df
+# ------------------------------------------------------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------------------------------------------------------
+# There were a number of samples from the immunocompromised cohort 
+# that were repeated and that were marked for discarding (see metadata). Remove these samples.
+# Some are retained to combine with repeats, either the original run produced enough reads
+# or both runs produced enough reads
+discard_samples <- as.character(subset(metadata_unfiltered.df, Discard_sample == "yes")$Index)
+project_otu_table.df <- project_otu_table.df[,!colnames(project_otu_table.df) %in% discard_samples]
+
+# Get the sample ids from the OTU table after removing discarded samples
+sample_ids <- grep("R[0-9].*|S[AB][0-9].*|S[0-9].*", names(project_otu_table.df), value = T)
+
+# ------------------------------------------------------------------------------------------
+# The immunocompetent study from 2018 has repeat samples that should be combined.
+# For example, S4284_J220 + S4284b_J220 = S4284_J220
+# Go through the samples in the project table and combine as necessary (sum and remove b sample)
+# Some of the immunocompromised samples are also combined here
+
+# First get the b samples S4284b_J220
+repeat_samples.v <- grep("b_", sample_ids, value = T)
+
+# The base form of the repeat samples, e.g. S4284
+bases_repeat_samples.v <- gsub("_.*","",repeat_samples.v)
+
+# The plate control samples
+plate_control_samples.v <- grep("r[1-4]_", sample_ids, value = T)
+
+# Original samples
+original_samples.v <- sample_ids[!sample_ids %in% c("OTU.ID",plate_control_samples.v,repeat_samples.v)]
+bases_original_samples.v <- gsub("_.*","",original_samples.v)
+
+# Add the counts for 'b' samples to their 'original' counterpart
+temp.df <- project_otu_table.df # use separate temporary dataframe to save time when editing code
+for (sample in original_samples.v){
+  sample_base <- gsub("_.*","",sample)
+  if  (paste0(sample_base, 'b') %in% bases_repeat_samples.v){
+    matching_repeat_sample <- grep(sample_base, repeat_samples.v, value = T)
+    sum_base_prior <- sum(project_otu_table.df[,sample])
+    sum_repeat <- sum(project_otu_table.df[,matching_repeat_sample])
+    temp.df[,sample] <- project_otu_table.df[,sample] + project_otu_table.df[,matching_repeat_sample]
+    sum_base_post <- sum(project_otu_table.df[,sample])
+    # print(paste(sample_base, sample, matching_repeat_sample, sum_base_prior, sum_repeat, sum_base_post))
+  }
+}
+# And now remove all the repeat 'b' samples from the project table
+temp.df <- temp.df[,!colnames(temp.df) %in% repeat_samples.v]
+
+project_otu_table.df <- temp.df
+# Reassign the sample_ids 
+n_samples_before <- length(sample_ids)
+sample_ids <- grep("R[0-9].*|S[AB][0-9].*|S[0-9].*", names(project_otu_table.df), value = T)
+
+paste0("There are ", length(sample_ids), " samples in the data after consolidating immunocompetent and (some) immunocompromised samples. This is a loss of ",
+       n_samples_before, "-", length(sample_ids)," = ", n_samples_before - length(sample_ids), " samples")
 
 # Store a version of the unfiltered* project table
 # *Samples specified to be discarded have been removed and repeat samples consolidated
@@ -567,17 +550,10 @@ dim(metadata.df)
 metadata.df <- metadata.df[!metadata.df$Index %in% missing_samples_metadata.v,]
 dim(metadata.df)
 
-# Remove MS patient samples that were sequenced along with the immunocompromised samples
-MS_resequenced_samples <- metadata.df[grep("Sequenced during immunocompromised batch", metadata.df$Note),]$Index
+# Remove immunocompetent patient samples that were sequenced along with the immunocompromised samples
+MS_resequenced_samples <- metadata.df[grep("Sequenced during immunocompromised batch", metadata.df$Sample_note),]$Index
 metadata.df <- metadata.df[!metadata.df$Index %in% MS_resequenced_samples,]
 project_otu_table.df <- project_otu_table.df[,!names(project_otu_table.df) %in% MS_resequenced_samples]
-
-# Remove the Note column
-# metadata.df <- metadata.df %>% select(-Note)
-
-# dim(metadata.df)
-# dim(project_otu_table.df)
-# names(project_otu_table.df)[!names(project_otu_table.df) %in% rownames(metadata.df)]
 
 # ------------------------------------------------------------------------------------------------
 # ------------------------------------------------------------------------------------------------
@@ -721,7 +697,8 @@ otu_taxonomy_map.df <- project_otu_table.df[c("OTU.ID",
                                         "taxonomy_class",
                                         "taxonomy_phylum",
                                         "RepSeq")]
-# Version withouth the RepSeq
+
+# Version without the RepSeq
 reduced_tax_map <- otu_taxonomy_map.df
 reduced_tax_map$RepSeq <- NULL
 
@@ -729,7 +706,7 @@ reduced_tax_map$RepSeq <- NULL
 write.table(otu_taxonomy_map.df, file = "Result_tables/other/otu_taxonomy_map.csv", sep = ",", quote = F, row.names = F)
 
 # Also save the unfiltered table, to avoid processing the original data table again 
-write.table(project_otu_table_unfiltered.df, file = "Result_tables/other/project_otu_table_unfiltered.csv", sep = ",", quote = F, row.names = F)
+# write.table(project_otu_table_unfiltered.df, file = "Result_tables/other/project_otu_table_unfiltered.csv", sep = ",", quote = F, row.names = F)
 
 # ---------------------------------------------------------------------------------------------------------------
 # ---------------------------------------------------------------------------------------------------------------
@@ -763,64 +740,24 @@ otu_unfiltered_rel.m <- t(t(otu_unfiltered.m) / colSums(otu_unfiltered.m))
 otu_rel.m[is.nan(otu_rel.m)] <- 0
 otu_unfiltered_rel.m[is.nan(otu_unfiltered_rel.m)] <- 0
 
+# colnames(otu_rel.m[,colSums(otu_rel.m) != 1])
+# colSums(otu_rel.m[,colnames(otu_rel.m[,colSums(otu_rel.m) != 1])])
+# sum(otu_rel.m[,"S4164_J220"])
 # summary(colSums(otu.m) < 5000)
 # summary(colSums(otu.m) < 4000)
 # summary(colSums(otu.m) < 2000)
-# colSums(otu_unfiltered.m)["SB4909_J1426"]
-# colSums(otu_unfiltered.m)["SB4911_J1426"]
-# 1647 SB4909_J1426 REMOVED
-# 1649 SB4911_J1426 REMOVED
-
-# --------------------------------------------------------------------------------------------------------------------
-# --------------------------------------------------------------------------------------------------------------------
-# One simple approach to removing contaminants, or 'noise', is to simply remove low abundance features or
-# remove features that are present / more prevalent in the negative controls.
-# Alternatively (or in addition), packages like microdecon and decontam can be used to identity putative contamaninants
-# We are going to try multiple approaches.
-
-negative_sample_ids <- as.character(metadata.df[metadata.df$Lesion_type == "negative",]$Index)
-
-# ------------------------------------------------------------------------------------------------------------------------
-# ------------------------------------------------------------------------------------------------------------------------
-# Filter those OTUs that are low abundance in all samples
-
-# Generally, low abundance OTUs are removed.
-# Check how many OTUs would be removed if we filtered any whose abundance is less than 0.05% (0.0005) in all samples
-filter_percentage = 0.0005
-otu_rel_low_abundance_otus.m <- otu_rel.m[apply(otu_rel.m[,sample_ids],1,function(z) all(z < filter_percentage)),]
-
-
-# TODO - Collect low abundance OTUs that will be filtered out at this stage
-# FIXME write.table(as.data.frame(otu_rel_low_abundance_otus.m), file = "Result_tables/count_tables/low_abundance_OTUs.csv", sep = ",", quote = F, col.names = T, row.names = F)
-percent_removed_before_taxa_filtered <- round(dim(otu_rel_low_abundance_otus.m)[1]/length(rownames(otu_unfiltered.m)) * 100,2)
-percent_removed_after_taxa_filtered <- round(dim(otu_rel_low_abundance_otus.m)[1]/length(rownames(otu.m)) * 100,2)
-print(paste("There are a total of", dim(otu_rel.m)[1], "OTUs before filtering"))
-print(paste("A total of", dim(otu_rel_low_abundance_otus.m)[1], 
-            "OTUs will be filtered at a threshold of", 
-            filter_percentage * 100, "percent"))
-
-# If you are happy with the filtering threshold, apply it.
-otu_rel.m <- otu_rel.m[apply(otu_rel.m[,sample_ids],1,function(z) any(z>=filter_percentage)),]
-
-# Re-normalise the matrix after filtering
-otu_rel.m <- t(t(otu_rel.m) / colSums(otu_rel.m))
-
-# Change nans to 0. Occurs when a sample has no hits at this point.
-otu_rel.m[is.nan(otu_rel.m)] <- 0
-
-# Also remove low abundance OTUs from the original OTU count matrix
-otu.m  <- otu.m[rownames(otu_rel.m),]
-
 # -------------------------------------------------------------------------------------------------------------------------------------
 # -------------------------------------------------------------------------------------------------------------------------------------
-# NEGATIVE SAMPLES
-
+#                                 NEGATIVE SAMPLES
 # Prior to calculating and removing contaminants, and even later removing low count samples, we 
 # want to retain the negative samples abundances to profile them later
-negative_sample_ids <- as.character(metadata.df[metadata.df$Sampletype == "negative",]$Index)
+
+negative_sample_ids <- as.character(metadata.df[metadata.df$Lesion_type == "negative",]$Index)
+# negative_sample_ids <- as.character(metadata_unfiltered.df[metadata_unfiltered.df$Lesion_type == "negative",]$Index)
 negative_otu.m <- otu.m[,negative_sample_ids]
 negative_otu_rel.m <- otu_rel.m[,negative_sample_ids]
 colSums(otu.m[,c("R1478_J1425","S7936_J306")])
+colSums(otu_unfiltered.m[,c("R1478_J1425","S7936_J306")])
 
 negative_otu.df <- m2df(negative_otu.m, "OTU.ID")
 negative_otu_rel.df <- m2df(negative_otu_rel.m, "OTU.ID")
@@ -897,46 +834,46 @@ write.table(otu_phylum_rel.df, file = "Result_tables/relative_abundance_tables/N
 # ----------------------------------------
 # Generate the combined datasets
 otu_combined <- create_combined_dataframe_no_rare(counts.df = negative_otu.df, 
-                                          abundances.df = negative_otu_rel.df,
-                                          mylevel = "OTU.ID",
-                                          mymetadata = metadata.df,
-                                          otu_map.df = reduced_tax_map)
+                                                  abundances.df = negative_otu_rel.df,
+                                                  mylevel = "OTU.ID",
+                                                  mymetadata = metadata.df,
+                                                  otu_map.df = reduced_tax_map)
 
 species_combined <- create_combined_dataframe_no_rare(counts.df = otu_species.df, 
-                                              abundances.df = otu_species_rel.df,
-                                              mylevel = "Species",
-                                              mymetadata = metadata.df,
-                                              otu_map.df = reduced_tax_map)
+                                                      abundances.df = otu_species_rel.df,
+                                                      mylevel = "Species",
+                                                      mymetadata = metadata.df,
+                                                      otu_map.df = reduced_tax_map)
 
 genus_combined <- create_combined_dataframe_no_rare(counts.df = otu_genus.df, 
-                                            abundances.df = otu_genus_rel.df,
-                                            mylevel = "Genus",
-                                            mymetadata = metadata.df,
-                                            otu_map.df = reduced_tax_map)
+                                                    abundances.df = otu_genus_rel.df,
+                                                    mylevel = "Genus",
+                                                    mymetadata = metadata.df,
+                                                    otu_map.df = reduced_tax_map)
 
 family_combined <- create_combined_dataframe_no_rare(counts.df = otu_family.df, 
-                                             abundances.df = otu_family_rel.df,
-                                             mylevel = "Family",
-                                             mymetadata = metadata.df,
-                                             otu_map.df = reduced_tax_map)
+                                                     abundances.df = otu_family_rel.df,
+                                                     mylevel = "Family",
+                                                     mymetadata = metadata.df,
+                                                     otu_map.df = reduced_tax_map)
 
 order_combined <- create_combined_dataframe_no_rare(counts.df = otu_order.df, 
-                                            abundances.df = otu_order_rel.df,
-                                            mylevel = "Order",
-                                            mymetadata = metadata.df,
-                                            otu_map.df = reduced_tax_map)
+                                                    abundances.df = otu_order_rel.df,
+                                                    mylevel = "Order",
+                                                    mymetadata = metadata.df,
+                                                    otu_map.df = reduced_tax_map)
 
 class_combined <- create_combined_dataframe_no_rare(counts.df = otu_class.df, 
-                                            abundances.df = otu_class_rel.df,
-                                            mylevel = "Class",
-                                            mymetadata = metadata.df,
-                                            otu_map.df = reduced_tax_map)
+                                                    abundances.df = otu_class_rel.df,
+                                                    mylevel = "Class",
+                                                    mymetadata = metadata.df,
+                                                    otu_map.df = reduced_tax_map)
 
 phylum_combined <- create_combined_dataframe_no_rare(counts.df = otu_phylum.df, 
-                                             abundances.df = otu_phylum_rel.df,
-                                             mylevel = "Phylum",
-                                             mymetadata = metadata.df,
-                                             otu_map.df = reduced_tax_map)
+                                                     abundances.df = otu_phylum_rel.df,
+                                                     mylevel = "Phylum",
+                                                     mymetadata = metadata.df,
+                                                     otu_map.df = reduced_tax_map)
 
 write.table(otu_combined, file = "Result_tables/combined_counts_abundances_and_metadata_tables/Negative_samples_OTU_counts_abundances_and_metadata.csv", sep = ",", quote = F, col.names = T, row.names = F)
 write.table(species_combined, file = "Result_tables/combined_counts_abundances_and_metadata_tables/Negative_samples_Specie_counts_abundances_and_metadata.csv", sep = ",", quote = F, col.names = T, row.names = F)
@@ -948,79 +885,97 @@ write.table(phylum_combined, file = "Result_tables/combined_counts_abundances_an
 
 
 
-# -------------------------------------------------------------------------------------------------------------------------------------
-# -------------------------------------------------------------------------------------------------------------------------------------
-# -------------------------------------------------------------------------------------------------------------------------------------
-#                     REMOVE CONTAMINANTS
-# TODO - investigate using Decontam and/or microDecon
+# --------------------------------------------------------------------------------------------------------------------
+# --------------------------------------------------------------------------------------------------------------------
+# One simple approach to removing contaminants, or 'noise', is to simply remove low abundance features or
+# remove features that are present / more prevalent in the negative controls.
+# Alternatively (or in addition), packages like microdecon and decontam can be used to identity putative contamaninants
+# We are going to try multiple approaches.
 
+# IGNORE : We are going to use the unfiltered data to determine putative contaminants. These will then be removed
+# from the filtered dataset.
+
+# TODO Process negatives for each run (job)? Or all negatives together?
+# Could use all negatives from compromised cohort for the compromised samples
+# and individual job-specific negatives for competent cohort...
+
+# 1. Use Decontam to identify contaminants
+decontam_contaminants.df <- isContaminant(t(otu.m), 
+                                          method = "prevalence", 
+                                          neg = rownames(t(otu.m)) %in% negative_sample_ids, 
+                                          threshold = 0.3)
+hist(decontam_contaminants.df$p,100, ylim = c(0,7000), xlim = c(0,1))
+abline(v = 0.5, col = 'red')
+decontam_contaminants_features <- rownames(subset(decontam_contaminants.df, contaminant == T))
+
+# unique(subset(otu_taxonomy_map.df, OTU.ID %in% decontam_contaminants_features)$taxonomy_species)
+
+# 2. Use microdecon - SKIP as of 17/02/20 as too slow
+# OTU Neg1 ....Sample 1....taxa (optional)
+# microdecon_data.df <- m2df(otu.m[,colnames(otu.m) %in% negative_sample_ids], column_name = "OTU.ID")
+# microdecon_data.df <- cbind(microdecon_data.df, otu.m[,!colnames(otu.m) %in% negative_sample_ids])
+# rownames(microdecon_data.df) <- NULL
+# dim(microdecon_data.df)
+# length(subset(otu_taxonomy_map_unfiltered.df, OTU.ID %in% microdecon_data.df$OTU.ID)$taxonomy_species)
+
+# microdecon_data.df$taxonomy_species <- subset(otu_taxonomy_map.df, OTU.ID %in% microdecon_data.df$OTU.ID)$taxonomy_species
+# microdecon_contaminants.df <- decon(microdecon_data.df, 
+#                                     numb.blanks = length(negative_sample_ids),
+#                                     numb.ind = length(sample_ids) - length(negative_sample_ids),
+#                                     taxa = T,
+#                                     runs = 2,regression = 1)
+
+# microdecon_contaminants_features <- microdecon_contaminants.df$OTUs.removed$OTU.ID
+# summary(microdecon_contaminants_features %in% decontam_contaminants_features)
+# summary(decontam_contaminants_features %in% microdecon_contaminants_features)
+
+# 3. Identify features that are present in negative controls (very extreme approach) 
+negative_present_features <- rownames(negative_otu.m[rowSums(negative_otu.m) > 0,])
+
+# 4. Identify features that are more prevalent in negative controls.
+# Use rarefied data to reduced false positives
 # Note that in the code for the 2018 paper, samples were first capped to a maximum read depth (rrarefy, not true rarefy) 
 # before calculating contaminants presence/absence.
 # e.g. otu_rare_count.m <- t(rrarefy(x = t(otu_count_raw.m), sample = 2000))
 # Large differences in read depth between samples will make it harder to determine the true-positive contaminants from false-positive.
+otu_rare_count.m <- t(rrarefy(x = t(otu.m), sample=2000))
+negative_otu_rare_count.m <- t(rrarefy(x = t(negative_otu.m), sample=2000))
 
-otu_rare_count.m <- t(rrarefy(x = t(otu.m), sample=30000)) # Ensure this value is the same as used in the 'rarefy' section
-
-# Calculate the relative abundance on this 'rarefied' table. Can use this to calculate the mean relative abundance of each OTU in different groups.
-# In theory, a contaminant will make up a larger percent of the abundance in the negative control.
-otu_rare_rel.m <- t(t(otu_rare_count.m) / colSums(otu_rare_count.m))
-
-# Change nans to 0. Occurs when a sample has no hits at this point.
-otu_rare_rel.m[is.nan(otu_rare_rel.m)] <- 0
-
-# First get the sample ids for various lesion type groups
-# TODO - Do we want to actually use negative samples rather than the control samples? I think so!
-negative_sample_ids <- as.character(metadata.df[metadata.df$Sampletype == "negative",]$Index)
-not_negative_sample_ids <- as.character(metadata.df[metadata.df$Sampletype != "negative",]$Index)
-# not_negative_or_control_sample_ids <- as.character(metadata.df[!metadata.df$Sampletype %in% c("negative", "C"),]$Index)
-# not_negative_or_control_sample_ids <- as.character(metadata.df[!metadata.df$Sampletype %in% c("negative", "C","LC", "NLC"),]$Index)
-# pooled_not_negative_sample_ids <- as.character(metadata.df[metadata.df$Sampletype %in% c("C","AK_PL","IEC_PL","SCC_PL","AK","IEC"),]$Index)
-# pooled_not_negative_sample_ids <- as.character(metadata.df[metadata.df$Sampletype %in% c("SCC","C","NLC","AK_PL","IEC_PL","SCC_PL","AK","IEC"),]$Index)
-
-# TODO - Determine whether to include controls when comparing against negative samples
-contaminating_otus_from_mean_abundances <- rownames(otu_rare_rel.m[rowMeans(otu_rare_rel.m[,not_negative_sample_ids]) < rowMeans(otu_rare_rel.m[,negative_sample_ids]),])
-
-# ------------------------------------------------------------------
-# ------------------------------------------------------------------
-# Approach to identifying contaminants used in 2018 paper. 
-# Based on the prevalence/frequency/abundance among sample type, rather than the mean relative abundance.
-# This will calculate what percentage of samples in each group an OTU is present in
-otu_negative_sample_prevalences <- apply(otu_rare_count.m[,negative_sample_ids], 1, function(x) {length(which(x > 0))}) /length(negative_sample_ids)
+otu_negative_sample_prevalences <- apply(negative_otu_rare_count.m, 1, function(x) {length(which(x > 0))}) /length(negative_sample_ids)
+not_negative_sample_ids <- sample_ids[!sample_ids %in% negative_sample_ids]
 otu_not_negative_sample_prevalences <- apply(otu_rare_count.m[,not_negative_sample_ids], 1, function(x) {length(which(x > 0))}) /length(not_negative_sample_ids)
+contaminating_otus_from_prevalences <- names(otu_negative_sample_prevalences[otu_negative_sample_prevalences > otu_not_negative_sample_prevalences])
 
-contaminating_otus_from_prevalences <- names(otu_not_negative_sample_prevalences[otu_not_negative_sample_prevalences < otu_negative_sample_prevalences])
+summary(decontam_contaminants_features %in% contaminating_otus_from_prevalences)
+summary(decontam_contaminants_features %in% negative_present_features)
+summary(contaminating_otus_from_prevalences %in% decontam_contaminants_features)
+summary(negative_present_features %in% decontam_contaminants_features)
 
-# Number of features shared by both approaches
-number_of_mean_abundance_otus_in_prevalence_otus <- length(contaminating_otus_from_mean_abundances[contaminating_otus_from_mean_abundances %in% contaminating_otus_from_prevalences])
-number_of_prevalence_otus_in_mean_abundance_otus <- length(contaminating_otus_from_prevalences[contaminating_otus_from_prevalences %in% contaminating_otus_from_mean_abundances])
+# Final contaminating features to remove
+contaminating_features <- unique(c(decontam_contaminants_features))
 
-print(paste("There are", length(contaminating_otus_from_mean_abundances), "contaminating OTUs based on mean abundances"))
-print(paste("There are", length(contaminating_otus_from_prevalences), "contaminating OTUs based on prevalences"))
+# -----------------------
+contaminating_feature_taxonomy_data.df <- otu_taxonomy_map.df[otu_taxonomy_map.df$OTU.ID %in% contaminating_features,]
+# contaminating_feature_taxonomy_data.df <- rbind(contaminating_feature_taxonomy_data.df, otu_taxonomy_map.df[otu_taxonomy_map.df$OTU.ID %in% microdecon_contaminants_features,])
+contaminating_feature_taxonomy_data.df <- unique(contaminating_feature_taxonomy_data.df)
+contaminating_feature_taxonomy_data.df$Decontam_contaminant <- contaminating_feature_taxonomy_data.df$OTU.ID %in% decontam_contaminants_features
+# contaminating_feature_taxonomy_data.df$Microdecon_contaminant <- contaminating_feature_taxonomy_data.df$OTU.ID %in% microdecon_contaminants_features
+temp <- contaminating_feature_taxonomy_data.df$RepSeq
+contaminating_feature_taxonomy_data.df$RepSeq <- NULL
+contaminating_feature_taxonomy_data.df$RepSeq <- temp
+write.csv(x = contaminating_feature_taxonomy_data.df, file = "Result_tables/other/contaminate_taxonomy_data.csv", quote =F, row.names = F)
 
-print(paste(number_of_mean_abundance_otus_in_prevalence_otus, "contaminating OTUs based on mean abundances are shared by those based on prevalences"))
-print(paste(number_of_prevalence_otus_in_mean_abundance_otus, "contaminating OTUs based on prevalences are shared by those based on mean abundances"))
+# Write putative contaminant sequences to file
+write.fasta(sequences = as.list(contaminating_feature_taxonomy_data.df$RepSeq),open = "w",
+names = as.character(contaminating_feature_taxonomy_data.df$OTU.ID),
+file.out = paste0("Result_other/sequences/contaminate_features.fasta"))
 
-# Plot the OTU detection fraction in negative controls vs other samples
-presences.df <- data.frame(row.names = rownames(otu_rare_count.m))
-presences.df$not_negative <- melt(otu_not_negative_sample_prevalences)$value
-presences.df$negative <- melt(otu_negative_sample_prevalences)$value
-presences.df[,'contaminant'] <- "No"
-presences.df[contaminating_otus_from_prevalences, 'contaminant'] <- "Yes" 
-myplot <- ggplot(presences.df, aes(x =negative*100, y= not_negative*100)) + 
-  geom_point(aes(color=contaminant)) +
-  # geom_point(aes(color=contaminant, shape = contaminant)) +
-  #scale_shape_manual(values = c(1,4)) +
-  xlab("Percent of swab negative control samples feature detected in") +
-  ylab("Percent of non-negative samples feature detected in") +
-  # scale_x_continuous(breaks = seq(0,1,.25), limits = c(0,1.01)) +
-  # scale_y_continuous(breaks = seq(0,1,.25), limits = c(0,1.01)) +
-  scale_x_continuous(breaks = seq(0,100,25), limits = c(0,101)) +
-  scale_y_continuous(breaks = seq(0,100,25), limits = c(0,101)) +
-  common_theme
-ggsave(plot = myplot, filename = "./Result_figures/contaminant_analysis/contaminant_otus_scatter_plot.pdf", width=6, height=6)
+# Remove contaminants from data. Retain both datasets for comparison.
+otu_rel_decontaminated.m <- otu_rel.m[!rownames(otu_rel.m) %in% unique(c(contaminating_features)),]
+otu_decontaminated.m <- otu.m[!rownames(otu.m) %in% unique(c(contaminating_features)),]
 
-# ------------------------------------------------------------------
-# Profile / summarise the samples containing contaminants
+# options(digits = 22)
+# apply(otu_rel.m[,apply(otu_rel.m, 2, sum) != 1],2,sum)
 
 # ---- General ---- 
 # How many / what samples are the contaminants in?
@@ -1028,85 +983,57 @@ ggsave(plot = myplot, filename = "./Result_figures/contaminant_analysis/contamin
 # What samples types are the contaminants in?
 # What is the break down per cohort?
 
-# Get rows from OTU matrix corresponding to contaminants
-contaminanted_samples.df <- as.data.frame(otu.m[contaminating_otus_from_prevalences,])
-contaminanted_samples_rel.df <- as.data.frame(otu_rel.m[contaminating_otus_from_prevalences,])
+sample_contamination.df <- m2df(melt(round(100-colSums(otu_rel_decontaminated.m)*100,5),value.name = "Contaminant_abundance"),"Sample")
+sample_contamination.df <- sample_contamination.df[order(sample_contamination.df$Contaminant_abundance,decreasing = T),]
 
-# Profile only samples that have any contamination
-contaminanted_samples.df <- contaminanted_samples.df[,colSums(contaminanted_samples.df) > 0]
-contaminanted_samples_rel.df <- contaminanted_samples_rel.df[,colnames(contaminanted_samples.df)]
-
-number_of_contaminated_samples <- length(names(contaminanted_samples.df))
-number_of_contaminating_features <- length(contaminating_otus_from_prevalences)
-paste0("There are ", number_of_contaminated_samples, " samples with at least one contaminant")
-paste0("There are ", number_of_contaminating_features, " contaminanting features")
-
-# Get the abundance of contaminants in each sample
-contaminant_summary.df <- melt(sort(round(colSums(contaminanted_samples_rel.df)*100,2), decreasing = T))
-names(contaminant_summary.df) <- "Contaminant_abundance"
-contaminant_summary.df <- m2df(contaminant_summary.df,column_name = "Sample")
-rownames(contaminant_summary.df) <- contaminant_summary.df$Sample
-
+rownames(sample_contamination.df) <- sample_contamination.df$Sample
 # Get the number of contaminant features in each sample
-temp <- otu_rel.m[contaminating_otus_from_prevalences,names(contaminanted_samples.df)]
+temp <- otu_rel.m[contaminating_features,sample_contamination.df$Sample]
 temp[temp > 0] <- 1
 temp <- melt(colSums(temp))
-contaminant_summary.df$Number_of_contaminant_features <- temp[rownames(contaminant_summary.df),]
+sample_contamination.df$Number_of_contaminant_features <- temp[rownames(sample_contamination.df),]
 
-# Get the sampletype, project and patient metadata for each sample
-contaminant_summary.df$Sampletype_final_refined <- metadata.df[rownames(contaminant_summary.df),]$Sampletype_final_refined
-contaminant_summary.df$Cohort <- metadata.df[rownames(contaminant_summary.df),]$Cohort
-contaminant_summary.df$Patient <- metadata.df[rownames(contaminant_summary.df),]$Patient
-write.csv(x = contaminant_summary.df, file = "Result_tables/contaminant_analysis/samples_with_contaminants_summary.csv", row.names = F)
-
-# ggplot(contaminant_summary.df, aes(x = Sample, y = Contaminant_abundance, fill = Sampletype_final_refined)) + geom_bar(stat = "identity", position = "dodge") +
-#   facet_wrap(~Project, scales = "free_x") +
-#   common_theme +
-#   theme(axis.text.x = element_text(angle = 90))
-# summary(factor(subset(metadata.df, Project == "immunocompromised")$Sampletype))
-# summary(subset(metadata_unfiltered.df, Project == "immunocompromised")$Sampletype)
-# summary(factor(subset(metadata.df, Project == "immunocompetent")$Sampletype))
-# summary(subset(metadata_unfiltered.df, Project == "immunocompetent")$Sampletype)
-
-# ----------------------------------------
-# ---- Specific ---- 
-# We want a profile of the contaminating features (taxa).
-
-# OTU taxonomy Max_abundance Mean_abundance
-max_abundances.df <- m2df(melt(round(apply(contaminanted_samples_rel.df, 1, max) *100,3)), "OTU.ID")
-names(max_abundances.df)[2] <- "Max_abundance"
-min_abundances.df <- m2df(melt(round(apply(contaminanted_samples_rel.df, 1, min) *100,3)), "OTU.ID")
-names(min_abundances.df)[2] <- "Min_abundance"
-mean_abundances.df <- m2df(melt(round(apply(contaminanted_samples_rel.df, 1, mean) *100,3)), "OTU.ID")
-names(mean_abundances.df)[2] <- "Mean_abundance"
-median_abundances.df <- m2df(melt(round(apply(contaminanted_samples_rel.df, 1, median) *100,3)), "OTU.ID")
-names(median_abundances.df)[2] <- "Median_abundance"
-temp <- contaminanted_samples_rel.df
+temp <- otu_rel.m[,sample_contamination.df$Sample]
 temp[temp > 0] <- 1
+temp <- melt(colSums(temp))
+sample_contamination.df$Number_of_features <- temp[rownames(sample_contamination.df),]
 
-in_n_immunocompromised_samples <- m2df(melt(apply(temp[,names(temp) %in% rownames(metadata.df[metadata.df$Cohort == "immunocompromised",])], 1, sum)), "OTU.ID")
-in_n_immunocompetent_samples <- m2df(melt(apply(temp[,names(temp) %in% rownames(metadata.df[metadata.df$Cohort == "immunocompetent",])], 1, sum)), "OTU.ID")
-in_n_samples.df <- m2df(melt(apply(temp, 1, sum)), "OTU.ID")
-names(in_n_samples.df)[2] <- "In_N_samples"
-names(in_n_immunocompromised_samples)[2] <- "In_N_immunocompromised_samples"
-names(in_n_immunocompetent_samples)[2] <- "In_N_immunocompetent_samples"
+# Add lesion, cohort and patient data
+sample_contamination.df$Lesion_type_refined <- metadata.df[rownames(sample_contamination.df),]$Lesion_type_refined
+sample_contamination.df$Cohort <- metadata.df[rownames(sample_contamination.df),]$Cohort
+sample_contamination.df$Patient <- metadata.df[rownames(sample_contamination.df),]$Patient
+sample_contamination.df
 
-contaminant_profile.df <- otu_taxonomy_map.df[otu_taxonomy_map.df$OTU.ID %in% contaminating_otus_from_prevalences,c("OTU.ID", "taxonomy_genus")]
-# cbind(temp, in_n_samples, max_abundances)
-contaminant_profile.df <- merge(contaminant_profile.df, in_n_samples.df, by.x = "OTU.ID", by.y = "OTU.ID")
-contaminant_profile.df <- merge(contaminant_profile.df, in_n_immunocompetent_samples, by.x = "OTU.ID", by.y = "OTU.ID")
-contaminant_profile.df <- merge(contaminant_profile.df, in_n_immunocompromised_samples, by.x = "OTU.ID", by.y = "OTU.ID")
-contaminant_profile.df <- merge(contaminant_profile.df, max_abundances.df, by.x = "OTU.ID", by.y = "OTU.ID")
-contaminant_profile.df <- merge(contaminant_profile.df, min_abundances.df, by.x = "OTU.ID", by.y = "OTU.ID")
-contaminant_profile.df <- merge(contaminant_profile.df, mean_abundances.df, by.x = "OTU.ID", by.y = "OTU.ID")
-contaminant_profile.df <- merge(contaminant_profile.df, median_abundances.df, by.x = "OTU.ID", by.y = "OTU.ID")
+write.csv(sample_contamination.df, "Result_tables/other/sample_contaminant_summary.csv", quote =F, row.names = F)
 
-write.csv(x = contaminant_profile.df, file = "Result_tables/contaminant_analysis/contaminants_profile.csv", row.names = F)
+# Re-normalise the data
+otu_rel_decontaminated.m <- t(t(otu_rel_decontaminated.m) / colSums(otu_rel_decontaminated.m))
+otu_rel_decontaminated.m[is.nan(otu_rel_decontaminated.m)] <- 0
 
-# ------------------------------------------------------------------
-# Filter out the contaminating otus calculated from prevalences (or from mean abundances)
-# otu_rel.m <- otu_rel.m[!rownames(otu_rel.m) %in% contaminating_otus_from_mean_abundances,]
-otu_rel.m <- otu_rel.m[!rownames(otu_rel.m) %in% contaminating_otus_from_prevalences,]
+# (Optional) Use de-contamainated data going forward
+otu_rel.m <- otu_rel_decontaminated.m
+otu.m <- otu.m[rownames(otu_rel.m),]
+
+# ------------------------------------------------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------------------------------------------------
+# Filter those OTUs that are low abundance in all samples
+
+# Generally, low abundance OTUs are removed.
+# Check how many OTUs would be removed if we filtered any whose abundance is less than 0.05% (0.0005) in all samples
+filter_percentage = 0.0005
+otu_rel_low_abundance_otus.m <- otu_rel.m[apply(otu_rel.m[,sample_ids],1,function(z) all(z < filter_percentage)),]
+
+otu_rel_low_abundance_otus.df <- as.data.frame(otu_rel_low_abundance_otus.m)
+percent_removed_before_taxa_filtered <- round(dim(otu_rel_low_abundance_otus.m)[1]/length(rownames(otu_unfiltered.m)) * 100,2)
+percent_removed_after_taxa_filtered <- round(dim(otu_rel_low_abundance_otus.m)[1]/length(rownames(otu.m)) * 100,2)
+
+print(paste("There are a total of", dim(otu_rel.m)[1], "OTUs before filtering"))
+print(paste("A total of", dim(otu_rel_low_abundance_otus.m)[1], 
+            "OTUs will be filtered at a threshold of", 
+            filter_percentage * 100, "percent"))
+
+# If you are happy with the filtering threshold, apply it.
+otu_rel.m <- otu_rel.m[apply(otu_rel.m[,sample_ids],1,function(z) any(z>=filter_percentage)),]
 
 # Re-normalise the matrix after filtering
 otu_rel.m <- t(t(otu_rel.m) / colSums(otu_rel.m))
@@ -1114,25 +1041,34 @@ otu_rel.m <- t(t(otu_rel.m) / colSums(otu_rel.m))
 # Change nans to 0. Occurs when a sample has no hits at this point.
 otu_rel.m[is.nan(otu_rel.m)] <- 0
 
-# Now go back to OTU counts matrix and remove contaminate OTUs
+# Also remove low abundance OTUs from the original OTU count matrix
 otu.m <- otu.m[rownames(otu_rel.m),]
 
 # Remove those samples with less than 5000 reads - used in previous paper
 # TODO - write to file those samples that are removed
-# colSums(otu.m) < 5000
-
+# summary(colSums(otu.m) < 5000)
+# summary(colSums(otu.m) < 4000)
+# summary(colSums(otu.m) < 2000)
 otu_prior_to_removing_low_read_count_samples.m <- otu.m
 otu_prior_to_removing_low_read_count_samples_rel.m <- otu_rel.m
-dim(otu.m)
-# otu.m <- otu.m[,colSums(otu.m) >= 5000]
-# otu.m <- otu.m[,colSums(otu.m) >= 4000]
-otu.m <- otu.m[,colSums(otu.m) >= 2000]
+# temp <- m2df(melt(colSums(otu_prior_to_removing_low_read_count_samples.m),value.name = "Count"),"Sample")
+# temp <- temp[order(temp$Count),]
+# temp$Sample <- factor(temp$Sample,levels = temp$Sample)
+# ggplot(temp, aes(x = Sample, y = Count)) + geom_bar(stat = "identity")
 
+# Discard samples with less than # reads.
 dim(otu.m)
-dim(otu.m[apply(otu.m, 1, max) == 0,])
-# The might be many rows whos maximum is 0 at this point. Remove them.
+otu.m <- otu.m[,colSums(otu.m) >= 2000]
+dim(otu.m)
+
+# The might be many rows (features) whose maximum is 0 at this point. Remove them.
+dim(otu.m)
 otu.m <- otu.m[apply(otu.m, 1, max) != 0,]
-# colSums(otu.m[,c("S7936_J306"),drop = F])
+dim(otu.m)
+
+# Reassign the sample ids
+sample_ids <- colnames(otu.m)
+
 # -------------------------------------------------------------------------------------------------------------------------------------
 # -------------------------------------------------------------------------------------------------------------------------------------
 # -------------------------------------------------------------------------------------------------------------------------------------
@@ -1143,18 +1079,18 @@ unassigned_project_otu_table_unfiltered.df <- project_otu_table_unfiltered.df[pr
 
 # Convert to dataframe
 unassigned_otu_unfiltered_rel.df <- m2df(otu_unfiltered_rel.m[as.character(unassigned_project_otu_table_unfiltered.df$OTU.ID),,drop =F],
-                                         name_of_taxonomy_col = "OTU.ID")
+                                         column_name = "OTU.ID")
 
 # Melt
 unassigned_otu_unfiltered_rel.df <- melt(unassigned_otu_unfiltered_rel.df, variable.name = "Sample", value.name = "Relative_abundance")
+
 if (max(unassigned_otu_unfiltered_rel.df$Relative_abundance) != 0){
   
   # Get the top most abundant unassigned features per sample
-  
   most_abundant_unassigned.df <- unassigned_otu_unfiltered_rel.df %>% 
     group_by(Sample) %>%
     filter(Relative_abundance > 0) %>%
-    top_n(n = 5, wt = Relative_abundance) %>% 
+    top_n(n = 10, wt = Relative_abundance) %>% 
     mutate(Relative_abundance = round(Relative_abundance*100,3)) %>%
     as.data.frame() 
   
@@ -1169,7 +1105,7 @@ if (max(unassigned_otu_unfiltered_rel.df$Relative_abundance) != 0){
   # Write fasta file
   write.fasta(sequences = as.list(unique_most_abundant_unassigned.df$RepSeq),open = "w", 
               names = as.character(unique_most_abundant_unassigned.df$OTU.ID),
-              file.out = paste0("Result_tables/other/project_most_abundant_unassigned_features.fasta"))
+              file.out = paste0("Result_other/sequences/most_abundant_unassigned_features.fasta"))
   
 }
 
@@ -1220,11 +1156,6 @@ myplot <- ggplot(column_sums.df, aes(x = value)) +
   theme(axis.text.x = element_text(angle = 90, vjust = .5))
 ggsave(plot = myplot, filename = "./Result_figures/exploratory_analysis/sample_read_depth_distribution_2.pdf", width=20, height=20, units = "cm")
 
-# summary(column_sums.df$value)
-# mean(column_sums.df$value)
-# median(column_sums.df$value)
-#row_sums <- #rowSums(otu.m) # counts for OTUs
-
 # Rarefaction curve
 # rarecurve(t(otu.m[,colSums(otu.m) > 1]),step = 500, label = F,xlim = c(0,30000),sample = 30000)
 # temp <- t(rrarefy(t(otu.m[,colSums(otu.m) >= 5000]), 5000))
@@ -1233,13 +1164,6 @@ ggsave(plot = myplot, filename = "./Result_figures/exploratory_analysis/sample_r
 # Generate a rarefied OTU count matrix
 # In the paper from 2018, a rarefaction maximum of 20,000 was used
 otu_rare_count.m <- t(rrarefy(x = t(otu.m), sample=30000))
-# otu_rare_count.m <- t(rrarefy(x = t(otu.m), sample=20000))
-
-# Compare before and after
-# colSums(otu.m)[1:5]
-# colSums(otu_rare_count.m)[1:5]
-# head(melt(rowSums(otu.m[,1:5])))
-# head(melt(rowSums(otu_rare_count.m[,1:5])))
 
 # TODO - number of and fraction of OTUs that are removed from rarefying
 
@@ -1289,19 +1213,20 @@ write.table(otu_rel_rare.df, file = "Result_tables/relative_abundance_tables/OTU
 # NOTE - otu.df, otu.m, otu_rel.df and otu_rel.m are the final, filtered OTU count / relative abundance dataframes and matrices. These can be used
 # elsewhere for a variety of analyses at the OTU level, or, as is shown below, used to calculate abundances at different taxa levels
 
+
+# Label those samples from the metadata.df that are not in the OTU table. A sample that has been filtered out
+# will generally not be of interest for the study, though we may wish to have the metadata at hand
 # Sample removed
 samples_retained <- colnames(otu.df)[2:length(colnames(otu.df))]
 samples_lost <- metadata.df$Index[!metadata.df$Index %in% samples_retained]
 print(paste(length(samples_retained), "samples retained"))
 print(paste(length(samples_lost), "samples lost"))
 
-# Label those samples from the metadata.df that are not in the OTU table. A sample that has been filtered out
-# will generally not be of interest for the study, though we may wish to have the metadata at hand
 metadata.df$Sample_retained <- "no"
 metadata.df[metadata.df$Index %in% samples_retained,]$Sample_retained <- "yes"
+
 write.table(metadata.df[metadata.df$Sample_retained == "yes",], file = "Result_tables/other/processed_metadata.csv", sep = ",", quote = F, row.names = F)
 write.table(metadata.df[metadata.df$Sample_retained == "no",], file = "Result_tables/other/metadata_samples_removed.csv", sep = ",", quote = F, row.names = F)
-
 
 # -------------------------------------------------------------------------------------------------------------------------------------
 # -------------------------------------------------------------------------------------------------------------------------------------
@@ -1318,96 +1243,60 @@ n_MST_samples <- length(metadata.df[grepl("MST", metadata.df$Patient),]$Index)
 # Number of MS samples
 n_MS_samples <- length(metadata.df[!grepl("MST", metadata.df$Patient),]$Index)
 
-# Number of samples for each Sampletype
-per_sampletype <- metadata.df %>% 
-  group_by(Sampletype) %>%
+# Number of samples for each Lesion_type
+per_lesion_type <- metadata.df %>% 
+  group_by(Lesion_type) %>%
   dplyr::summarise(Count = n()) %>%
   mutate(Percent = round((Count/sum(Count))*100,2)) %>%
   arrange(desc(Percent)) %>%
   as.data.frame
 # per_sampletype <- per_sampletype[order(per_sampletype$Percent),]per_sampletype$Sampletype <- factor(per_sampletype$Sampletype, levels = per_sampletype$Sampletype)
 
-per_sampletype_final_refined <- metadata.df %>% 
-  group_by(Sampletype_final_refined) %>%
+per_lesion_type_refined <- metadata.df %>% 
+  group_by(Lesion_type_refined) %>%
   dplyr::summarise(Count = n()) %>%
   mutate(Percent = round((Count/sum(Count))*100,2)) %>%
   arrange(desc(Percent)) %>%
   as.data.frame
 
-# Number of samples for each Sampletype for each patient
-per_patient_sampletype <- metadata.df %>% 
-  group_by(Patient,Sampletype) %>%
+# Number of samples for each Lesion_type for each patient
+per_patient_lesion_type <- metadata.df %>% 
+  group_by(Patient,Lesion_type) %>%
   dplyr::summarise(Count = n()) %>%
   mutate(Percent = round((Count/sum(Count))*100,2)) %>%
   arrange(Patient, desc(Percent)) %>%
   as.data.frame
 
-# Number of samples for each Sampletype_final_refined for each patient
-per_patient_sampletype_final_refined <- metadata.df %>% 
-  group_by(Patient,Sampletype_final_refined) %>%
+# Number of samples for each Lesion_type_refined for each patient
+per_patient_lesion_type_refined <- metadata.df %>% 
+  group_by(Patient,Lesion_type_refined) %>%
   dplyr::summarise(Count = n()) %>%
   mutate(Percent = round((Count/sum(Count))*100,2)) %>%
   arrange(Patient, desc(Percent)) %>%
   as.data.frame
 
-# Number of samples for each Sampletype for each cohort
-per_cohort_sampletype <- metadata.df %>% 
-  group_by(Project,Sampletype) %>%
+# Number of samples for each Lesion_type for each cohort
+per_cohort_lesion_type <- metadata.df %>% 
+  group_by(Cohort, Lesion_type) %>%
   dplyr::summarise(Count = n()) %>%
   mutate(Percent = round((Count/sum(Count))*100,2)) %>%
-  arrange(Project, desc(Percent)) %>%
+  arrange(Cohort, desc(Percent)) %>%
   as.data.frame
 
-# Number of samples for each Sampletype_final_refined for each cohort
-per_cohort_sampletype_final <- metadata.df %>% 
-  group_by(Project,Sampletype_final) %>%
+# Number of samples for each Lesion_type for each cohort
+per_cohort_lesion_type_refined <- metadata.df %>% 
+  group_by(Cohort,Lesion_type_refined) %>%
   dplyr::summarise(Count = n()) %>%
   mutate(Percent = round((Count/sum(Count))*100,2)) %>%
-  arrange(Project, desc(Percent)) %>%
+  arrange(Cohort, desc(Percent)) %>%
   as.data.frame
 
-# Number of samples for each Sampletype_final_refined for each cohort
-per_cohort_sampletype_final_refined <- metadata.df %>% 
-  group_by(Project,Sampletype_final_refined) %>%
-  dplyr::summarise(Count = n()) %>%
-  mutate(Percent = round((Count/sum(Count))*100,2)) %>%
-  arrange(Project, desc(Percent)) %>%
-  as.data.frame
+write.csv(per_lesion_type,"Result_tables/other/metadata_lesion_type_counts.csv", row.names = F)
+write.csv(per_patient_lesion_type,"Result_tables/other/metadata_patient_lesion_type_counts.csv", row.names = F)
+write.csv(per_patient_lesion_type_refined,"Result_tables/other/metadata_patient_lesion_type_refined_type_counts.csv", row.names = F)
+write.csv(per_cohort_lesion_type,"Result_tables/other/metadata_cohort_lesion_type_counts.csv", row.names = F)
+write.csv(per_cohort_lesion_type_refined,"Result_tables/other/metadata_cohort_lesion_type_refined_counts.csv", row.names = F)
 
-
-write.csv(per_cohort_sampletype,"Result_tables/other/metadata_cohort_sampletype_counts.csv", row.names = F)
-write.csv(per_cohort_sampletype_final,"Result_tables/other/metadata_cohort_sampletype_final_counts.csv", row.names = F)
-write.csv(per_cohort_sampletype_final_refined,"Result_tables/other/metadata_cohort_sampletype_final_refined_counts.csv", row.names = F)
-
-# Number of samples and patients for each Number_of_meds
-# number_of_meds_summary.df <- 
-#   metadata.df %>% 
-#   filter(Project == "immunocompromised") %>%
-#   group_by(Number_of_meds) %>%
-#   dplyr::summarise(N_patients = n_distinct(Patient), N_samples = n_distinct(Index)) %>%
-#   as.data.frame()
-
-# write.csv(number_of_meds_summary.df,"Result_tables/other/number_of_meds_summary.csv", row.names = F)
-
-# Number of samples and patients for each Fitzpatrick_skin_type
-# fitzpatrick_skin_type_summary.df <- 
-#   metadata.df %>% 
-#   filter(Project == "immunocompromised") %>%
-#   group_by(Fitzpatrick_skin_type) %>%
-#   dplyr::summarise(N_patients = n_distinct(Patient), N_samples = n_distinct(Index)) %>%
-#   as.data.frame()
-
-# write.csv(fitzpatrick_skin_type_summary.df,"Result_tables/other/Fitzpatrick_skin_type_summary.csv", row.names = F)
-
-# Number of samples and patients for each Patient_group
-# patient_group_summary.df <-
-#   metadata.df %>% 
-#   filter(Project == "immunocompromised") %>%
-#   group_by(Patient_group) %>%
-#   dplyr::summarise(N_patients = n_distinct(Patient), N_samples = n_distinct(Index)) %>%
-#   as.data.frame()
-
-# write.csv(patient_group_summary.df,"Result_tables/other/patient_group_summary.csv", row.names = F)
 
 # ------------------------------------
 #           Reads stats
@@ -1421,10 +1310,10 @@ write.csv(per_cohort_sampletype_final_refined,"Result_tables/other/metadata_coho
 # Counts (with low abundance samples)              = otu_prior_to_removing_low_read_count_samples.m
 # Relative abundances (with low abundance samples) = otu_prior_to_removing_low_read_count_samples_rel.m
 
-
 # Only focus on those samples that have passed QC.
 samples_passing_QC <- colnames(otu.m)
 samples_in_unfiltered <- colnames(otu_unfiltered.m)
+
 # stats.df <- data.frame(Sample = samples_passing_QC)
 stats.df <- data.frame(Sample = samples_in_unfiltered)
 rownames(stats.df) <- stats.df$Sample
@@ -1434,23 +1323,25 @@ stats.df[samples_passing_QC,]$Sample_retained <- "yes"
 samples_not_retained <- rownames(stats.df[stats.df$Sample_retained == "no",])
 
 # stats.df$Patient <- metadata.df[samples_passing_QC,"Patient"]
-# stats.df$Cohort <- metadata.df[samples_passing_QC,"Project"]
-# stats.df$Sampletype <- metadata.df[samples_passing_QC,"Sampletype"]
-# stats.df$Patient_group <- metadata.df[samples_passing_QC,"Patient_group"]
+# stats.df$Cohort <- metadata.df[samples_passing_QC,"Cohort"]
+# stats.df$Lesion_type_refined <- metadata.df[samples_passing_QC,"Lesion_type_refined"]
 
 stats.df$Patient <- metadata.df[samples_in_unfiltered,"Patient"]
-stats.df$Cohort <- metadata.df[samples_in_unfiltered,"Project"]
-stats.df$Sampletype <- metadata.df[samples_in_unfiltered,"Sampletype"]
-stats.df$Sampletype_final <- metadata.df[samples_in_unfiltered,"Sampletype_final"]
-stats.df$Sampletype_final_refined <- metadata.df[samples_in_unfiltered,"Sampletype_final_refined"]
-# stats.df$Patient_group <- metadata.df[samples_in_unfiltered,"Patient_group"]
+stats.df$Cohort <- metadata.df[samples_in_unfiltered,"Cohort"]
+stats.df$Lesion_type <- metadata.df[samples_in_unfiltered,"Lesion_type_refined"]
+stats.df$Lesion_type_refined <- metadata.df[samples_in_unfiltered,"Lesion_type_refined"]
 
-# stats.df[,"Original_read_counts"] <- colSums(otu_unfiltered.m[,samples_passing_QC]) # Read counts prior to filtering out taxonomy / contaminants / low abundance features
-stats.df[,"Original_read_counts"] <- colSums(otu_unfiltered.m[,samples_in_unfiltered]) # Read counts prior to filtering out taxonomy / contaminants / low abundance features
+# Add the raw read counts
+stats.df[,"Raw_R1_read_counts"] <- metadata.df[rownames(stats.df),]$R1_read_count_raw
+
+# Read counts prior to filtering out taxonomy / contaminants / low abundance features
+# stats.df[,"Original_read_counts"] <- colSums(otu_unfiltered.m[,samples_passing_QC])
+stats.df[,"Original_read_counts"] <- colSums(otu_unfiltered.m[,samples_in_unfiltered]) 
 
 stats.df[samples_passing_QC,"Filtered_read_counts"] <- colSums(otu.m[,samples_passing_QC])  # Read counts after filtering (contaminants, low read depth samples and low abundance features removed)
 stats.df[samples_not_retained,"Filtered_read_counts"] <- colSums(otu_prior_to_removing_low_read_count_samples.m[,rownames(stats.df[samples_not_retained,])])
 stats.df[samples_passing_QC,"Filtered_rarefied_read_counts"] <- colSums(otu_rare_count.m[,samples_passing_QC]) # "" and rarefied
+head(stats.df)
 
 # Reads removed from filtering
 stats.df[,"Reads_removed_from_filtering"] <- stats.df[,"Original_read_counts"] - stats.df[,"Filtered_read_counts"]

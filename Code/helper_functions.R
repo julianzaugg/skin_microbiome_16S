@@ -89,6 +89,15 @@ m2df <- function(mymatrix, column_name = "Row_variable"){
   return(mydf)
 }
 
+normalise_matrix <- function(mymatrix){
+  # options(digits = 22)
+  normalised_matrix.m <- t(t(mymatrix) / apply(mymatrix, 2, sum))
+  normalised_matrix.m[is.nan(normalised_matrix.m)] <- 0
+  # options(digits = 7)
+  normalised_matrix.m
+}
+
+
 # Make row names of a dataframe the value of a defined column (default 1st) and then remove the column
 clean_dataframe <- function(mydf, rowname_col = 1){
   my_clean.df <- mydf
