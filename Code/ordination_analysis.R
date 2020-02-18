@@ -1,8 +1,20 @@
-
+detachAllPackages <- function() {
+  
+  basic.packages <- c("package:stats","package:graphics","package:grDevices","package:utils","package:datasets","package:methods","package:base")
+  
+  package.list <- search()[ifelse(unlist(gregexpr("package:",search()))==1,TRUE,FALSE)]
+  
+  package.list <- setdiff(package.list,basic.packages)
+  
+  if (length(package.list)>0)  for (package in package.list) detach(package, character.only=TRUE)
+  
+}
+detachAllPackages()
 
 library(vegan)
 library(ggplot2)
 library(ggfortify)
+
 
 source("Code/helper_functions.R")
 ############################################################
@@ -42,416 +54,69 @@ get_samples_missing_data <- function(my_metadata, variables){
 # Set the working directory
 setwd("/Users/julianzaugg/Desktop/ACE/major_projects/skin_microbiome_16S")
 
-# Load count table at the OTU level. These are the counts for OTUs that were above our abundance thresholds
-otu_rare.df <- read.table("Result_tables/count_tables/OTU_counts_rarefied.csv", sep =",", header =T)
-otu.df <- read.table("Result_tables/count_tables/OTU_counts.csv", sep =",", header =T)
+
+# Load the processed metadata
+metadata.df <- read.csv("Result_tables/other/processed_metadata.csv", sep =",", header = T)
+rownames(metadata.df) <- metadata.df$Index
+
+discrete_variables <- c("Lesion_type_refined","Gender","Patient", "Cohort", "Length_of_immunosuppression_group_1", "Length_of_immunosuppression_group_2")
+
+# We are only interested in C,AK_PL,IEC_PL,SCC_PL,AK,IEC and SCC lesions. 
+# Remove samples for different lesion types (negative, nasal,scar,scar_PL,KA,KA_PL,VV,VV_PL,SF,SF_PL,other,other_PL) from metadata and otu table
+# metadata.df <- metadata.df[metadata.df$Lesion_type %in% c("C","AK_PL","IEC_PL","SCC_PL","AK","IEC","SCC", "LC", "NLC"),]
 
 # Load the OTU - taxonomy mapping file
 otu_taxonomy_map.df <- read.csv("Result_tables/other/otu_taxonomy_map.csv", header = T)
 
-# Load the processed metadata
-metadata.df <- read.csv("Result_tables/other/processed_metadata.csv", sep =",", header = T)
+# Load the counts
+otu.m <- as.matrix(read.csv("Result_tables/count_tables/OTU_counts_rarefied.csv", header =T, row.names = 1))
+genus.m <-  as.matrix(read.csv("Result_tables/count_tables/Genus_counts_rarefied.csv", header =T, row.names = 1))
 
-# We are only interested in C,AK_PL,IEC_PL,SCC_PL,AK,IEC and SCC lesions. 
-# Remove samples for different lesion types (nasal,scar,scar_PL,KA,KA_PL,VV,VV_PL,SF,SF_PL,other,other_PL) from metadata and otu table
-metadata.df <- metadata.df[metadata.df$Sampletype %in% c("C","AK_PL","IEC_PL","SCC_PL","AK","IEC","SCC", "LC"),]
-
-# metadata.df <- metadata.df[metadata.df$Project == "immunocompetent",]
-# metadata.df <- metadata.df[metadata.df$Project == "immunocompromised",]
-
-# metadata.df <- metadata.df[!metadata.df$Patient %in% c("MS001","MS010"),]
+genus_data.df <- read.csv("Result_tables/combined_counts_abundances_and_metadata_tables/Genus_counts_abundances_and_metadata.csv",header = T)
 
 # Set the Index to be the rowname
 rownames(metadata.df) <- metadata.df$Index
 
 # Since we likely removed samples from the count matrix
 # in the main script, remove them from the metadata.df here
-samples_removed <- metadata.df$Index[!metadata.df$Index %in% names(otu_rare.df)]
-metadata.df <- metadata.df[! metadata.df$Index %in% samples_removed,]
+# samples_removed <- metadata.df$Index[!metadata.df$Index %in% names(otu_rare.df)]
+# metadata.df <- metadata.df[! metadata.df$Index %in% samples_removed,]
 
 # Factorise discrete columns
 metadata.df$Patient <- factor(metadata.df$Patient)
-metadata.df$Sampletype <- factor(metadata.df$Sampletype)
-metadata.df$Sampletype_pooled <- factor(metadata.df$Sampletype_pooled, levels = c("LC", "AK","SCC"))
-metadata.df$Project <- factor(metadata.df$Project)
-metadata.df$Patient_group <- factor(metadata.df$Patient_group, levels = c("Control", "AK","SCC"))
+metadata.df$Lesion_type <- factor(metadata.df$Lesion_type)
+metadata.df$Lesion_type_refined <- factor(metadata.df$Lesion_type_refined)
+metadata.df$Cohort <- factor(metadata.df$Cohort)
 metadata.df$Gender <- factor(metadata.df$Gender)
-metadata.df$Number_of_meds <- factor(metadata.df$Number_of_meds, levels = c("1", "2","3"))
 
-# Filter to just immunocompromised or snapshot samples
-metadata.df <- subset(metadata.df, Project == "immunocompromised" | Snapshot_sample == "yes")
 
 # Need to factorise the colour columns as well
 colour_columns <- names(metadata.df)[grepl("colour", names(metadata.df))]
 metadata.df[colour_columns] <- lapply(metadata.df[colour_columns], factor)
 
-# Remove samples from the OTU table that are not in the filtered metadata
-otu_rare.df <- otu_rare.df[,names(otu_rare.df) %in% c("OTU.ID", as.character(metadata.df$Index))]
-otu.df <- otu.df[,names(otu.df) %in% c("OTU.ID", as.character(metadata.df$Index))]
+# Filter to just immunocompromised or snapshot samples
+metadata.df <- subset(metadata.df, Cohort == "immunocompromised" | Snapshot_sample_5 == "yes")
 
 # Order the metadata.df by the index value
-# metadata.df <- metadata.df[order(metadata.df$Index),]
+metadata.df <- metadata.df[order(metadata.df$Index),]
 
-# Create matrices
-otu_rare.m <- otu_rare.df
-rownames(otu_rare.m) <- otu_rare.df$OTU.ID
-otu_rare.m$OTU.ID <- NULL
-otu_rare.m <- as.matrix(otu_rare.m)
-
-otu.m <- otu.df
-rownames(otu.m) <- otu.df$OTU.ID
-otu.m$OTU.ID <- NULL
-otu.m <- as.matrix(otu.m)
-
-# Filter by reads per sample if you don't want to use the existing filtering
-minimum_reads <- 0
-otu_rare.m <- otu_rare.m[,colSums(otu_rare.m) >= minimum_reads]
-otu.m <- otu.m[,colSums(otu.m) >= minimum_reads]
-metadata.df <- metadata.df[rownames(metadata.df) %in% colnames(otu_rare.m),]
+# Remove samples from the OTU table that are not in the filtered metadata
+otu.m <- otu.m[,as.character(metadata.df$Index)]
+genus.m <- genus.m[,as.character(metadata.df$Index)]
 
 # Order the matrices and metadata to be the same order
 metadata.df <- metadata.df[order(rownames(metadata.df)),]
 otu_rare.m <- otu_rare.m[,order(rownames(metadata.df))]
 otu.m <- otu.m[,order(rownames(metadata.df))]
-# colnames(otu_rare.m) == rownames(metadata.df)
-
-# Just get OTUs with more than counts of 15 (0.05 % if rarefied to 30,000)
-# Just get OTUs with more than counts of 3 (0.01 % if rarefied to 30,000)
-dim(otu_rare.m)
-otu_rare_filtered.m <- otu_rare.m[apply(otu_rare.m,1,max) >= 15,]
-dim(otu_rare_filtered.m)
-
-dim(otu.m)
-otu_filtered.m <- otu_rare.m[apply(otu.m,1,max) >= 15,]
-dim(otu_filtered.m)
 
 # CLR transform the otu matrix.
-otu_rare_clr_filtered.m <- clr(otu_rare_filtered.m)
-otu_clr_filtered.m <- clr(otu_filtered.m)
-otu_rare_clr_rel_filtered.m <- clr(t(t(otu_rare_filtered.m)/colSums(otu_rare_filtered.m)))
+otu_clr.m <- clr(otu.m)
+genus_clr.m <- clr(genus.m)
 
-# EDIT 1/11/19 - no sure why I did the following. May only be required for permanova and/or jaccard distances
-# If there are negative values, assign them a value of zero, 
-# otu_rare_clr_filtered.m[which(otu_rare_clr_filtered.m < 0)] <- 0
-# otu_clr_filtered.m[which(otu_clr_filtered.m < 0)] <- 0
-# otu_rare_clr_rel_filtered.m[which(otu_rare_clr_rel_filtered.m < 0)] <- 0
-
-# Determine which samples are missing metadata and remove them
-# variables_of_interest <- c("Sampletype", "Patient","Sampletype_pooled", "Project", "Sampletype_pooled_IEC_sep", "Sampletype_pooled_C_sep")
-# samples_to_remove <- get_samples_missing_data(metadata.df, variables_of_interest)
-# metadata.df <- metadata.df[!rownames(metadata.df) %in% samples_to_remove,]
-#metadata.df <- metadata.df["Sampletype"]
-# metadata.df <- metadata.df[variables_of_interest]
-
-
-# --------------------------------------------------------------------------------
-# --------------------------------------------------------------------------------
-# --------------------------------------------------------------------------------
-# Ordination analysis
-generate_pca <- function(pca_object, mymetadata, variable_to_plot, colour_palette, limits = NULL, filename = NULL, include_legend = T, add_spider = F, add_ellipse = F,
-                         point_alpha = 1, plot_width = 10, plot_height=10, point_size = 0.8, point_line_thickness = 1,
-                         label_sites = F, label_species = F,
-                         legend_x = NULL, legend_y = NULL, legend_x_offset = 0, legend_y_offset = 0,
-                         plot_spiders = NULL, plot_ellipses = NULL,plot_hulls = NULL, legend_cols = 2, legend_title = NULL,
-                         label_ellipse = F, ellipse_label_size = 0.5, ellipse_border_width = 1,variable_colours_available = F, 
-                         plot_title = NULL, use_shapes = F, my_levels = NULL){
-  pca.scores <- try(scores(pca_object, choices=c(1,2,3)))
-  if(inherits(pca.scores, "try-error")) {
-    return()
-  }
-  # Get component x,y coordinates
-  pca_site_scores <- scores(pca_object, display = "sites")
-  pca_specie_scores <- scores(pca_object, display = "species")
-  pca_percentages <- (pca_object$CA$eig/sum(pca_object$CA$eig)) * 100
-  
-  # Remove NA entries from the metadata and from the PCA
-  internal_metadata <- mymetadata[!is.na(mymetadata[[variable_to_plot]]),]
-  pca_site_scores <- pca_site_scores[rownames(pca_site_scores) %in% rownames(internal_metadata),]
-  
-  if (!is.null(limits)){
-    x_min <- limits[1]
-    x_max <- limits[2]
-    y_min <- limits[3]
-    y_max <- limits[4]
-  }
-  else {
-    x_min <- round(lapply(min(pca_site_scores[,1]), function(x) ifelse(x > 0, x + 1, x - 1))[[1]])
-    x_max <- round(lapply(max(pca_site_scores[,1]), function(x) ifelse(x > 0, x + 1, x - 1))[[1]])
-    y_min <- round(lapply(min(pca_site_scores[,2]), function(x) ifelse(x > 0, x + 1, x - 1))[[1]])
-    y_max <- round(lapply(max(pca_site_scores[,2]), function(x) ifelse(x > 0, x + 1, x - 1))[[1]])
-    
-  }
-  my_xlab = paste("PC1 (", round(pca_percentages[1],1), "%)", sep = "")
-  my_ylab = paste("PC2 (", round(pca_percentages[2],1), "%)", sep = "")
-  metadata_ordered.df <- internal_metadata[order(rownames(internal_metadata)),]
-  metadata_ordered.df <- metadata_ordered.df[order(metadata_ordered.df[[variable_to_plot]]),]
-  
-  # ------------------------------------------------------------------------------------
-  # Ensure outcome variable is factored
-  # Refactor the variable column so that the levels are consistent
-  if (!is.null(my_levels)){
-    metadata_ordered.df[,variable_to_plot] <- factor(metadata_ordered.df[,variable_to_plot], levels = my_levels)
-  } else{
-    # Uncomment to factorise and order levels alphabetically
-    metadata_ordered.df[,variable_to_plot] <- factor(metadata_ordered.df[,variable_to_plot], levels = sort(unique(as.character(metadata_ordered.df[,variable_to_plot]))))
-    # Uncomment to factorise and inherit the current ordering
-    # metadata_ordered.df[,variable_to_plot] <- factor(metadata_ordered.df[,variable_to_plot])
-  }
-  # ------------------------------------------------------------------------------------
-  
-  if (!is.null(filename)){
-    pdf(filename, height=plot_height,width=plot_width)  
-  }
-  
-  plot(pca_object,
-       type='n',
-       # x = 0, y=0,
-       xlim = c(x_min,x_max),
-       ylim = c(y_min,y_max),
-       xlab = my_xlab,
-       ylab = my_ylab)
-  
-  # Make grid
-  grid(NULL,NULL, lty = 2, col = "grey80")
-  
-  # Assign (unique) colours and shapes for each grouping variable
-  variable_values <- levels(metadata_ordered.df[[variable_to_plot]])
-  # variable_values <- unique(as.character(metadata_ordered.df[[variable_to_plot]]))
-  
-  
-  # If variable colour column "variable_colour" in metadata, use colours from there
-  if (variable_colours_available == T){
-    colour_col_name <- paste0(variable_to_plot, "_colour")
-    variable_colours <- setNames(as.character(unique(metadata_ordered.df[[colour_col_name]])), as.character(unique(metadata_ordered.df[[variable_to_plot]])))
-  } else{
-    variable_colours <- setNames(colour_palette[1:length(variable_values)], variable_values)  
-  }
-  if (use_shapes == T){
-    # variable_shapes <- setNames(c(25,24,23,22,21,8,6,5,4,3,2,1)[1:length(variable_values)],variable_values)
-    variable_shapes <- setNames(rep(c(25,24,23,22,21),length(variable_values))[1:length(variable_values)],variable_values)
-  } else{
-    variable_shapes <- setNames(rep(c(21),length(variable_values))[1:length(variable_values)],variable_values)  
-  }
-  annotation_dataframe <- data.frame(variable_colours, variable_shapes,stringsAsFactors = F)
-  annotation_dataframe$variable_outline_colours <- as.character(annotation_dataframe$variable_colours)
-  if (point_line_thickness != 0){
-    annotation_dataframe[annotation_dataframe$variable_shapes > 15,"variable_outline_colours"] <- "black"  
-  }
-  
-  if (!is.null(my_levels)){
-    annotation_dataframe <- annotation_dataframe[my_levels,]
-  }
-  
-  # Order the site scores by the order of the rows in the metadata
-  pca_site_scores <- pca_site_scores[rownames(metadata_ordered.df),]
-  
-  all_sample_colours <- as.character(
-    lapply(
-      as.character(metadata_ordered.df[rownames(pca_site_scores),variable_to_plot]), 
-      function(x) as.character(annotation_dataframe[x,"variable_colours"])
-    )
-  )
-  # all_sample_colours <- as.character(
-  #   lapply(
-  #     as.character(metadata_ordered.df[rownames(pca_site_scores),variable_to_plot]), 
-  #     function(x) variable_colours[x]
-  #   )
-  # )
-  
-  all_sample_shapes <- as.numeric(
-    lapply(
-      as.character(metadata_ordered.df[rownames(pca_site_scores),variable_to_plot]), 
-      function(x) annotation_dataframe[x,"variable_shapes"][[1]]
-    )
-  )
-  
-  # all_sample_shapes <- as.numeric(
-  #   lapply(
-  #     as.character(sort(metadata_ordered.df[rownames(pca_site_scores),variable_to_plot])), 
-  #     function(x) variable_shapes[x][[1]]
-  #   )
-  # )
-  
-  # Set the outline colours for all samples based on the sample colours and refering to the annotation dataframe created above
-  all_sample_outline_colours <- as.character(unlist(lapply(all_sample_colours, function(x) annotation_dataframe[annotation_dataframe$variable_colours == x, "variable_outline_colours"])))
-  # Need to construct the legend outline colour vector.
-  # legend_point_outline_colours <- annotation_dataframe$variable_outline_colours
-  points(pca_site_scores, 
-         cex = point_size,
-         lwd = point_line_thickness,
-         pch = all_sample_shapes,
-         col = alpha(all_sample_outline_colours,point_alpha),
-         # col = alpha("black",point_alpha),
-         bg = alpha(all_sample_colours, point_alpha),
-  )
-  
-  # Plot ellipses that are filled
-  plot_ellipses_func <- function () {
-    for (member in variable_values) {
-      if (nrow(metadata_ordered.df[metadata_ordered.df[[variable_to_plot]] == member,]) > 2){ # if too few samples, skip plotting ellipse
-        ordiellipse(pca_site_scores,
-                    groups = metadata_ordered.df[[variable_to_plot]],
-                    kind = "ehull",
-                    lwd = ellipse_border_width,
-                    # border = variable_colours[member][[1]],
-                    border = alpha(variable_colours[member][[1]],point_alpha),
-                    # col = variable_colours[member][[1]],
-                    col = alpha(variable_colours[member][[1]],point_alpha),
-                    show.groups = member,
-                    alpha = .05,
-                    draw = "polygon",
-                    label = F,
-                    cex = .5)
-      }
-    }
-  }
-  
-  # Plot hulls that are filled
-  plot_hulls_func <- function () {
-    for (member in variable_values){
-      if (nrow(metadata_ordered.df[metadata_ordered.df[[variable_to_plot]] == member,]) > 2){ # if too few samples, skip plotting ellipse}
-        ordihull(pca_site_scores,
-                 groups = metadata_ordered.df[[variable_to_plot]],
-                 lwd = ellipse_border_width,
-                 # border = variable_colours[member][[1]],
-                 border = alpha(variable_colours[member][[1]],point_alpha),
-                 # col = variable_colours[member][[1]],
-                 col = alpha(variable_colours[member][[1]],point_alpha),
-                 show.groups = member,
-                 alpha = .05,
-                 draw = "polygon",
-                 label = F,
-                 cex = .5)
-      }
-    }
-  }
-  if (hasArg(plot_hulls)){
-    if (plot_hulls == T){
-      plot_hulls_func()    
-    }
-  }
-  
-  plot_ellipses_labels_func <- function(label_ellipse = F){
-    # Repeat to have labels clearly on top of all ellipses
-    for (member in variable_values){
-      if (nrow(metadata_ordered.df[metadata_ordered.df[[variable_to_plot]] == member,]) > 2){ # if too few samples, skip plotting ellipse
-        ordiellipse(pca_site_scores,
-                    groups = metadata_ordered.df[[variable_to_plot]],
-                    kind = "ehull",
-                    # border = variable_colours[member][[1]],
-                    border = NA,
-                    # col = variable_colours[member][[1]],
-                    col = NA,
-                    show.groups = member,
-                    alpha = 0,
-                    draw = "polygon",
-                    label = label_ellipse,
-                    cex = ellipse_label_size)
-      }
-    }
-  }
-  
-  if (hasArg(plot_ellipses) | hasArg(label_ellipse)){
-    if (plot_ellipses == T){
-      plot_ellipses_func()    
-      plot_ellipses_labels_func(label_ellipse = label_ellipse)
-    } else if (label_ellipse == T){
-      plot_ellipses_labels_func(label_ellipse = label_ellipse)
-    }
-  } 
-  
-  #Plot spiders
-  plot_spiders_func <- function (label_spider = F) {
-    for (member in variable_values){
-      if (nrow(metadata_ordered.df[metadata_ordered.df[[variable_to_plot]] == member,]) > 2){ # if too few samples, skip plotting ellipse
-        ordispider(pca_site_scores,
-                   groups = metadata_ordered.df[[variable_to_plot]],
-                   # col = variable_colours[member][[1]],
-                   col = alpha(variable_colours[member][[1]],point_alpha),
-                   show.groups = member,
-                   #alpha = .05,
-                   label = label_spider)
-      }
-    }
-  }
-  if (hasArg(plot_spiders)){
-    if (plot_spiders == T){
-      plot_spiders_func(F)    
-    }
-  }
-  
-  # points(pca_specie_scores, 
-  #        cex = 0.8,
-  #        col = "red",
-  #        bg = "red",
-  #        pch = 3,
-  # )
-  
-  if (label_sites == T){
-    text(x = pca_site_scores[,1],
-         y = pca_site_scores[,2],
-         labels = rownames(pca_site_scores),
-         cex = .5,
-         pos = 2)
-  }
-  if (label_species == T){
-    text(x = pca_specie_scores[,1],
-         y = pca_specie_scores[,2],
-         labels = rownames(pca_specie_scores),
-         cex = .5,
-         pos = 2)
-    # arrows(x = pca_specie_scores[,1],
-    #        y = pca_specie_scores[,2])
-  }
-  
-  if (is.null(legend_x) || is.null(legend_y)){
-    legend_x <- x_min + legend_x_offset
-    legend_y <- y_max + legend_y_offset
-  }
-  if (is.null(legend_title)){
-    legend_title <- variable_to_plot
-  }
-  
-  if (!is.null(plot_title)){
-    title(main = plot_title)
-  }
-  
-  if (include_legend){
-    legend(
-      # title = bold(variable_to_plot),
-      title = as.expression(bquote(bold(.(legend_title)))),
-      title.col="black",
-      # x = x_min-4,
-      # y = y_max-6,
-      x = legend_x,
-      y = legend_y,
-      # legend= variable_values,
-      # pch= unique(all_sample_shapes),
-      # col= legend_point_outline_colours,
-      # pt.bg = unique(all_sample_colours),
-      legend= rownames(annotation_dataframe),
-      pch= annotation_dataframe$variable_shapes,
-      col= as.character(annotation_dataframe$variable_outline_colours),
-      pt.bg = as.character(annotation_dataframe$variable_colours),
-      #bg = "white",
-      bty = "n",
-      ncol = legend_cols,
-      cex = 0.6,
-      # pt.cex = 0.6,
-      pt.lwd = point_line_thickness,
-      y.intersp =1,
-      x.intersp =1,
-    )  
-  }
-  
-  if (!is.null(filename)){
-    dev.off()
-  }
-}
 
 # ------------------------------------------------------------------------------------------------------------------------
 # Testing
-# temp_metadata <- subset(metadata.df, Sampletype != "negative")
+# temp_metadata <- subset(metadata.df, Lesion_type != "negative")
 # temp_data <- otu_rare_filtered.m[,rownames(temp_metadata)]
 # temp <- capscale(t(otu_rare_filtered.m)~1, data = temp_metadata, distance = "bray")
 # 
@@ -468,11 +133,11 @@ generate_pca <- function(pca_object, mymetadata, variable_to_plot, colour_palett
 #              ellipse_border_width = .5,
 #              label_ellipse = F, ellipse_label_size = .5,
 #              colour_palette = my_colour_palette_206_distinct,
-#              variable_to_plot = "Sampletype_pooled", legend_cols = 1,
+#              variable_to_plot = "Lesion_type_refined", legend_cols = 1,
 #              variable_colours_available = T,
-#              filename = paste0("Result_figures/ordination_plots/both_cohorts_Sampletype_pooled_bray.pdf"))
+#              filename = paste0("Result_figures/ordination_plots/both_cohorts_Lesion_type_refined_bray.pdf"))
 
-# metadata_sampletype.df <- subset(metadata.df, Sampletype_pooled == "AK")
+# metadata_sampletype.df <- subset(metadata.df, Lesion_type_refined == "AK")
 # metadata_sampletype.df <- metadata_sampletype.df[order(rownames(metadata_sampletype.df)),]
 # otu_rare_sampletype.m <- otu_rare_filtered.m[,colnames(otu_rare_filtered.m) %in% rownames(metadata_sampletype.df)]
 # m.pca_sampletype <- capscale(t(otu_rare_filtered.m)~1, data = metadata_sampletype.df, distance = "bray")
@@ -483,7 +148,7 @@ generate_pca <- function(pca_object, mymetadata, variable_to_plot, colour_palett
 #              point_size = .7, point_line_thickness = .3,point_alpha =.7,
 #              legend_title = "Cohort",
 #              include_legend = T,
-#              plot_title = paste0("Sampletype : AK"),
+#              plot_title = paste0("Lesion_type : AK"),
 #              # limits = c(-5,5,-5,5),
 #              plot_hulls = F,
 #              plot_spiders = F,
@@ -498,44 +163,94 @@ generate_pca <- function(pca_object, mymetadata, variable_to_plot, colour_palett
 
 # ------------------------------------------------------------------------------------------------------------------------
 
-# Both cohorts, all sample types 
-temp <- rda(t(otu_rare_clr_filtered.m), data = metadata.df) # ~1 makes it unconstrained
-generate_pca(temp, mymetadata = metadata.df,
+
+# --------------------------------------------------------------------------------
+# --------------------------------------------------------------------------------
+# --------------------------------------------------------------------------------
+# Ordination analysis
+
+otu_relabeller_function <- function(my_labels){
+  taxonomy_strings <- unlist(lapply(my_labels, function(x) {
+    as.character(otu_taxonomy_map.df[otu_taxonomy_map.df$OTU.ID == x,]$taxonomy_genus)
+  }
+  ))
+  unlist(lapply(taxonomy_strings, function(x) {
+    phylostring <- unlist(strsplit(x, split = ";"))
+    paste(phylostring[3], phylostring[6], sep = ";")
+  }))
+}
+# otu_relabeller_function(rownames(otu.m))
+
+genus_relabeller_function <- function(my_labels){
+  unlist(lapply(my_labels, 
+                function(x) {
+                  phylostring <- unlist(strsplit(x, split = ";"))
+                  # paste(phylostring[2],phylostring[3], phylostring[6], sep = ";")
+                  paste(phylostring[3], phylostring[6], sep = ";")
+                }))
+}
+
+# ----------------
+# Generate PCA plots. If CLR transformed values with euclidean distances, these will be the same as
+# the values calculated from betadisper...maybe not important
+temp <- betadiver(t(otu_clr.m),method = "e")
+
+# Generate ordination objects
+otu_pca <- rda(t(otu_clr.m), data = metadata.df)
+genus_pca <- rda(t(genus_clr.m), data = metadata.df)
+
+
+temp <- calculate_PC_abundance_correlations(genus_pca, mydata.df = genus_data.df,taxa_column = "taxonomy_genus",variables = discrete_variables)
+
+# Both cohorts, all lesion types
+generate_pca(genus_pca, mymetadata = metadata.df,
              plot_height = 5, plot_width = 5,
-             legend_x = -6, legend_y = 4,
-             point_size = .7, point_line_thickness = 0.3,point_alpha =.7,
-             legend_title = "Sample type",
-             plot_title = "Both cohorts, all lesion types",
-             limits = c(-5,5,-5,5),
+             legend_x = -4, legend_y = 3,
+             # legend_x = -2, legend_y = 2,
+             point_size = .7, point_line_thickness = 0.3,point_alpha =.9,
+             legend_title = "Lesion type",
+             legend_cex = .5,
+             plot_title = "",
+             limits = c(-4,5,-6,3),
              plot_spiders = F,
              plot_ellipses = F,
              plot_hulls = F,
              use_shapes = T,
              ellipse_border_width = .5,
-             label_ellipse = F, ellipse_label_size = .5,
-             colour_palette = my_colour_palette_206_distinct,
-             variable_to_plot = "Sampletype_pooled", legend_cols = 1,
-             variable_colours_available = T,
-             my_levels = c("LC", "AK", "SCC"),
-             filename = paste0("Result_figures/ordination_plots/both_cohorts_Sampletype_pooled.pdf"))
+             include_legend = T,
+             label_ellipse = F, ellipse_label_size = .3,
+             colour_palette = my_colour_palette_15,
+             variable_to_plot = "Lesion_type_refined", legend_cols = 1,
+             variable_colours_available = F,
+             num_top_species = 3,
+             plot_arrows = T,arrow_alpha = .7, arrow_colour = "grey20",arrow_scalar = 1,arrow_thickness = .7,
+             label_arrows = T, arrow_label_size = .25, arrow_label_colour = "black", arrow_label_font_type = 1,
+             specie_labeller_function = genus_relabeller_function,arrow_label_offset = 0)
 
-generate_pca(temp, mymetadata = metadata.df,
-             plot_height = 5, plot_width =5,
-             legend_x = -6, legend_y = 4,
-             point_size = .7, point_line_thickness = .3,point_alpha =.7,
+generate_pca(genus_pca, mymetadata = metadata.df,
+             plot_height = 5, plot_width = 5,
+             legend_x = -4, legend_y = 3,
+             # legend_x = -2, legend_y = 2,
+             point_size = .7, point_line_thickness = 0.3,point_alpha =.9,
              legend_title = "Patient",
+             legend_cex = .5,
              plot_title = "Both cohorts, all lesion types",
-             limits = c(-5,5,-5,5),
-             include_legend = F,
+             limits = c(-4,5,-6,3),
              plot_spiders = F,
              plot_ellipses = F,
+             plot_hulls = F,
              use_shapes = T,
              ellipse_border_width = .5,
-             label_ellipse = F, ellipse_label_size = .5,
-             colour_palette = my_colour_palette_206_distinct,
+             include_legend = T,
+             label_ellipse = F, ellipse_label_size = .3,
+             colour_palette = patient_colour_palette_45,
              variable_to_plot = "Patient", legend_cols = 1,
              variable_colours_available = T,
-             filename = paste0("Result_figures/ordination_plots/both_cohorts_Patient.pdf"))
+             num_top_species = 3,
+             plot_arrows = T,arrow_alpha = .7, arrow_colour = "grey20",arrow_scalar = 2,arrow_thickness = .7,
+             label_arrows = T, arrow_label_size = .5, arrow_label_colour = "black", arrow_label_font_type = 1,
+             specie_labeller_function = genus_relabeller_function,arrow_label_offset = 0,)
+             # filename = paste0("Result_figures/ordination_plots/both_cohorts_Patient.pdf"))
 
 
 generate_pca(temp, mymetadata = metadata.df,
@@ -559,7 +274,7 @@ generate_pca(temp, mymetadata = metadata.df,
 
 # ---------------------------------------------------------------------------------------------------------
 # Immunocompetent, all sample types
-metadata_immunocompetent.df <- subset(metadata.df, Project == "immunocompetent" & Sampletype != "negative")
+metadata_immunocompetent.df <- subset(metadata.df, Project == "immunocompetent" & Lesion_type != "negative")
 metadata_immunocompetent.df <- metadata_immunocompetent.df[order(rownames(metadata_immunocompetent.df)),]
 otu_rare_clr_filtered_competent.m <- otu_rare_clr_filtered.m[,colnames(otu_rare_clr_filtered.m) %in% rownames(metadata_immunocompetent.df)]
 otu_rare_clr_filtered_competent.m <- otu_rare_clr_filtered_competent.m[,rownames(metadata_immunocompetent.df)]
@@ -571,7 +286,7 @@ colnames(otu_rare_clr_filtered_competent.m)[!rownames(metadata_immunocompetent.d
 
 m.pca_competent <- rda(t(otu_rare_clr_filtered_competent.m), data = metadata_immunocompetent.df)
 
-# Sampletype_final ***
+# Lesion_type_final ***
 generate_pca(m.pca_competent, mymetadata = metadata_immunocompetent.df,
              plot_height = 5, plot_width =5,
              legend_x = -3.5, legend_y = 5,
@@ -586,10 +301,10 @@ generate_pca(m.pca_competent, mymetadata = metadata_immunocompetent.df,
              ellipse_border_width = .5,
              label_ellipse = F, ellipse_label_size = .5,
              colour_palette = my_colour_palette_206_distinct,
-             variable_to_plot = "Sampletype_final", legend_cols = 1,
+             variable_to_plot = "Lesion_type_final", legend_cols = 1,
              variable_colours_available = T,
              my_levels = c("LC", "AK", "SCC"),
-             filename = paste0("Result_figures/ordination_plots/immunocompetent_Sampletype_final.pdf"))
+             filename = paste0("Result_figures/ordination_plots/immunocompetent_Lesion_type_final.pdf"))
 
 # Patient ***
 generate_pca(m.pca_competent, mymetadata = metadata_immunocompetent.df,
@@ -613,14 +328,14 @@ generate_pca(m.pca_competent, mymetadata = metadata_immunocompetent.df,
 
 # ---------------------------------------------------------------------------------------------------------
 # Immunocompromised, all sample types
-metadata_immunocompromised.df <- subset(metadata.df, Project == "immunocompromised" & Sampletype != "negative")
+metadata_immunocompromised.df <- subset(metadata.df, Project == "immunocompromised" & Lesion_type != "negative")
 metadata_immunocompromised.df <- metadata_immunocompromised.df[order(rownames(metadata_immunocompromised.df)),]
 otu_rare_clr_filtered_compromised.m <- otu_rare_clr_filtered.m[,colnames(otu_rare_clr_filtered.m) %in% rownames(metadata_immunocompromised.df)]
 otu_rare_clr_filtered_compromised.m <- otu_rare_clr_filtered_compromised.m[,rownames(metadata_immunocompromised.df)]
 
 m.pca_compromised <- rda(t(otu_rare_clr_filtered_compromised.m), data = metadata_immunocompromised.df)
 
-# Sampletype_pooled
+# Lesion_type_refined
 generate_pca(m.pca_compromised, mymetadata = metadata_immunocompromised.df,
              plot_height = 5, plot_width =5,
              legend_x = -9, legend_y = 6,
@@ -635,10 +350,10 @@ generate_pca(m.pca_compromised, mymetadata = metadata_immunocompromised.df,
              ellipse_border_width = .5,
              label_ellipse = F, ellipse_label_size = .5,
              colour_palette = my_colour_palette_206_distinct,
-             variable_to_plot = "Sampletype_final", legend_cols = 1,
+             variable_to_plot = "Lesion_type_final", legend_cols = 1,
              variable_colours_available = T,
              my_levels = c("C","LC", "AK", "SCC"),
-             filename = paste0("Result_figures/ordination_plots/immunocompromised_Sampletype_final.pdf"))
+             filename = paste0("Result_figures/ordination_plots/immunocompromised_Lesion_type_final.pdf"))
 
 # Patient ***
 generate_pca(m.pca_compromised, mymetadata = metadata_immunocompromised.df,
@@ -746,8 +461,8 @@ generate_pca(m.pca_compromised, mymetadata = metadata_immunocompromised.df,
 
 
 # Each lesion type, color by cohort and patient
-for (sample_type in unique(metadata.df$Sampletype_pooled)){
-  metadata_sampletype.df <- subset(metadata.df, Sampletype_pooled == sample_type)
+for (sample_type in unique(metadata.df$Lesion_type_refined)){
+  metadata_sampletype.df <- subset(metadata.df, Lesion_type_refined == sample_type)
   metadata_sampletype.df <- metadata_sampletype.df[order(rownames(metadata_sampletype.df)),]
   otu_rare_clr_sampletype.m <- otu_rare_clr_filtered.m[,colnames(otu_rare_clr_filtered.m) %in% rownames(metadata_sampletype.df)]
   m.pca_sampletype <- rda(t(otu_rare_clr_sampletype.m), data = metadata_sampletype.df)
@@ -757,7 +472,7 @@ for (sample_type in unique(metadata.df$Sampletype_pooled)){
                point_size = .7, point_line_thickness = .3,point_alpha =.7,
                legend_title = "Cohort",
                include_legend = T,
-               plot_title = paste0("Sampletype : ", sample_type),
+               plot_title = paste0("Lesion_type : ", sample_type),
                limits = c(-7,7,-7,7),
                plot_hulls = F,
                plot_spiders = F,
@@ -777,7 +492,7 @@ for (sample_type in unique(metadata.df$Sampletype_pooled)){
                point_size = .5, point_line_thickness = .3,point_alpha =.7,
                legend_title = "Patient",
                include_legend = F,
-               plot_title = paste0("Sampletype : ", sample_type),
+               plot_title = paste0("Lesion_type : ", sample_type),
                limits = c(-7,7,-7,7),
                plot_hulls = F,
                plot_spiders = F,
@@ -793,8 +508,8 @@ for (sample_type in unique(metadata.df$Sampletype_pooled)){
 
 # Each lesion type within cohort, color by patient
 for (cohort in unique(metadata.df$Project)){
-  for (sample_type in unique(metadata.df$Sampletype_pooled)){
-    metadata_sampletype.df <- subset(metadata.df, Project == cohort & Sampletype_pooled == sample_type)
+  for (sample_type in unique(metadata.df$Lesion_type_refined)){
+    metadata_sampletype.df <- subset(metadata.df, Project == cohort & Lesion_type_refined == sample_type)
     metadata_sampletype.df <- metadata_sampletype.df[order(rownames(metadata_sampletype.df)),]
     otu_rare_clr_sampletype.m <- otu_rare_clr_filtered.m[,colnames(otu_rare_clr_filtered.m) %in% rownames(metadata_sampletype.df)]
     m.pca_sampletype <- rda(t(otu_rare_clr_sampletype.m), data = metadata_sampletype.df)
@@ -804,7 +519,7 @@ for (cohort in unique(metadata.df$Project)){
                  point_size = .7, point_line_thickness = .3, point_alpha =.7,
                  legend_title = "Patient",
                  include_legend = T,
-                 plot_title = paste0(cohort, "\nSampletype : ", sample_type, "; Patient"),
+                 plot_title = paste0(cohort, "\nLesion_type : ", sample_type, "; Patient"),
                  limits = c(-10,10,-10,10),
                  plot_hulls = F,
                  plot_spiders = F,
@@ -843,7 +558,7 @@ for (cohort in unique(metadata.df$Project)){
 #                ellipse_border_width = .5,
 #                label_ellipse = F, ellipse_label_size = .5,
 #                colour_palette = my_colour_palette_206_distinct,
-#                variable_to_plot = "Sampletype_pooled", legend_cols = 1,
+#                variable_to_plot = "Lesion_type_refined", legend_cols = 1,
 #                variable_colours_available = T,
 #                filename = paste0("Result_figures/ordination_plots/",patient,".pdf"))
 # }
@@ -913,30 +628,30 @@ run_permanova_custom <- function(my_metadata, my_formula){
 }
 
 # Both cohorts
-# adonis(t(otu_rare_clr_filtered.m)~Patient+Project +Sampletype_pooled+Patient:Sampletype_pooled,data = metadata.df, permu=999,method="euclidean")
+# adonis(t(otu_rare_clr_filtered.m)~Patient+Project +Lesion_type_refined+Patient:Lesion_type_refined,data = metadata.df, permu=999,method="euclidean")
 
 # Immunocompromised
-metadata_immunocompromised.df <- subset(metadata.df, Project == "immunocompromised" & Sampletype != "negative")
+metadata_immunocompromised.df <- subset(metadata.df, Project == "immunocompromised" & Lesion_type != "negative")
 metadata_immunocompromised.df <- metadata_immunocompromised.df[order(rownames(metadata_immunocompromised.df)),]
 otu_rare_clr_filtered_compromised.m <- otu_rare_clr_filtered.m[,colnames(otu_rare_clr_filtered.m) %in% rownames(metadata_immunocompromised.df)]
 otu_rare_clr_filtered_compromised.m <- otu_rare_clr_filtered_compromised.m[,rownames(metadata_immunocompromised.df)]
 
-# result <- adonis(t(otu_rare_clr_filtered_compromised.m)~Patient+Sampletype_pooled+Patient:Sampletype_pooled,data = metadata_immunocompromised.df, permu=999,method="euclidean")
+# result <- adonis(t(otu_rare_clr_filtered_compromised.m)~Patient+Lesion_type_refined+Patient:Lesion_type_refined,data = metadata_immunocompromised.df, permu=999,method="euclidean")
 # permanova_results_immunocompromised <- run_permanova_custom(my_metadata = metadata_immunocompromised.df,
-#                      my_formula = as.formula(t(otu_rare_clr_filtered_compromised.m)~Patient+Sampletype_pooled+Patient:Sampletype_pooled))
+#                      my_formula = as.formula(t(otu_rare_clr_filtered_compromised.m)~Patient+Lesion_type_refined+Patient:Lesion_type_refined))
 
 permanova_results_immunocompromised <- run_permanova_custom(my_metadata = metadata_immunocompromised.df,
-                                                            my_formula = as.formula(t(otu_rare_clr_filtered_compromised.m)~Patient+Sampletype_compromised_refined+Patient:Sampletype_compromised_refined))
+                                                            my_formula = as.formula(t(otu_rare_clr_filtered_compromised.m)~Patient+Lesion_type_compromised_refined+Patient:Lesion_type_compromised_refined))
 
 # permanova_results_immunocompromised <- run_permanova_custom(my_metadata = metadata_immunocompromised.df,
-#                                                             my_formula = as.formula("t(otu_rare_clr_filtered_compromised.m)~Patient+Sampletype_pooled+Gender+Patient_group + Number_of_meds"))
+#                                                             my_formula = as.formula("t(otu_rare_clr_filtered_compromised.m)~Patient+Lesion_type_refined+Gender+Patient_group + Number_of_meds"))
 
 # Immunocompetent, all sample types
-# metadata_immunocompetent.df <- subset(metadata.df, Project == "immunocompetent" & Sampletype != "negative")
-metadata_immunocompetent.df <- subset(metadata.df, Project == "immunocompetent" & Sampletype != "negative" & Snapshot_sample == "yes")
+# metadata_immunocompetent.df <- subset(metadata.df, Project == "immunocompetent" & Lesion_type != "negative")
+metadata_immunocompetent.df <- subset(metadata.df, Project == "immunocompetent" & Lesion_type != "negative" & Snapshot_sample == "yes")
 metadata_immunocompetent.df <- metadata_immunocompetent.df[order(rownames(metadata_immunocompetent.df)),]
-# metadata_immunocompetent_AK_LC.df <- subset(metadata_immunocompetent.df, Sampletype_pooled %in% c("LC", "AK"))
-# metadata_immunocompetent_AK_LC_non_pooled.df <- subset(metadata_immunocompetent.df, Sampletype %in% c("LC", "AK"))
+# metadata_immunocompetent_AK_LC.df <- subset(metadata_immunocompetent.df, Lesion_type_refined %in% c("LC", "AK"))
+# metadata_immunocompetent_AK_LC_non_pooled.df <- subset(metadata_immunocompetent.df, Lesion_type %in% c("LC", "AK"))
 # otu_clr_skin_filt.m <- otu_clr.m[which(apply(otu_clr.m[,samples.l[['long']]], 1, max) >= 3),samples.l[['long']]]
 # otu_clr_skin_filt.m[which(otu_clr_skin_filt.m < 0)] <- 0
 otu_rare_clr_filtered_competent.m <- otu_rare_clr_filtered.m[,colnames(otu_rare_clr_filtered.m) %in% rownames(metadata_immunocompetent.df)]
@@ -945,13 +660,13 @@ otu_rare_clr_filtered_competent.m <- otu_rare_clr_filtered_competent.m[,rownames
 # otu_rare_clr_filtered_competent_AK_LC_non_pooled.m <- otu_rare_clr_filtered_competent.m[,rownames(metadata_immunocompetent_AK_LC_non_pooled.df)]
 
 permanova_results_immunocompetent <- run_permanova_custom(my_metadata = metadata_immunocompetent.df,
-                                                            my_formula = as.formula(t(otu_rare_clr_filtered_competent.m)~Patient+Sampletype_pooled+Patient:Sampletype_pooled))
+                                                            my_formula = as.formula(t(otu_rare_clr_filtered_competent.m)~Patient+Lesion_type_refined+Patient:Lesion_type_refined))
 permanova_results_immunocompetent
 # permanova_results_immunocompetent_AK_LC <- run_permanova_custom(my_metadata = metadata_immunocompetent_AK_LC.df,
-                                                          # my_formula = as.formula(t(otu_rare_clr_filtered_competent_AK_LC.m)~Patient+Sampletype_pooled+Patient:Sampletype_pooled))
+                                                          # my_formula = as.formula(t(otu_rare_clr_filtered_competent_AK_LC.m)~Patient+Lesion_type_refined+Patient:Lesion_type_refined))
 
 # permanova_results_immunocompetent_AK_LC_non_pooled <- run_permanova_custom(my_metadata = metadata_immunocompetent_AK_LC_non_pooled.df,
-                                                                 # my_formula = as.formula(t(otu_rare_clr_filtered_competent_AK_LC_non_pooled.m)~Patient+Sampletype_pooled+Patient:Sampletype_pooled))
+                                                                 # my_formula = as.formula(t(otu_rare_clr_filtered_competent_AK_LC_non_pooled.m)~Patient+Lesion_type_refined+Patient:Lesion_type_refined))
 # permanova_results_immunocompetent_AK_LC_non_pooled
 
 # Both cohorts, all samples types
@@ -959,11 +674,11 @@ metadata_competent_compromised.df <- metadata.df[c(rownames(metadata_immunocompe
 metadata_competent_compromised.df <- metadata_competent_compromised.df[order(rownames(metadata_competent_compromised.df)),]
 otu_rare_clr_filtered_competent_compromised.m <- otu_rare_clr_filtered.m[,colnames(otu_rare_clr_filtered.m) %in% rownames(metadata_competent_compromised.df)]
 otu_rare_clr_filtered_competent_compromised.m <- otu_rare_clr_filtered_competent_compromised.m[,rownames(metadata_competent_compromised.df)]
-# Since the immunocompetent do not have values for Sampletype_compromised_refined, use the corresponding Sampletype_pooled values
-metadata_competent_compromised.df[is.na(metadata_competent_compromised.df$Sampletype_compromised_refined),]$Sampletype_compromised_refined <- metadata_competent_compromised.df[is.na(metadata_competent_compromised.df$Sampletype_compromised_refined),c("Sampletype_pooled")]
+# Since the immunocompetent do not have values for Lesion_type_compromised_refined, use the corresponding Lesion_type_refined values
+metadata_competent_compromised.df[is.na(metadata_competent_compromised.df$Lesion_type_compromised_refined),]$Lesion_type_compromised_refined <- metadata_competent_compromised.df[is.na(metadata_competent_compromised.df$Lesion_type_compromised_refined),c("Lesion_type_refined")]
 
 permanova_results_both_cohorts <- run_permanova_custom(my_metadata = metadata_competent_compromised.df,
-                                                       my_formula = as.formula(t(otu_rare_clr_filtered_competent_compromised.m)~Patient+Sampletype_compromised_refined+Patient:Sampletype_compromised_refined))
+                                                       my_formula = as.formula(t(otu_rare_clr_filtered_competent_compromised.m)~Patient+Lesion_type_compromised_refined+Patient:Lesion_type_compromised_refined))
 
 write.csv(permanova_results_both_cohorts,file="Result_tables/stats_various/PERMANOVA_both_cohorts.csv",row.names = F)
 write.csv(permanova_results_immunocompromised,file="Result_tables/stats_various/PERMANOVA_immunocompromised.csv",row.names = F)

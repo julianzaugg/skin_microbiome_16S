@@ -160,11 +160,11 @@ filter_summary_to_top_n <- function(taxa_summary, grouping_variables, abundance_
   return(out)
 }
 
-
+# ---------------------------------------------------------------------------------------------------------
 generate_pca <- function(pca_object, mymetadata, variable_to_plot, colour_palette, limits = NULL, filename = NULL, include_legend = T, add_spider = F, add_ellipse = F,
                          point_alpha = 1, plot_width = 10, plot_height=10, point_size = 0.8, point_line_thickness = 1,
                          label_sites = F, label_species = F,
-                         legend_x = NULL, legend_y = NULL, legend_x_offset = 0, legend_y_offset = 0,
+                         legend_x = NULL, legend_y = NULL, legend_x_offset = 0, legend_y_offset = 0,title_cex = 1,
                          legend_cex = 0.6,
                          plot_spiders = NULL, plot_ellipses = NULL,plot_hulls = NULL, legend_cols = 2, legend_title = NULL,
                          label_ellipse = F, ellipse_label_size = 0.5, ellipse_border_width = 1,variable_colours_available = F, 
@@ -264,6 +264,8 @@ generate_pca <- function(pca_object, mymetadata, variable_to_plot, colour_palett
   # Order the site scores by the order of the rows in the metadata
   # print(dim(pca_site_scores))
   # print(dim(metadata_ordered.df))
+  # print(head(pca_site_scores))
+  # print(head(pca_site_scores))
   pca_site_scores <- pca_site_scores[rownames(metadata_ordered.df),]
   
   all_sample_colours <- as.character(
@@ -343,7 +345,7 @@ generate_pca <- function(pca_object, mymetadata, variable_to_plot, colour_palett
                offset = arrow_label_offset,
                col = alpha(arrow_label_colour,1),
                font = arrow_label_font_type)
-          }
+        }
       } else{
         for (tv in top_vars.v){
           text(x = pca_specie_scores[tv,1] * arrow_scalar,
@@ -360,8 +362,8 @@ generate_pca <- function(pca_object, mymetadata, variable_to_plot, colour_palett
         }
       }
     }
-
-
+    
+    
   }
   if (plot_arrows == T){
     plot_arrows_func()
@@ -495,7 +497,7 @@ generate_pca <- function(pca_object, mymetadata, variable_to_plot, colour_palett
   }
   
   if (!is.null(plot_title)){
-    title(main = plot_title)
+    title(main = plot_title, cex.main = title_cex)
   }
   
   if (include_legend){
@@ -530,6 +532,67 @@ generate_pca <- function(pca_object, mymetadata, variable_to_plot, colour_palett
     dev.off()
   }
 }
+
+
+calculate_PC_taxa_contributions <- function(pca_object){
+  # Calculate the percentage contribution from each taxa for PC1-3. Requires unscaled values that are squared
+  pc1_contribution <- melt(round(100*scores(pca_object, display = "species", scaling = 0)[,1]^2, 3),value.name = "PC1_contribution_percentage")
+  pc2_contribution <- melt(round(100*scores(pca_object, display = "species", scaling = 0)[,2]^2, 3),value.name = "PC2_contribution_percentage")
+  pc3_contribution <- melt(round(100*scores(pca_object, display = "species", scaling = 0)[,2]^2, 3),value.name = "PC3_contribution_percentage")
+  
+  data.frame(pc1_contribution, pc2_contribution, pc3_contribution)
+}
+
+calculate_PC_abundance_correlations <- function(pca_object, mydata.df, taxa_column, variables = NULL){
+  # pca_object <- genus_pca
+  # mydata.df <- genus_data.df
+  # taxa_column <-  "taxonomy_genus"
+  # variables <- discrete_variables
+  
+  # Assume "Sample" and taxa_column are in mydata.df
+  # mydata.df should be the combined table from the specific taxa level
+  taxa_contributions <- calculate_PC_taxa_contributions(pca_object)
+  
+  # PC scores for each sample (site)
+  pca_site_scores <- m2df(scores(pca_object, display = "sites"),"Sample") # These will be scaled scores!
+  pca_species_scores <- m2df(scores(pca_object, display = "species"),taxa_column) # These will be scaled scores!
+  
+  # Filter to taxonomy in pca object (because we have filtered during the PCA calculations)
+  abundance_pc_scores.df <- subset(mydata.df, get(taxa_column) %in% rownames(pca_object$CA$v))
+  abundance_pc_scores.df <- left_join(abundance_pc_scores.df, pca_site_scores, by = "Sample")
+  abundance_pc_scores.df <- abundance_pc_scores.df[,c("Sample","Relative_abundance", variables,taxa_column, "PC1", "PC2")]
+  
+  # Filter out entries where there are no PC scores
+  abundance_pc_scores.df <- abundance_pc_scores.df[!is.na(abundance_pc_scores.df$PC1),]
+  abundance_pc_scores.df$Relative_abundance <- abundance_pc_scores.df$Relative_abundance*100
+  
+  # Calculate the correlation between the abundances for each taxa and the PC1 and PC2 scores
+  abundance_pc_correlations.df <- 
+    abundance_pc_scores.df %>% 
+    dplyr::group_by_(taxa_column) %>% dplyr::summarise(Pearson_PC1 = cor(PC1, Relative_abundance, method = "pearson"),
+                                                       Pearson_PC2 = cor(PC2, Relative_abundance, method = "pearson"),
+                                                       Spearman_PC1 = cor(PC1, Relative_abundance, method = "spearman"),
+                                                       Spearman_PC2 = cor(PC2, Relative_abundance, method = "spearman"), 
+                                                       N_Samples = n_distinct(Sample)) %>% 
+    # filter(N_Samples >= 5) %>% 
+    arrange(desc(abs(Pearson_PC1))) %>%
+    as.data.frame()
+  
+  # Combine the correlation table with the PCA specie scores
+  abundance_pc_correlations.df <- left_join(abundance_pc_correlations.df, pca_species_scores, by = taxa_column)
+  
+  
+  # Add percentage contributions
+  abundance_pc_correlations.df$PC1_contribution_percentage <- as.numeric(lapply(abundance_pc_correlations.df[,taxa_column],  
+                                                                                function(x) taxa_contributions[x,]$PC1_contribution_percentage))
+  abundance_pc_correlations.df$PC2_contribution_percentage <- as.numeric(lapply(abundance_pc_correlations.df[,taxa_column],  
+                                                                                function(x) taxa_contributions[x,]$PC2_contribution_percentage))
+  abundance_pc_correlations.df$PC3_contribution_percentage <- as.numeric(lapply(abundance_pc_correlations.df[,taxa_column], 
+                                                                                function(x) taxa_contributions[x,]$PC3_contribution_percentage))
+  abundance_pc_correlations.df
+}
+# ---------------------------------------------------------------------------------------------------------
+
 
 
 # Function to create heatmap
