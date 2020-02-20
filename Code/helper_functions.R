@@ -306,7 +306,7 @@ generate_pca <- function(pca_object, mymetadata, variable_to_plot, colour_palett
          pch = all_sample_shapes,
          col = alpha(all_sample_outline_colours,point_alpha),
          # col = alpha("black",point_alpha),
-         bg = alpha(all_sample_colours, point_alpha),
+         bg = alpha(all_sample_colours, point_alpha)
   )
   
   # Plot arrows for species / variables
@@ -827,14 +827,27 @@ psotu2veg <- function(physeq) {
 calculate_alpha_diversity_significance <- function(mydata, variable){
   # Assumes there are Shannon, Chao1 and Simpson columns
   # This is run assuming unpaired data.
-  results.df <- data.frame("Group_1" = character(),
+  results.df <- data.frame("Variable" = character(),
+                           "Group_1" = character(),
                            "Group_2" = character(),
+                           "N_samples_group_1" = character(),
+                           "N_samples_group_2" = character(),
                            "Shannon_MannW_pvalue" = character(),
                            "Simpson_MannW_pvalue" = character(),
                            "Chao1_MannW_pvalue" = character(),
                            "Shannon_KrusW_pvalue" = character(),
                            "Simpson_KrusW_pvalue" = character(),
-                           "Chao1_KrusW_pvalue" = character())
+                           "Chao1_KrusW_pvalue" = character(),
+                           "Shannon_MannW_padj" = character(),
+                           "Simpson_MannW_padj" = character(),
+                           "Chao1_MannW_padj" = character(),
+                           "Shannon_KrusW_padj" = character(),
+                           "Simpson_KrusW_padj" = character(),
+                           "Chao1_KrusW_padj" = character())
+  if (length(unique(mydata[,variable])) < 2){
+    print(paste0("Less than two groups for variable :", variable))
+    return()
+  }
   group_combinations <- combn(as.character(unique(mydata[,variable])), 2)
   
   for (i in 1:ncol(group_combinations)) {
@@ -842,6 +855,10 @@ calculate_alpha_diversity_significance <- function(mydata, variable){
     group_2 <- group_combinations[2,i]
     group_1_meta <- subset(mydata, get(variable) == group_1)
     group_2_meta <- subset(mydata, get(variable) == group_2)
+    if (is.na(group_1) | is.na(group_2)) {next}
+    if (dim(group_1_meta)[1] == 0 | dim(group_2_meta)[1] == 0) {next}
+    N_samples_group_1 <- dim(group_1_meta)[1]
+    N_samples_group_2 <- dim(group_2_meta)[1]
     
     # Mann-Whitney test on the Shannon diversity
     wilcox_shannon_test <- wilcox.test(group_1_meta$Shannon, group_2_meta$Shannon, exact = F)
@@ -857,16 +874,26 @@ calculate_alpha_diversity_significance <- function(mydata, variable){
     # Kruskal-Wallis (pairwise) test on the Chao1 diversity
     kruskal_chao1_test <- kruskal.test(Chao1~get(variable), data = subset(mydata, get(variable) %in% c(group_1, group_2)))
     
-    results.df <- rbind(results.df, data.frame("Group_1" = group_1, 
+    results.df <- rbind(results.df, data.frame("Variable" = variable,
+                                               "Group_1" = group_1, 
                                                "Group_2" = group_2, 
+                                               "N_samples_group_1" = N_samples_group_1,
+                                               "N_samples_group_2" = N_samples_group_2,
                                                "Shannon_MannW_pvalue" = round(wilcox_shannon_test$p.value,6),
-                                               "Simpson_MannW_pvalue" = round(wilcox_simpson_test$p.value,6),
-                                               "Chao1_MannW_pvalue" = round(wilcox_chao1_test$p.value,6),
+                                               "Shannon_MannW_padj" = NA,
                                                "Shannon_KrusW_pvalue" = round(kruskal_shannon_test$p.value,6),
+                                               "Shannon_KrusW_padj" = NA,
+                                               "Chao1_MannW_padj" = NA,
+                                               "Chao1_MannW_pvalue" = round(wilcox_chao1_test$p.value,6),
+                                               "Chao1_KrusW_pvalue" = round(kruskal_chao1_test$p.value,6),
+                                               "Chao1_KrusW_padj" = NA,
+                                               "Simpson_MannW_pvalue" = round(wilcox_simpson_test$p.value,6),
+                                               "Simpson_MannW_padj" = NA,
                                                "Simpson_KrusW_pvalue" = round(kruskal_simpson_test$p.value,6),
-                                               "Chao1_KrusW_pvalue" = round(kruskal_chao1_test$p.value,6)
-    ))
+                                               "Simpson_KrusW_padj" = NA
+                                               ))
   }
+  
   results.df$Shannon_MannW_padj <- round(p.adjust(results.df$Shannon_MannW_pvalue,method = "BH"),6)
   results.df$Simpson_MannW_padj <- round(p.adjust(results.df$Simpson_MannW_pvalue,method = "BH"),6)
   results.df$Chao1_MannW_padj <- round(p.adjust(results.df$Chao1_MannW_pvalue,method = "BH"),6)
@@ -880,7 +907,7 @@ calculate_alpha_diversity_significance <- function(mydata, variable){
 summarise_alpha_diversities <- function(mydata, group_by_columns){
   summary.df <- mydata %>% 
     dplyr::group_by_(.dots = c(group_by_columns)) %>%
-    summarise(Shannon_Mean =mean(Shannon),
+    dplyr::summarise(Shannon_Mean =mean(Shannon),
               Shannon_Stdev=sd(Shannon),
               Shannon_Max=max(Shannon), 
               Shannon_Min=min(Shannon), 
@@ -898,8 +925,8 @@ summarise_alpha_diversities <- function(mydata, group_by_columns){
               Chao1_Min=min(Chao1), 
               Chao1_Median=median(Chao1),
               
-              N_samples = n_distinct(Index),
-              N_projects = n_distinct(study_accession)) %>% as.data.frame()
+              N_samples = n_distinct(Index)
+              ) %>% as.data.frame()
   summary.df
 }
 

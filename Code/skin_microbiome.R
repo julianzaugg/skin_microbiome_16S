@@ -121,8 +121,8 @@ dir.create(file.path("./Result_other", "sequences"), showWarnings = FALSE,recurs
 
 dir.create(file.path("./Result_figures", "abundance_analysis_plots"), showWarnings = FALSE)
 dir.create(file.path("./Result_figures/abundance_analysis_plots/boxplots"), showWarnings = FALSE, recursive = T)
-dir.create(file.path("./Result_figures/abundance_analysis_plots/boxplots/Project_lesion_type_refined"), showWarnings = FALSE, recursive = T)
-dir.create(file.path("./Result_figures/abundance_analysis_plots/boxplots/Project"), showWarnings = FALSE, recursive = T)
+dir.create(file.path("./Result_figures/abundance_analysis_plots/boxplots/Cohort_lesion_type_refined"), showWarnings = FALSE, recursive = T)
+dir.create(file.path("./Result_figures/abundance_analysis_plots/boxplots/Cohort"), showWarnings = FALSE, recursive = T)
 
 dir.create(file.path("./Result_figures", "DESeq_plots"), showWarnings = FALSE)
 dir.create(file.path("./Result_figures/DESeq_plots/boxplots"), showWarnings = FALSE, recursive = T)
@@ -130,10 +130,16 @@ dir.create(file.path("./Result_figures/DESeq_plots/boxplots/lesion_type_refined_
 dir.create(file.path("./Result_figures/DESeq_plots/boxplots/lesion_type_refined_otu"), showWarnings = FALSE, recursive = T)
 
 dir.create(file.path("./Result_figures", "diversity_analysis"), showWarnings = FALSE)
+dir.create(file.path("./Result_figures/diversity_analysis", "otu"), showWarnings = FALSE,recursive = T)
+dir.create(file.path("./Result_figures/diversity_analysis", "genus"), showWarnings = FALSE,recursive = T)
+
 dir.create(file.path("./Result_figures", "exploratory_analysis"), showWarnings = FALSE)
 dir.create(file.path("./Result_figures", "heatmaps"), showWarnings = FALSE)
 dir.create(file.path("./Result_figures", "mixomics"), showWarnings = FALSE)
 dir.create(file.path("./Result_figures", "ordination_plots"), showWarnings = FALSE)
+dir.create(file.path("./Result_figures/ordination_plots", "otu"), showWarnings = FALSE)
+dir.create(file.path("./Result_figures/ordination_plots", "genus"), showWarnings = FALSE)
+
 dir.create(file.path("./Result_figures", "contaminant_analysis"), showWarnings = FALSE)
 dir.create(file.path("./Result_tables", "correlation_analysis"), showWarnings = FALSE)
 
@@ -145,6 +151,9 @@ dir.create(file.path("./Result_tables/DESeq_results/by_patient"), showWarnings =
 dir.create(file.path("./Result_tables/DESeq_results/by_lesion_cohort"), showWarnings = FALSE, recursive = T)
 
 dir.create(file.path("./Result_tables", "diversity_analysis"), showWarnings = FALSE)
+dir.create(file.path("./Result_tables/diversity_analysis", "otu"), showWarnings = FALSE,recursive = T)
+dir.create(file.path("./Result_tables/diversity_analysis", "genus"), showWarnings = FALSE,recursive = T)
+
 dir.create(file.path("./Result_tables", "mixomics"), showWarnings = FALSE)
 dir.create(file.path("./Result_tables", "other"), showWarnings = FALSE)
 dir.create(file.path("./Result_tables", "combined_counts_abundances_and_metadata_tables"), showWarnings = FALSE)
@@ -636,11 +645,11 @@ metadata.df$Length_of_immunosuppression_group_2_colour <- loi_group2_colours
 # metadata.df$Patient_group_colour <- all_patient_group_colours
 
 # For Gender
-# gender_values <- as.character(unique(metadata.df$Gender))
-# gender_values <- gender_values[!is.na(gender_values)]
-# gender_colours <- setNames(lesion_palette_10[1:length(gender_values)], gender_values)
-# all_gender_colours <- as.character(lapply(as.character(metadata.df$Gender), function(x) gender_colours[x]))
-# metadata.df$Gender_colour <- all_gender_colours
+gender_values <- as.character(unique(metadata.df$Gender))
+gender_values <- gender_values[!is.na(gender_values)]
+gender_colours <- setNames(cohort_palette_2[1:length(gender_values)], gender_values)
+all_gender_colours <- as.character(lapply(as.character(metadata.df$Gender), function(x) gender_colours[x]))
+metadata.df$Gender_colour <- all_gender_colours
 
 # For Number_of_meds
 # n_meds_values <- as.character(unique(metadata.df$Number_of_meds))

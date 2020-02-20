@@ -16,7 +16,7 @@ library(ggplot2)
 library(ggfortify)
 
 
-source("Code/helper_functions.R")
+
 ############################################################
 # Various colour colour_palettes
 my_colour_palette <- c("#8dd3c7","#ffffb3","#bebada","#fb8072", "#80b1d3", "#fdb462","#b3de69","#fccde5","#d9d9d9","#bc80bd","#ccebc5", "#cc0000")
@@ -53,7 +53,7 @@ get_samples_missing_data <- function(my_metadata, variables){
 ############################################################
 # Set the working directory
 setwd("/Users/julianzaugg/Desktop/ACE/major_projects/skin_microbiome_16S")
-
+source("Code/helper_functions.R")
 
 # Load the processed metadata
 metadata.df <- read.csv("Result_tables/other/processed_metadata.csv", sep =",", header = T)
@@ -71,8 +71,15 @@ otu_taxonomy_map.df <- read.csv("Result_tables/other/otu_taxonomy_map.csv", head
 # Load the counts
 otu.m <- as.matrix(read.csv("Result_tables/count_tables/OTU_counts_rarefied.csv", header =T, row.names = 1))
 genus.m <-  as.matrix(read.csv("Result_tables/count_tables/Genus_counts_rarefied.csv", header =T, row.names = 1))
+# genus.m <-  as.matrix(read.csv("Result_tables/count_tables/Genus_counts.csv", header =T, row.names = 1))
+dim(metadata.df)
+dim(genus.m)
+dim(otu.m)
+dim(subset(metadata.df, Cohort == "immunocompetent"))
+dim(subset(metadata.df, Cohort == "immunocompromised"))
 
 genus_data.df <- read.csv("Result_tables/combined_counts_abundances_and_metadata_tables/Genus_counts_abundances_and_metadata.csv",header = T)
+length(unique(genus_data.df$Sample))
 
 # Set the Index to be the rowname
 rownames(metadata.df) <- metadata.df$Index
@@ -96,6 +103,9 @@ metadata.df[colour_columns] <- lapply(metadata.df[colour_columns], factor)
 
 # Filter to just immunocompromised or snapshot samples
 metadata.df <- subset(metadata.df, Cohort == "immunocompromised" | Snapshot_sample_5 == "yes")
+dim(subset(metadata.df, Cohort == "immunocompromised" | Snapshot_sample_5 == "yes"))
+dim(subset(metadata.df, Snapshot_sample_5 == "yes"))
+dim(subset(metadata.df,  Cohort == "immunocompromised"))
 
 # Order the metadata.df by the index value
 metadata.df <- metadata.df[order(metadata.df$Index),]
@@ -242,7 +252,7 @@ generate_pca(genus_pca, mymetadata = metadata.df,
              plot_arrows = F,arrow_alpha = .7, arrow_colour = "grey20",arrow_scalar = 2,arrow_thickness = .7,
              label_arrows = T, arrow_label_size = .5, arrow_label_colour = "black", arrow_label_font_type = 1,
              specie_labeller_function = genus_relabeller_function,arrow_label_offset = 0,
-             filename = paste0("Result_figures/ordination_plots/both_cohorts_lesion_type_refined.pdf"))
+             filename = paste0("Result_figures/ordination_plots/genus/both_cohorts_lesion_type_refined.pdf"))
              
 
 # Patient
@@ -270,7 +280,7 @@ generate_pca(genus_pca, mymetadata = metadata.df,
              plot_arrows = F,arrow_alpha = .7, arrow_colour = "grey20",arrow_scalar = 2,arrow_thickness = .7,
              label_arrows = T, arrow_label_size = .5, arrow_label_colour = "black", arrow_label_font_type = 1,
              specie_labeller_function = genus_relabeller_function,arrow_label_offset = 0,
-             filename = paste0("Result_figures/ordination_plots/both_cohorts_Patient.pdf"))
+             filename = paste0("Result_figures/ordination_plots/genus/both_cohorts_Patient.pdf"))
 
 # Cohort
 generate_pca(genus_pca, mymetadata = metadata.df,
@@ -296,7 +306,7 @@ generate_pca(genus_pca, mymetadata = metadata.df,
              plot_arrows = F,arrow_alpha = .7, arrow_colour = "grey20",arrow_scalar = 2,arrow_thickness = .7,
              label_arrows = T, arrow_label_size = .5, arrow_label_colour = "black", arrow_label_font_type = 1,
              specie_labeller_function = genus_relabeller_function,arrow_label_offset = 0,
-             filename = paste0("Result_figures/ordination_plots/both_cohorts_cohort.pdf"))
+             filename = paste0("Result_figures/ordination_plots/genus/both_cohorts_cohort.pdf"))
 
 
 # ------------------------------------------------------------------------------------
@@ -325,7 +335,7 @@ generate_pca(immunocompetent_genus_pca, mymetadata = subset(metadata.df, Cohort 
              plot_arrows = F,arrow_alpha = .7, arrow_colour = "grey20",arrow_scalar = 2,arrow_thickness = .7,
              label_arrows = T, arrow_label_size = .5, arrow_label_colour = "black", arrow_label_font_type = 1,
              specie_labeller_function = genus_relabeller_function,arrow_label_offset = 0,
-             filename = paste0("Result_figures/ordination_plots/immunocompetent_lesion_type_refined.pdf"))
+             filename = paste0("Result_figures/ordination_plots/genus/immunocompetent_lesion_type_refined.pdf"))
 
 
 # Patient ***
@@ -352,7 +362,35 @@ generate_pca(immunocompetent_genus_pca, mymetadata = subset(metadata.df, Cohort 
              plot_arrows = F,arrow_alpha = .7, arrow_colour = "grey20",arrow_scalar = 2,arrow_thickness = .7,
              label_arrows = T, arrow_label_size = .5, arrow_label_colour = "black", arrow_label_font_type = 1,
              specie_labeller_function = genus_relabeller_function,arrow_label_offset = 0,
-             filename = paste0("Result_figures/ordination_plots/immunocompetent_patient.pdf"))
+             filename = paste0("Result_figures/ordination_plots/genus/immunocompetent_patient.pdf"))
+
+generate_pca(immunocompetent_otu_pca, mymetadata = subset(metadata.df, Cohort == "immunocompetent"),
+             plot_height = 5, plot_width = 5,
+             legend_x = -6, legend_y = 5,
+             point_size = .7, point_line_thickness = 0.3,point_alpha =.9,
+             legend_title = "Patient",
+             legend_cex = .5,
+             plot_title = "immunocompetent cohort, all lesion types",
+             limits = c(-6,3,-4,5),
+             plot_spiders = F,
+             plot_ellipses = F,
+             plot_hulls = F,
+             use_shapes = T,
+             ellipse_border_width = .5,
+             include_legend = T,
+             label_ellipse = F, ellipse_label_size = .3,
+             colour_palette = patient_colour_palette_45,
+             variable_to_plot = "Patient",
+             legend_cols = 2,
+             variable_colours_available = T,
+             num_top_species = 3,
+             plot_arrows = F,arrow_alpha = .7, arrow_colour = "grey20",arrow_scalar = 2,arrow_thickness = .7,
+             label_arrows = T, arrow_label_size = .5, arrow_label_colour = "black", arrow_label_font_type = 1,
+             specie_labeller_function = genus_relabeller_function,arrow_label_offset = 0,
+             filename = paste0("Result_figures/ordination_plots/otu/immunocompetent_patient.pdf"))
+
+# temp <- prcomp(t(otu_clr.m[,immunocompetent_samples]), center = T)
+# autoplot(temp)
 
 generate_pca(immunocompetent_genus_pca2, mymetadata = metadata.df[immunocompetent_samples_2,],
              plot_height = 5, plot_width = 5,
@@ -377,7 +415,7 @@ generate_pca(immunocompetent_genus_pca2, mymetadata = metadata.df[immunocompeten
              plot_arrows = F,arrow_alpha = .7, arrow_colour = "grey20",arrow_scalar = 2,arrow_thickness = .7,
              label_arrows = T, arrow_label_size = .5, arrow_label_colour = "black", arrow_label_font_type = 1,
              specie_labeller_function = genus_relabeller_function,arrow_label_offset = 0,
-             filename = paste0("Result_figures/ordination_plots/immunocompetent_patient2.pdf"))
+             filename = paste0("Result_figures/ordination_plots/genus/immunocompetent_patient2.pdf"))
 
 # ---------------------------------------------------------------------------------------------------------
 # Immunocompromised, all sample types
@@ -404,7 +442,7 @@ generate_pca(immunocompromised_genus_pca, mymetadata = metadata.df[immunocomprom
              plot_arrows = F,arrow_alpha = .7, arrow_colour = "grey20",arrow_scalar = 2,arrow_thickness = .7,
              label_arrows = T, arrow_label_size = .5, arrow_label_colour = "black", arrow_label_font_type = 1,
              specie_labeller_function = genus_relabeller_function,arrow_label_offset = 0,
-             filename = paste0("Result_figures/ordination_plots/immunocompromised_lesion_type_refined.pdf"))
+             filename = paste0("Result_figures/ordination_plots/genus/immunocompromised_lesion_type_refined.pdf"))
 
 
 # Patient ***
@@ -431,7 +469,7 @@ generate_pca(immunocompromised_genus_pca, mymetadata = metadata.df[immunocomprom
              plot_arrows = F,arrow_alpha = .7, arrow_colour = "grey20",arrow_scalar = 2,arrow_thickness = .7,
              label_arrows = T, arrow_label_size = .5, arrow_label_colour = "black", arrow_label_font_type = 1,
              specie_labeller_function = genus_relabeller_function,arrow_label_offset = 0,
-             filename = paste0("Result_figures/ordination_plots/immunocompromised_patient.pdf"))
+             filename = paste0("Result_figures/ordination_plots/genus/immunocompromised_patient.pdf"))
 
 
 # Gender
@@ -459,7 +497,7 @@ generate_pca(immunocompromised_genus_pca, mymetadata = metadata.df[immunocomprom
              plot_arrows = F,arrow_alpha = .7, arrow_colour = "grey20",arrow_scalar = 2,arrow_thickness = .7,
              label_arrows = T, arrow_label_size = .5, arrow_label_colour = "black", arrow_label_font_type = 1,
              specie_labeller_function = genus_relabeller_function,arrow_label_offset = 0,
-             filename = paste0("Result_figures/ordination_plots/immunocompromised_gender.pdf"))
+             filename = paste0("Result_figures/ordination_plots/genus/immunocompromised_gender.pdf"))
 
 # ---------------------------------------------------------------------------------------------------------
 
@@ -476,7 +514,7 @@ for (lesion_type in unique(metadata.df$Lesion_type_refined)){
                legend_title = "Cohort",
                legend_cex = .5,
                plot_title = paste0("Lesion_type : ", lesion_type),
-               # limits = c(-5,5,-5,8),
+               limits = c(-10,10,-10,10),
                plot_spiders = F,
                plot_ellipses = F,
                plot_hulls = F,
@@ -492,7 +530,7 @@ for (lesion_type in unique(metadata.df$Lesion_type_refined)){
                plot_arrows = F,arrow_alpha = .7, arrow_colour = "grey20",arrow_scalar = 2,arrow_thickness = .7,
                label_arrows = T, arrow_label_size = .5, arrow_label_colour = "black", arrow_label_font_type = 1,
                specie_labeller_function = genus_relabeller_function,arrow_label_offset = 0,
-               filename = paste0("Result_figures/ordination_plots/",lesion_type,"_cohort.pdf"))
+               filename = paste0("Result_figures/ordination_plots/genus/",lesion_type,"_cohort.pdf"))
   
   
   generate_pca(genus_pca_lesion_type, mymetadata = metadata_lesion_type.df,
@@ -502,7 +540,7 @@ for (lesion_type in unique(metadata.df$Lesion_type_refined)){
                legend_title = "Patient",
                legend_cex = .5,
                plot_title = paste0("Lesion_type : ", lesion_type),
-               # limits = c(-5,5,-5,8),
+               limits = c(-10,10,-10,10),
                plot_spiders = F,
                plot_ellipses = F,
                plot_hulls = F,
@@ -518,7 +556,7 @@ for (lesion_type in unique(metadata.df$Lesion_type_refined)){
                plot_arrows = F,arrow_alpha = .7, arrow_colour = "grey20",arrow_scalar = 2,arrow_thickness = .7,
                label_arrows = T, arrow_label_size = .5, arrow_label_colour = "black", arrow_label_font_type = 1,
                specie_labeller_function = genus_relabeller_function,arrow_label_offset = 0,
-               filename = paste0("Result_figures/ordination_plots/", lesion_type, "_patient.pdf"))
+               filename = paste0("Result_figures/ordination_plots/genus/", lesion_type, "_patient.pdf"))
 }
 
 # Each lesion type within cohort, color by patient
@@ -541,7 +579,7 @@ for (cohort in unique(metadata.df$Cohort)){
                  legend_title = "Patient",
                  legend_cex = .5,
                  plot_title = paste0("Lesion_type : ", lesion_type),
-                 # limits = c(-5,5,-5,8),
+                 limits = c(-10,10,-10,10),
                  plot_spiders = F,
                  plot_ellipses = F,
                  plot_hulls = F,
@@ -557,7 +595,7 @@ for (cohort in unique(metadata.df$Cohort)){
                  plot_arrows = F,arrow_alpha = .7, arrow_colour = "grey20",arrow_scalar = 2,arrow_thickness = .7,
                  label_arrows = T, arrow_label_size = .5, arrow_label_colour = "black", arrow_label_font_type = 1,
                  specie_labeller_function = genus_relabeller_function,arrow_label_offset = 0,
-                 filename = paste0("Result_figures/ordination_plots/",cohort, "_",lesion_type,"_patient.pdf"))
+                 filename = paste0("Result_figures/ordination_plots/genus/",cohort, "_",lesion_type,"_patient.pdf"))
   }
 }
 
@@ -580,10 +618,119 @@ print("Centred-log ratio transformed counts - Euclidean distance")
 
 otu_permanova_results <- data.frame()
 genus_permanova_results <- data.frame()
+
+otu_interaction_patient_permanova_results <- data.frame()
+genus_interaction_patient_permanova_results <- data.frame()
+
 otu_within_cohort_permanova_results <- data.frame()
 genus_within_cohort_permanova_results <- data.frame()
-otu_within_patient_permanova_results <- data.frame()
-genus_within_patient_permanova_results <- data.frame()
+
+# run_permanova_custom(my_metadata = metadata.df,
+#                      my_formula = as.formula(paste0("t(genus_clr_subset.m)~Patient+Cohort+Lesion_type_refined+Patient:Lesion_type_refined + Cohort:Lesion_type_refined")),
+#                      my_method = "euclidean",label = "CLR",permutations = 999)
+
+# Compare groups for each variable
+for (myvar in discrete_variables){
+  print(myvar)
+  metadata_subset.df <- metadata.df[!is.na(metadata.df[,myvar]),]
+  
+  otu_clr_subset.m <- otu_clr.m[,rownames(metadata_subset.df)]
+  genus_clr_subset.m <- genus_clr.m[,rownames(metadata_subset.df)]
+  number_of_samples <- nrow(metadata_subset.df)
+  
+  temp <- run_permanova_custom(my_metadata = metadata_subset.df,
+                               my_formula = as.formula(paste0("t(otu_clr_subset.m)~", myvar)),
+                               my_method = "euclidean",label = "CLR",permutations = 999)
+  temp$Number_of_samples <- number_of_samples
+  otu_permanova_results <- rbind(otu_permanova_results,temp)
+  
+  temp <- run_permanova_custom(my_metadata = metadata_subset.df, 
+                               my_formula = as.formula(paste0("t(genus_clr_subset.m)~", myvar)),
+                               my_method = "euclidean",label = "CLR",permutations = 999)
+  temp$Number_of_samples <- number_of_samples
+  genus_permanova_results <- rbind(genus_permanova_results, temp)
+  
+  # Include an interaction with Patient in the model
+  if (myvar != "Patient"){
+    temp <- run_permanova_custom(my_metadata = metadata_subset.df, 
+                                 my_formula = as.formula(paste0("t(otu_clr_subset.m)~Patient+", myvar, "+Patient:",myvar)),
+                                 my_method = "euclidean",label = "CLR",permutations = 999)
+    temp$Number_of_samples <- number_of_samples
+    otu_interaction_patient_permanova_results <- rbind(otu_interaction_patient_permanova_results, temp)
+    
+    temp <- run_permanova_custom(my_metadata = metadata_subset.df, 
+                                 my_formula = as.formula(paste0("t(genus_clr_subset.m)~Patient+", myvar, "+Patient:",myvar)),
+                                 my_method = "euclidean",label = "CLR",permutations = 999)
+    temp$Number_of_samples <- number_of_samples
+    genus_interaction_patient_permanova_results <- rbind(genus_interaction_patient_permanova_results, temp)
+  }
+  # Also compare the groups after accounting for the cohort
+  if (myvar == "Cohort") {next}
+  for (cohort in unique(metadata.df$Cohort)){
+    print(paste0("Processing cohort: ", cohort))
+    metadata_subset.df <- metadata.df[!is.na(metadata.df[,myvar]),]
+    metadata_subset.df <- subset(metadata_subset.df, Cohort == cohort)
+    if (length(unique(metadata_subset.df[,myvar])) < 2){
+      next
+    }
+
+    otu_clr_subset.m <- otu_clr.m[,rownames(metadata_subset.df)]
+    genus_clr_subset.m <- genus_clr.m[,rownames(metadata_subset.df)]
+    
+    number_of_samples <- nrow(metadata_subset.df)
+    
+    temp <- run_permanova_custom(my_metadata = metadata_subset.df, 
+                                 my_formula = as.formula(paste0("t(otu_clr_subset.m)~", myvar)),
+                                 my_method = "euclidean",label = "CLR",permutations = 999)
+    temp$Cohort <- cohort
+    temp$Number_of_samples <- number_of_samples
+    otu_within_cohort_permanova_results <- rbind(otu_within_cohort_permanova_results, temp)
+    
+    temp <- run_permanova_custom(my_metadata = metadata_subset.df, 
+                                 my_formula = as.formula(paste0("t(genus_clr_subset.m)~", myvar)),
+                                 my_method = "euclidean",label = "CLR",permutations = 999)
+    temp$Cohort <- cohort
+    temp$Number_of_samples <- number_of_samples
+    genus_within_cohort_permanova_results <- rbind(genus_within_cohort_permanova_results,temp)
+    
+  }
+}
+# genus_within_cohort_permanova_results
+
+write.csv(otu_permanova_results, file = "Result_tables/stats_various/otu_PERMANOVA.csv", row.names = F, quote = F)
+write.csv(genus_permanova_results, file = "Result_tables/stats_various/genus_PERMANOVA.csv", row.names = F, quote = F)
+
+write.csv(otu_within_cohort_permanova_results, file = "Result_tables/stats_various/otu_within_cohort_PERMANOVA.csv", row.names = F, quote = F)
+write.csv(genus_within_cohort_permanova_results, file = "Result_tables/stats_various/genus_within_cohort_PERMANOVA.csv", row.names = F, quote = F)
+
+write.csv(otu_interaction_patient_permanova_results, file = "Result_tables/stats_various/otu_interaction_patient_PERMANOVA.csv", row.names = F, quote = F)
+write.csv(genus_interaction_patient_permanova_results, file = "Result_tables/stats_various/genus_interaction_patient_PERMANOVA.csv", row.names = F, quote = F)
+
+# ---------------------------------------------
+# PERMDISP (betadisper)
+# See: https://www.nicholas-ollberding.com/post/introduction-to-the-statistical-analysis-of-microbiome-data-in-r/
+# "Test the homogeneity of within-group multivariate dispersions on the basis of any resemblance measure."
+# temp_meta.df <- metadata.df
+# temp_meta.df$Lesion_type_refined_Cohort <- with(temp_meta.df, paste0(Lesion_type_refined, "__", Cohort))
+temp <- with(metadata.df, betadisper(vegdist(t(genus_clr.m), method = "euclidean"), group = Lesion_type))
+plot(temp, main = "Ordination Centroids and Dispersion Labeled: Aitchison Distance", sub = "")
+boxplot(temp, main = "", xlab = "")
+vegan::permutest(temp, permutations = 999, parallel = 2)
+
+# ord_unifrac <- ordinate(t(genus_clr.m),method = "PCoA", distance = "wunifrac")
+# ord_unifrac_un <- phyloseq::ordinate(t(genus_clr.m), method = "PCoA", distance = "unifrac")   
+# temp <- run_permdisp_custom(metadata.df, 
+#                     my_data = genus_clr.m,
+#                     my_group = "Lesion_type_refined",
+#                     my_method = "euclidean",
+#                     permutations = 999, label = NULL)
+
+otu_permdisp_results <- data.frame()
+genus_permdisp_results <- data.frame()
+
+otu_within_cohort_permdisp_results <- data.frame()
+genus_within_cohort_permdisp_results <- data.frame()
+
 
 for (myvar in discrete_variables){
   print(myvar)
@@ -592,123 +739,151 @@ for (myvar in discrete_variables){
   otu_clr_subset.m <- otu_clr.m[,rownames(metadata_subset.df)]
   genus_clr_subset.m <- genus_clr.m[,rownames(metadata_subset.df)]
   
-  # otu_permanova_results <- rbind(otu_permanova_results,run_permanova_custom(my_metadata = metadata.df, 
-  #                                                                           my_formula = as.formula(paste0("t(otu_clr_subset.m)~", myvar)),
-  #                                                                           my_method = "euclidean",label = "CLR",permutations = 9999))
-  genus_permanova_results <- rbind(genus_permanova_results,run_permanova_custom(my_metadata = metadata.df, 
-                                                                                my_formula = as.formula(paste0("t(genus_clr_subset.m)~", myvar)),
-                                                                                my_method = "euclidean",label = "CLR",permutations = 999))
+  number_of_samples <- nrow(metadata_subset.df)
   
-}
-
-
-
-
-
-# The function below will only calculate the the significance of individual variables
-run_permanova <- function(my_community_data, my_metadata, my_variables){
-  stat_sig_table <- NULL
+  temp <- run_permdisp_custom(my_metadata = metadata_subset.df, 
+                              my_data = otu_clr_subset.m,
+                              my_group = myvar,
+                              my_method = "euclidean",
+                              permutations = 999,
+                              label = "CLR")
+  temp$Number_of_samples <- number_of_samples
+  otu_permdisp_results <- rbind(otu_permdisp_results, temp)
   
-  # Remove NA entries from the metadata
-  for (var_name in my_variables) {
-    result <- adonis(my_community_data~get(var_name),data = my_metadata, permu=999,method="euclidean")
-    SumOfSqs <- round(result$aov.tab$SumsOfSqs[1], 3)
-    meanSqs <- round(result$aov.tab$MeanSqs[1], 3)
-    F.model <- round(result$aov.tab$F.Model[1], 3)
-    R2 <- round(result$aov.tab$R2[1], 3)
-    p_value <- round(result$aov.tab$`Pr(>F)`[1], 5)
-    stat_sig_table <- rbind(stat_sig_table, data.frame(var_name,
-                                                       SumOfSqs,
-                                                       meanSqs,
-                                                       F.model,
-                                                       R2,
-                                                       p_value))
+  temp <- run_permdisp_custom(my_metadata = metadata_subset.df, 
+                              my_data = genus_clr_subset.m,
+                              my_group = myvar,
+                              my_method = "euclidean",
+                              permutations = 999,
+                              label = "CLR")
+  temp$Number_of_samples <- number_of_samples
+  genus_permdisp_results <- rbind(genus_permdisp_results, temp)
+  
+  if (myvar == "Cohort") {next}
+  for (cohort in unique(metadata.df$Cohort)){
+    print(paste0("Processing cohort: ", cohort))
+    metadata_subset.df <- metadata.df[!is.na(metadata.df[,myvar]),]
+    metadata_subset.df <- subset(metadata_subset.df, Cohort == cohort)
+    if (length(unique(metadata_subset.df[,myvar])) < 2){
+      next
+    }
+    number_of_samples <- nrow(metadata_subset.df)
+    
+    otu_clr_subset.m <- otu_clr.m[,rownames(metadata_subset.df)]
+    genus_clr_subset.m <- genus_clr.m[,rownames(metadata_subset.df)]
+    
+    temp <- run_permdisp_custom(my_metadata = metadata_subset.df, 
+                                my_data = otu_clr_subset.m,
+                                my_group = myvar,
+                                my_method = "euclidean",
+                                permutations = 999,
+                                label = "CLR")
+    temp$Cohort <- cohort
+    temp$Number_of_samples <- number_of_samples
+    otu_within_cohort_permdisp_results <- rbind(otu_within_cohort_permdisp_results, temp)
+    
+    temp <- run_permdisp_custom(my_metadata = metadata_subset.df, 
+                                my_data = genus_clr_subset.m,
+                                my_group = myvar,
+                                my_method = "euclidean",
+                                permutations = 999,
+                                label = "CLR")
+    temp$Cohort <- cohort
+    temp$Number_of_samples <- number_of_samples
+    genus_within_cohort_permdisp_results <- rbind(genus_within_cohort_permdisp_results, temp)
   }
-  names(stat_sig_table) <- c("Variable", "SumOfSqs","MeanSqs","F.Model","R2","P-value")
-  stat_sig_table <- stat_sig_table[order(stat_sig_table$"P-value"),]
-  stat_sig_table
 }
 
-run_permanova_custom <- function(my_metadata, my_formula){
-  stat_sig_table <- NULL
-  result <- adonis(my_formula,data = my_metadata, permu=999,method="euclidean")
-  # result <- adonis(my_formula,data = my_metadata, permu=999,method="bray")
-  for (r in rownames(result$aov.tab)){
-    variable <- r
-    Degress_of_freedom <- result$aov.tab[r,]$Df[1]
-    SumOfSqs <- round(result$aov.tab[r,]$SumsOfSqs[1], 3)
-    meanSqs <- round(result$aov.tab[r,]$MeanSqs[1], 3)
-    F.model <- round(result$aov.tab[r,]$F.Model[1], 3)
-    R2 <- round(result$aov.tab[r,]$R2[1], 3)
-    p_value <- round(result$aov.tab[r,]$`Pr(>F)`[1], 5)
-    stat_sig_table <- rbind(stat_sig_table, data.frame(variable,
-                                                       Degress_of_freedom,
-                                                       SumOfSqs,
-                                                       meanSqs,
-                                                       F.model,
-                                                       R2,
-                                                       p_value))
+write.csv(otu_permdisp_results, file = "Result_tables/stats_various/otu_PERMDISP.csv", row.names = F, quote = F)
+write.csv(genus_permdisp_results, file = "Result_tables/stats_various/genus_PERMDISP.csv", row.names = F, quote = F)
+
+write.csv(otu_within_cohort_permdisp_results, file = "Result_tables/stats_various/otu_within_cohort_PERMDISP.csv", row.names = F, quote = F)
+write.csv(genus_within_cohort_permdisp_results, file = "Result_tables/stats_various/genus_within_cohort_PERMDISP.csv", row.names = F, quote = F)
+
+
+# ---------------------------------------------
+# Takes awhile to calculate
+# ANOSIM tests whether distances between groups are greater than within groups.
+# "Nonparametric procedure for testing the hypothesis of no difference between two or more groups of entities
+# based on permutation test of among- and within-group similarities"
+# R = 1 when all pairs of samples within groups are more similar than to any pair of samples from different groups
+# R = 0 expected value under the null model that among-and within- group dissimilarities are the same on average.
+
+# "If you have very different group sizes, you may consider analysis of similarities (ANOSIM) instead of PERMANOVA. 
+# This test does not assume equal group variances."
+
+otu_anosim_results <- data.frame()
+genus_anosim_results <- data.frame()
+
+otu_within_cohort_anosim_results <- data.frame()
+genus_within_cohort_anosim_results <- data.frame()
+
+for (myvar in discrete_variables){
+  print(myvar)
+  metadata_subset.df <- metadata.df[!is.na(metadata.df[,myvar]),]
+  
+  otu_clr_subset.m <- otu_clr.m[,rownames(metadata_subset.df)]
+  genus_clr_subset.m <- genus_clr.m[,rownames(metadata_subset.df)]
+  
+  number_of_samples <- nrow(metadata_subset.df)
+  
+  temp <- run_anosim_custom(my_metadata = metadata_subset.df, 
+                            my_data = otu_clr_subset.m,
+                            my_group = myvar,
+                            my_method = "euclidean",
+                            permutations = 999,
+                            label = "CLR")
+  temp$Number_of_samples <- number_of_samples
+  otu_anosim_results <- rbind(otu_anosim_results, temp)
+  
+  temp <- run_anosim_custom(my_metadata = metadata_subset.df, 
+                            my_data = genus_clr_subset.m,
+                            my_group = myvar,
+                            my_method = "euclidean",
+                            permutations = 999,
+                            label = "CLR")
+  temp$Number_of_samples <- number_of_samples
+  genus_anosim_results <- rbind(genus_anosim_results, temp)
+  
+  if (myvar == "Cohort") {next}
+  for (cohort in unique(metadata.df$Cohort)){
+    print(paste0("Processing cohort: ", cohort))
+    
+    metadata_subset.df <- metadata.df[!is.na(metadata.df[,myvar]),]
+    metadata_subset.df <- subset(metadata_subset.df, Cohort == cohort)
+    if (length(unique(metadata_subset.df[,myvar])) < 2){
+      next
+    }
+    otu_clr_subset.m <- otu_clr.m[,rownames(metadata_subset.df)]
+    genus_clr_subset.m <- genus_clr.m[,rownames(metadata_subset.df)]
+    
+    number_of_samples <- nrow(metadata_subset.df)
+    
+    temp <- run_anosim_custom(my_metadata = metadata_subset.df, 
+                              my_data = otu_clr_subset.m,
+                              my_group = myvar,
+                              my_method = "euclidean",
+                              permutations = 999,
+                              label = "CLR")
+    temp$Cohort <- cohort
+    temp$Number_of_samples <- number_of_samples
+    otu_within_cohort_anosim_results <- rbind(otu_within_cohort_anosim_results, temp)
+    
+    temp <- run_anosim_custom(my_metadata = metadata_subset.df, 
+                              my_data = genus_clr_subset.m,
+                              my_group = myvar,
+                              my_method = "euclidean",
+                              permutations = 999,
+                              label = "CLR")
+    temp$Cohort <- cohort
+    temp$Number_of_samples <- number_of_samples
+    genus_within_cohort_anosim_results <- rbind(genus_within_cohort_anosim_results, temp)
   }
-  print(result)
-  names(stat_sig_table) <- c("Term","Df", "SumOfSqs","MeanSqs","F.Model","R2","Pr(>F)")
-  stat_sig_table <- stat_sig_table[order(stat_sig_table$"Pr(>F)"),]
-  stat_sig_table
 }
 
-# Both cohorts
-# adonis(t(otu_rare_clr_filtered.m)~Patient+Project +Lesion_type_refined+Patient:Lesion_type_refined,data = metadata.df, permu=999,method="euclidean")
+write.csv(otu_anosim_results, file = "Result_tables/stats_various/otu_ANOSIM.csv", row.names = F, quote = F)
+write.csv(genus_anosim_results, file = "Result_tables/stats_various/genus_ANOSIM.csv", row.names = F, quote = F)
 
-# Immunocompromised
-metadata_immunocompromised.df <- subset(metadata.df, Project == "immunocompromised" & Lesion_type != "negative")
-metadata_immunocompromised.df <- metadata_immunocompromised.df[order(rownames(metadata_immunocompromised.df)),]
-otu_rare_clr_filtered_compromised.m <- otu_rare_clr_filtered.m[,colnames(otu_rare_clr_filtered.m) %in% rownames(metadata_immunocompromised.df)]
-otu_rare_clr_filtered_compromised.m <- otu_rare_clr_filtered_compromised.m[,rownames(metadata_immunocompromised.df)]
-
-# result <- adonis(t(otu_rare_clr_filtered_compromised.m)~Patient+Lesion_type_refined+Patient:Lesion_type_refined,data = metadata_immunocompromised.df, permu=999,method="euclidean")
-# permanova_results_immunocompromised <- run_permanova_custom(my_metadata = metadata_immunocompromised.df,
-#                      my_formula = as.formula(t(otu_rare_clr_filtered_compromised.m)~Patient+Lesion_type_refined+Patient:Lesion_type_refined))
-
-permanova_results_immunocompromised <- run_permanova_custom(my_metadata = metadata_immunocompromised.df,
-                                                            my_formula = as.formula(t(otu_rare_clr_filtered_compromised.m)~Patient+Lesion_type_compromised_refined+Patient:Lesion_type_compromised_refined))
-
-# permanova_results_immunocompromised <- run_permanova_custom(my_metadata = metadata_immunocompromised.df,
-#                                                             my_formula = as.formula("t(otu_rare_clr_filtered_compromised.m)~Patient+Lesion_type_refined+Gender+Patient_group + Number_of_meds"))
-
-# Immunocompetent, all sample types
-# metadata_immunocompetent.df <- subset(metadata.df, Project == "immunocompetent" & Lesion_type != "negative")
-metadata_immunocompetent.df <- subset(metadata.df, Project == "immunocompetent" & Lesion_type != "negative" & Snapshot_sample == "yes")
-metadata_immunocompetent.df <- metadata_immunocompetent.df[order(rownames(metadata_immunocompetent.df)),]
-# metadata_immunocompetent_AK_LC.df <- subset(metadata_immunocompetent.df, Lesion_type_refined %in% c("LC", "AK"))
-# metadata_immunocompetent_AK_LC_non_pooled.df <- subset(metadata_immunocompetent.df, Lesion_type %in% c("LC", "AK"))
-# otu_clr_skin_filt.m <- otu_clr.m[which(apply(otu_clr.m[,samples.l[['long']]], 1, max) >= 3),samples.l[['long']]]
-# otu_clr_skin_filt.m[which(otu_clr_skin_filt.m < 0)] <- 0
-otu_rare_clr_filtered_competent.m <- otu_rare_clr_filtered.m[,colnames(otu_rare_clr_filtered.m) %in% rownames(metadata_immunocompetent.df)]
-otu_rare_clr_filtered_competent.m <- otu_rare_clr_filtered_competent.m[,rownames(metadata_immunocompetent.df)]
-# otu_rare_clr_filtered_competent_AK_LC.m <- otu_rare_clr_filtered_competent.m[,rownames(metadata_immunocompetent_AK_LC.df)]
-# otu_rare_clr_filtered_competent_AK_LC_non_pooled.m <- otu_rare_clr_filtered_competent.m[,rownames(metadata_immunocompetent_AK_LC_non_pooled.df)]
-
-permanova_results_immunocompetent <- run_permanova_custom(my_metadata = metadata_immunocompetent.df,
-                                                            my_formula = as.formula(t(otu_rare_clr_filtered_competent.m)~Patient+Lesion_type_refined+Patient:Lesion_type_refined))
-permanova_results_immunocompetent
-# permanova_results_immunocompetent_AK_LC <- run_permanova_custom(my_metadata = metadata_immunocompetent_AK_LC.df,
-                                                          # my_formula = as.formula(t(otu_rare_clr_filtered_competent_AK_LC.m)~Patient+Lesion_type_refined+Patient:Lesion_type_refined))
-
-# permanova_results_immunocompetent_AK_LC_non_pooled <- run_permanova_custom(my_metadata = metadata_immunocompetent_AK_LC_non_pooled.df,
-                                                                 # my_formula = as.formula(t(otu_rare_clr_filtered_competent_AK_LC_non_pooled.m)~Patient+Lesion_type_refined+Patient:Lesion_type_refined))
-# permanova_results_immunocompetent_AK_LC_non_pooled
-
-# Both cohorts, all samples types
-metadata_competent_compromised.df <- metadata.df[c(rownames(metadata_immunocompetent.df), rownames(metadata_immunocompromised.df)),]
-metadata_competent_compromised.df <- metadata_competent_compromised.df[order(rownames(metadata_competent_compromised.df)),]
-otu_rare_clr_filtered_competent_compromised.m <- otu_rare_clr_filtered.m[,colnames(otu_rare_clr_filtered.m) %in% rownames(metadata_competent_compromised.df)]
-otu_rare_clr_filtered_competent_compromised.m <- otu_rare_clr_filtered_competent_compromised.m[,rownames(metadata_competent_compromised.df)]
-# Since the immunocompetent do not have values for Lesion_type_compromised_refined, use the corresponding Lesion_type_refined values
-metadata_competent_compromised.df[is.na(metadata_competent_compromised.df$Lesion_type_compromised_refined),]$Lesion_type_compromised_refined <- metadata_competent_compromised.df[is.na(metadata_competent_compromised.df$Lesion_type_compromised_refined),c("Lesion_type_refined")]
-
-permanova_results_both_cohorts <- run_permanova_custom(my_metadata = metadata_competent_compromised.df,
-                                                       my_formula = as.formula(t(otu_rare_clr_filtered_competent_compromised.m)~Patient+Lesion_type_compromised_refined+Patient:Lesion_type_compromised_refined))
-
-write.csv(permanova_results_both_cohorts,file="Result_tables/stats_various/PERMANOVA_both_cohorts.csv",row.names = F)
-write.csv(permanova_results_immunocompromised,file="Result_tables/stats_various/PERMANOVA_immunocompromised.csv",row.names = F)
-write.csv(permanova_results_immunocompetent,file="Result_tables/stats_various/PERMANOVA_immunocompetent.csv",row.names = F)
+write.csv(otu_within_cohort_anosim_results, file = "Result_tables/stats_various/otu_within_cohort_ANOSIM.csv", row.names = F, quote = F)
+write.csv(genus_within_cohort_anosim_results, file = "Result_tables/stats_various/genus_within_cohort_ANOSIM.csv", row.names = F, quote = F)
 
