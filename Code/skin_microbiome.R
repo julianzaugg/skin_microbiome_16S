@@ -129,10 +129,6 @@ dir.create(file.path("./Result_figures/DESeq_plots/boxplots"), showWarnings = FA
 dir.create(file.path("./Result_figures/DESeq_plots/boxplots/lesion_type_refined_genus"), showWarnings = FALSE, recursive = T)
 dir.create(file.path("./Result_figures/DESeq_plots/boxplots/lesion_type_refined_otu"), showWarnings = FALSE, recursive = T)
 
-dir.create(file.path("./Result_figures", "diversity_analysis"), showWarnings = FALSE)
-dir.create(file.path("./Result_figures/diversity_analysis", "otu"), showWarnings = FALSE,recursive = T)
-dir.create(file.path("./Result_figures/diversity_analysis", "genus"), showWarnings = FALSE,recursive = T)
-
 dir.create(file.path("./Result_figures", "exploratory_analysis"), showWarnings = FALSE)
 dir.create(file.path("./Result_figures", "heatmaps"), showWarnings = FALSE)
 dir.create(file.path("./Result_figures", "mixomics"), showWarnings = FALSE)
@@ -151,8 +147,21 @@ dir.create(file.path("./Result_tables/DESeq_results/by_patient"), showWarnings =
 dir.create(file.path("./Result_tables/DESeq_results/by_lesion_cohort"), showWarnings = FALSE, recursive = T)
 
 dir.create(file.path("./Result_tables", "diversity_analysis"), showWarnings = FALSE)
-dir.create(file.path("./Result_tables/diversity_analysis", "otu"), showWarnings = FALSE,recursive = T)
-dir.create(file.path("./Result_tables/diversity_analysis", "genus"), showWarnings = FALSE,recursive = T)
+dir.create(file.path("./Result_tables/diversity_analysis/both_cohorts/", "otu"), showWarnings = FALSE,recursive = T)
+dir.create(file.path("./Result_tables/diversity_analysis/both_cohorts/", "genus"), showWarnings = FALSE,recursive = T)
+dir.create(file.path("./Result_tables/diversity_analysis/immunocompetent/", "otu"), showWarnings = FALSE,recursive = T)
+dir.create(file.path("./Result_tables/diversity_analysis/immunocompetent/", "genus"), showWarnings = FALSE,recursive = T)
+dir.create(file.path("./Result_tables/diversity_analysis/immunocompromised/", "otu"), showWarnings = FALSE,recursive = T)
+dir.create(file.path("./Result_tables/diversity_analysis/immunocompromised/", "genus"), showWarnings = FALSE,recursive = T)
+
+
+dir.create(file.path("./Result_figures", "diversity_analysis"), showWarnings = FALSE)
+dir.create(file.path("./Result_figures/diversity_analysis/both_cohorts/", "otu"), showWarnings = FALSE,recursive = T)
+dir.create(file.path("./Result_figures/diversity_analysis/both_cohorts/", "genus"), showWarnings = FALSE,recursive = T)
+dir.create(file.path("./Result_figures/diversity_analysis/immunocompetent/", "otu"), showWarnings = FALSE,recursive = T)
+dir.create(file.path("./Result_figures/diversity_analysis/immunocompetent/", "genus"), showWarnings = FALSE,recursive = T)
+dir.create(file.path("./Result_figures/diversity_analysis/immunocompromised/", "otu"), showWarnings = FALSE,recursive = T)
+dir.create(file.path("./Result_figures/diversity_analysis/immunocompromised/", "genus"), showWarnings = FALSE,recursive = T)
 
 dir.create(file.path("./Result_tables", "mixomics"), showWarnings = FALSE)
 dir.create(file.path("./Result_tables", "other"), showWarnings = FALSE)
@@ -1124,7 +1133,7 @@ if (max(unassigned_otu_unfiltered_rel.df$Relative_abundance) != 0){
   # Get corresponding representative sequence
   most_abundant_unassigned.df$RepSeq <- unlist(lapply(most_abundant_unassigned.df$OTU.ID, 
                                                       function(x) as.character(unassigned_project_otu_table_unfiltered.df[unassigned_project_otu_table_unfiltered.df$OTU.ID == x,]$RepSeq)))
-  write.csv(x = most_abundant_unassigned.df, file = paste0("Result_tables/other/project_most_abundant_unassigned.csv"), row.names = F)
+  write.csv(x = most_abundant_unassigned.df, file = paste0("Result_tables/other/most_abundant_unassigned.csv"), row.names = F)
   
   # Get unique set of features
   unique_most_abundant_unassigned.df <- unique(most_abundant_unassigned.df[c("OTU.ID", "RepSeq")])

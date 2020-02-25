@@ -123,10 +123,10 @@ genus_rare_alpha.df <- left_join(metadata.df[c("Index",
 
 # Write per-sample diversities to file
 write.csv(otu_rare_alpha.df,
-          "Result_tables/diversity_analysis/otu/sample_otu_alpha_diversities.csv", quote = F, row.names = F
+          "Result_tables/diversity_analysis/both_cohorts/otu/sample_otu_alpha_diversities.csv", quote = F, row.names = F
 )
 write.csv(genus_rare_alpha.df,
-          "Result_tables/diversity_analysis/genus/sample_genus_alpha_diversities.csv", quote = F, row.names = F
+          "Result_tables/diversity_analysis/both_cohorts/genus/sample_genus_alpha_diversities.csv", quote = F, row.names = F
 )
 
 # Create Cohort specific datasets
@@ -136,141 +136,127 @@ immunocompetent_genus_data.df <- subset(genus_rare_alpha.df, Cohort == "immunoco
 immunocompromised_genus_data.df <- subset(genus_rare_alpha.df, Cohort == "immunocompromised")
 
 
+
 # ------------------------------------------------------------------------------------------------------------------------------------------
 # ------------------------------------------------------------------------------------------------------------------------------------------
-# Calculate summaries and signifiance tests for each group for each variable
+# Calculate summaries and signifiance tests for each group for each variable, across all samples (both cohorts) and each
+# individual cohort
 # significance tests and p-value adjustments only apply to non-NA groups
-otu_alpha_diversity_summary.df <- NULL
-genus_alpha_diversity_summary_genus.df <- NULL
-otu_alpha_diversity_significances.df <- NULL
-genus_alpha_diversity_significances.df <- NULL
 
-# otu_alpha_diversity_summary.df <- summarise_alpha_diversities(otu_rare_alpha.df, "Lesion_type_refined")
-# otu_alpha_diversity_summary.df <- melt(otu_alpha_diversity_summary.df, measure.vars = "Lesion_type_refined", value.name = "Group", variable.name = "Variable")
+summarise_diversities_each_variable <- function(mydata, variables){
+  mydata_summary.df <- NULL
+  for (myvar in variables){
+    if (is.null(mydata_summary.df)){
+      mydata_summary.df <- summarise_alpha_diversities(mydata, myvar)
+      # Melt because we are combining variables into a single table
+      mydata_summary.df <- melt(mydata_summary.df, measure.vars = myvar, value.name = "Group", variable.name = "Variable")
+    } else{
+      mydata_summary.df <- rbind(mydata_summary.df, melt(summarise_alpha_diversities(mydata, myvar),
+                                                         measure.vars = myvar, value.name = "Group", variable.name = "Variable"))      
+    }
 
-for (myvar in discrete_variables){
-  print(myvar)
-  if (is.null(otu_alpha_diversity_summary.df)){
-    # Normal, OTU level
-    otu_alpha_diversity_summary.df <- summarise_alpha_diversities(otu_rare_alpha.df, myvar)
-    otu_alpha_diversity_summary.df <- melt(otu_alpha_diversity_summary.df, measure.vars = myvar, value.name = "Group", variable.name = "Variable")
-    
-    otu_alpha_diversity_significances.df <- calculate_alpha_diversity_significance(otu_rare_alpha.df, myvar)
-    
-    # Normal, Genus level
-    genus_alpha_diversity_summary.df <- summarise_alpha_diversities(genus_rare_alpha.df, myvar)
-    genus_alpha_diversity_summary.df <- melt(genus_alpha_diversity_summary.df, measure.vars = myvar, value.name = "Group", variable.name = "Variable")
-    
-    genus_alpha_diversity_significances.df <- calculate_alpha_diversity_significance(genus_rare_alpha.df, myvar)
-    
-  } else{
-    # Normal, OTU level
-    otu_alpha_diversity_summary.df <- rbind(otu_alpha_diversity_summary.df,
-                                            melt(summarise_alpha_diversities(otu_rare_alpha.df, myvar  ),
-                                                 measure.vars = myvar, value.name = "Group", variable.name = "Variable"))
-    otu_alpha_diversity_significances.df <- rbind(otu_alpha_diversity_significances.df, 
-                                                  calculate_alpha_diversity_significance(otu_rare_alpha.df, myvar))
-    # Normal, Genus level
-    genus_alpha_diversity_summary.df <- rbind(genus_alpha_diversity_summary.df,
-                                              melt(summarise_alpha_diversities(genus_rare_alpha.df, myvar  ),
-                                                   measure.vars = myvar, value.name = "Group", variable.name = "Variable"))
-    genus_alpha_diversity_significances.df <- rbind(genus_alpha_diversity_significances.df, 
-                                                    calculate_alpha_diversity_significance(genus_rare_alpha.df, myvar))
   }
+  mydata_summary.df
 }
-# OTU level
-write.csv(x = otu_alpha_diversity_summary.df, 
-          file = paste0("Result_tables/diversity_analysis/otu/otu_alpha_diversities_summary.csv"), 
+
+calculate_diversity_sigificances_each_variable <- function(mydata, variables){
+  mydata_significances.df <- NULL
+  for (myvar in variables){
+    if (is.null(mydata_significances.df)){
+      mydata_significances.df <- calculate_alpha_diversity_significance(mydata, myvar)      
+    }
+    else{
+      mydata_significances.df <- rbind(mydata_significances.df,
+                                       calculate_alpha_diversity_significance(mydata, myvar))      
+    }
+  }
+  mydata_significances.df
+}
+
+
+both_cohorts_otu_alpha_diversity_summary.df <- summarise_diversities_each_variable(otu_rare_alpha.df, variables = discrete_variables)
+both_cohorts_otu_alpha_diversity_significances.df <- summarise_diversities_each_variable(otu_rare_alpha.df, variables = discrete_variables)
+
+both_cohorts_genus_alpha_diversity_summary.df <- summarise_diversities_each_variable(genus_rare_alpha.df, variables = discrete_variables)
+both_cohorts_genus_alpha_diversity_significances.df <- calculate_diversity_sigificances_each_variable(genus_rare_alpha.df, variables = discrete_variables)
+
+immunocompromised_otu_alpha_diversity_summary.df <- summarise_diversities_each_variable(immunocompromised_otu_data.df, variables = discrete_variables)
+immunocompromised_otu_alpha_diversity_significances.df <- calculate_diversity_sigificances_each_variable(immunocompromised_otu_data.df, variables = discrete_variables)
+
+immunocompromised_genus_alpha_diversity_summary.df <- summarise_diversities_each_variable(immunocompromised_genus_data.df, variables = discrete_variables)
+immunocompromised_genus_alpha_diversity_significances.df <- calculate_diversity_sigificances_each_variable(immunocompromised_genus_data.df, variables = discrete_variables)
+
+immunocompetent_otu_alpha_diversity_summary.df <- summarise_diversities_each_variable(immunocompetent_otu_data.df, variables = discrete_variables)
+immunocompetent_otu_alpha_diversity_significances.df <- calculate_diversity_sigificances_each_variable(immunocompetent_otu_data.df, variables = discrete_variables)
+
+immunocompetent_genus_alpha_diversity_summary.df <- summarise_diversities_each_variable(immunocompetent_genus_data.df, variables = discrete_variables)
+immunocompetent_genus_alpha_diversity_significances.df <- calculate_diversity_sigificances_each_variable(immunocompetent_genus_data.df, variables = discrete_variables)
+
+
+# Both cohorts,OTU level
+write.csv(x = both_cohorts_otu_alpha_diversity_summary.df, 
+          file = paste0("Result_tables/diversity_analysis/both_cohorts/otu/otu_alpha_diversities_summary.csv"), 
           quote = F, row.names = F)
 
-write.csv(x = otu_alpha_diversity_significances.df, 
-          file = paste0("Result_tables/diversity_analysis/otu/otu_alpha_diversities_significance.csv"), 
+write.csv(x = both_cohorts_otu_alpha_diversity_significances.df, 
+          file = paste0("Result_tables/diversity_analysis/both_cohorts/otu/otu_alpha_diversities_significance.csv"), 
           quote = F, row.names = F)
 
-# Genus level
-write.csv(x = genus_alpha_diversity_summary.df, 
-          file = paste0("Result_tables/diversity_analysis/genus/genus_alpha_diversities_summary.csv"), 
+# Both cohorts, Genus level
+write.csv(x = both_cohorts_genus_alpha_diversity_summary.df, 
+          file = paste0("Result_tables/diversity_analysis/both_cohorts/genus/genus_alpha_diversities_summary.csv"), 
           quote = F, row.names = F)
 
-write.csv(x = genus_alpha_diversity_significances.df, 
-          file = paste0("Result_tables/diversity_analysis/genus/genus_alpha_diversities_significance.csv"), 
+write.csv(x = both_cohorts_genus_alpha_diversity_significances.df, 
+          file = paste0("Result_tables/diversity_analysis/both_cohorts/genus/genus_alpha_diversities_significance.csv"), 
           quote = F, row.names = F)
+
+# immunocompromised, OTU level
+write.csv(x = immunocompromised_otu_alpha_diversity_summary.df, 
+          file = paste0("Result_tables/diversity_analysis/immunocompromised/otu/otu_alpha_diversities_summary.csv"), 
+          quote = F, row.names = F)
+
+write.csv(x = immunocompromised_otu_alpha_diversity_significances.df, 
+          file = paste0("Result_tables/diversity_analysis/immunocompromised/otu/otu_alpha_diversities_significance.csv"), 
+          quote = F, row.names = F)
+
+# immunocompromised, Genus level
+write.csv(x = immunocompromised_genus_alpha_diversity_summary.df, 
+          file = paste0("Result_tables/diversity_analysis/immunocompromised/genus/genus_alpha_diversities_summary.csv"), 
+          quote = F, row.names = F)
+
+write.csv(x = immunocompromised_genus_alpha_diversity_significances.df, 
+          file = paste0("Result_tables/diversity_analysis/immunocompromised/genus/genus_alpha_diversities_significance.csv"), 
+          quote = F, row.names = F)
+
+# immunocompetent, OTU level
+write.csv(x = immunocompetent_otu_alpha_diversity_summary.df, 
+          file = paste0("Result_tables/diversity_analysis/immunocompetent/otu/otu_alpha_diversities_summary.csv"), 
+          quote = F, row.names = F)
+
+write.csv(x = immunocompetent_otu_alpha_diversity_significances.df, 
+          file = paste0("Result_tables/diversity_analysis/immunocompetent/otu/otu_alpha_diversities_significance.csv"), 
+          quote = F, row.names = F)
+
+# immunocompetent, Genus level
+write.csv(x = immunocompetent_genus_alpha_diversity_summary.df, 
+          file = paste0("Result_tables/diversity_analysis/immunocompetent/genus/genus_alpha_diversities_summary.csv"), 
+          quote = F, row.names = F)
+
+write.csv(x = immunocompetent_genus_alpha_diversity_significances.df, 
+          file = paste0("Result_tables/diversity_analysis/immunocompetent/genus/genus_alpha_diversities_significance.csv"), 
+          quote = F, row.names = F)
+
+
 # ------------------------------------------------------------------------------------------------------------------------------------------
 # ------------------------------------------------------------------------------------------------------------------------------------------
 # Calculate summaries and signifiance tests for each group for each variable WITHIN EACH COHORT
 # significance tests and p-value adjustments only apply to non-NA groups
 
-otu_alpha_diversity_summary.df <- NULL
-otu_genus_alpha_diversity_summary.df <- NULL
-out_alpha_diversity_significances.df <- NULL
-out_genus_alpha_diversity_significances.df <- NULL
-
-for (myvar in discrete_variables){
-  if (myvar == "Cohort") {next}
-  for (cohort in unique(otu_rare_alpha.df$Cohort)){
-    data_subset <- subset(otu_rare_alpha.df, Cohort == cohort)
-    data_subset_genus <- subset(genus_rare_alpha.df, Cohort == cohort)
-    if (length(unique(data_subset[,myvar])) < 2){
-      next
-    }
-    
-    if (is.null(otu_alpha_diversity_summary.df)){
-      # Normal, OTU level
-      otu_alpha_diversity_summary.df <- summarise_alpha_diversities(data_subset, myvar)
-      otu_alpha_diversity_summary.df <- melt(otu_alpha_diversity_summary.df, measure.vars = myvar, value.name = "Group", variable.name = "Variable")
-      otu_alpha_diversity_summary.df$Cohort <- cohort
-      
-      out_alpha_diversity_significances.df <- calculate_alpha_diversity_significance(data_subset, myvar)
-      out_alpha_diversity_significances.df$Cohort <- cohort
-      
-      # Normal, Genus level
-      otu_genus_alpha_diversity_summary.df <- summarise_alpha_diversities(data_subset_genus, myvar)
-      otu_genus_alpha_diversity_summary.df <- melt(otu_genus_alpha_diversity_summary.df, measure.vars = myvar, value.name = "Group", variable.name = "Variable")
-      otu_genus_alpha_diversity_summary.df$Cohort <- cohort
-      
-      out_genus_alpha_diversity_significances.df <- calculate_alpha_diversity_significance(data_subset_genus, myvar)
-      out_genus_alpha_diversity_significances.df$Cohort <- cohort
-      
-    } else{
-      # Normal, OTU level
-      temp_summary <- melt(summarise_alpha_diversities(data_subset, myvar), measure.vars = myvar, value.name = "Group", variable.name = "Variable")
-      temp_summary$Cohort <- cohort
-      otu_alpha_diversity_summary.df <- rbind(otu_alpha_diversity_summary.df, temp_summary)
-      
-      temp_significance <- calculate_alpha_diversity_significance(data_subset, myvar)
-      temp_significance$Cohort <- cohort
-      out_alpha_diversity_significances.df <- rbind(out_alpha_diversity_significances.df, temp_significance)
-      
-      # Normal, Genus level
-      temp_summary <- melt(summarise_alpha_diversities(data_subset_genus, myvar),measure.vars = myvar, value.name = "Group", variable.name = "Variable")
-      temp_summary$Cohort <- cohort
-      otu_genus_alpha_diversity_summary.df <- rbind(otu_genus_alpha_diversity_summary.df, temp_summary)
-      
-      temp_significance <- calculate_alpha_diversity_significance(data_subset_genus, myvar)
-      temp_significance$Cohort <- cohort
-      out_genus_alpha_diversity_significances.df <- rbind(out_genus_alpha_diversity_significances.df, temp_significance)
-    }
-  }
-}
-
-# Normal, OTU level
-write.csv(x = otu_alpha_diversity_summary.df, 
-          file = paste0("Result_tables/diversity_analysis/otu/otu_alpha_diversities_summary_within_cohort.csv"), 
-          quote = F, row.names = F)
-
-write.csv(x = otu_alpha_diversity_significances.df, 
-          file = paste0("Result_tables/diversity_analysis/otu/otu_alpha_diversities_significance_within_cohort.csv"), 
-          quote = F, row.names = F)
-
-# Normal, Genus level
-write.csv(x = genus_alpha_diversity_summary.df, 
-          file = paste0("Result_tables/diversity_analysis/genus/genus_alpha_diversities_summary_within_cohort.csv"), 
-          quote = F, row.names = F)
-
-write.csv(x = genus_alpha_diversity_significances.df, 
-          file = paste0("Result_tables/diversity_analysis/genus/genus_alpha_diversities_significance_within_cohort.csv"), 
-          quote = F, row.names = F)
-
+# df_last_to_first <- function(mydf){
+#   last_name <- names(mydf)[length(mydf)]
+#   mydf[c(last_name,names(mydf)[1:length(names(mydf))-1])]
+# }
 
 # ------------------------------------------------------------------------------------------------------------------------------------------
 # ------------------------------------------------------------------------------------------------------------------------------------------
@@ -323,6 +309,49 @@ generate_diversity_boxplot <- function(mydata, variable, metric, variable_colour
   myplot
 }
 
+# OLD
+# generate_diversity_boxplot_2 <- function(mydata, variable, metric, variable_colours_available = T){
+#   internal_data.df <- mydata[!is.na(mydata[variable]),]
+#   variable_values <- factor(as.character(unique(internal_data.df[[variable]])))
+#   if (variable_colours_available == T){
+#     color_col_name <- paste0(variable, "_colour")
+#     variable_colours <- setNames(as.character(unique(internal_data.df[[color_col_name]])), as.character(unique(internal_data.df[[variable]])))
+#   } else{
+#     variable_colours <- setNames(my_colour_pallete_206_distinct[1:length(variable_values)], variable_values)  
+#   }
+#   myplot <- ggplot(internal_data.df, aes(x = get(variable), y = get(metric))) +
+#     geom_boxplot(outlier.shape = NA, aes(fill = get(variable))) +
+#     scale_fill_manual(values = variable_colours, name = variable) +
+#     geom_jitter(size=0.5, width = 0.10, height=0) +
+#     guides(fill=FALSE) +
+#     # scale_y_continuous(limits = c(0,4.5), breaks = seq(0,4.5,.5)) +
+#     xlab("") +
+#     ylab(metric)  +
+#     common_theme +
+#     theme(panel.border = element_blank(), 
+#           panel.grid.major = element_blank(),
+#           panel.grid.minor = element_blank(),
+#           axis.line = element_line(colour = "black", size = 0.5),
+#           panel.background = element_blank(),
+#           strip.background = element_rect(fill = "white", colour = "white", size = 1),
+#           strip.text = element_text(size = 6),
+#           legend.key=element_blank(),
+#           legend.direction="vertical",
+#           legend.background = element_rect(colour ="white", size = .3),
+#           legend.text.align = 0,
+#           legend.title = element_text(size=10, face="bold"),
+#           legend.title.align = 0.5,
+#           legend.margin = margin(c(2,2,2,2)),
+#           legend.key.height=unit(.4,"cm"),
+#           legend.text = element_text(size = 8),
+#           axis.text = element_text(size = 9, colour = "black"),
+#           axis.title = element_text(size = 10,face = "bold"),
+#           complete = F,
+#           plot.title = element_text(size = 6))
+#   myplot
+# }
+
+
 
 for (myvar in discrete_variables){
   # Normal, otu level
@@ -331,19 +360,19 @@ for (myvar in discrete_variables){
     ggtitle("Chao1") +
     scale_y_continuous(limits = c(0,200), breaks = seq(0,200,50))
   
-  ggsave(filename = paste0("Result_figures/diversity_analysis/otu/otu_",myvar,"_Chao1.pdf"),myplot, width = 10, height = 10,units = "cm")
+  ggsave(filename = paste0("Result_figures/diversity_analysis/both_cohorts/otu/otu_",myvar,"_Chao1.pdf"),myplot, width = 10, height = 10,units = "cm")
   
   myplot <- generate_diversity_boxplot(otu_rare_alpha.df, variable = myvar,fill_palette = my_colour_palette_10_distinct,metric = "Shannon",variable_colours_available = T) + 
     guides(fill = F, color = F) + 
     ggtitle("Shannon") +
     scale_y_continuous(limits = c(0,5), breaks = seq(0,5,.5))
-  ggsave(filename = paste0("Result_figures/diversity_analysis/otu/otu_",myvar,"_Shannon.pdf"),myplot, width = 10, height = 10,units = "cm")
+  ggsave(filename = paste0("Result_figures/diversity_analysis/both_cohorts/otu/otu_",myvar,"_Shannon.pdf"),myplot, width = 10, height = 10,units = "cm")
   
   myplot <- generate_diversity_boxplot(otu_rare_alpha.df, variable = myvar,fill_palette = my_colour_palette_10_distinct,metric = "Simpson",variable_colours_available = T) +
     guides(fill = F, color = F) +
     ggtitle("Simpson") +
     scale_y_continuous(limits = c(0,1), breaks = seq(0,1,.2))
-  ggsave(filename = paste0("Result_figures/diversity_analysis/otu/otu_",myvar,"_Simpson.pdf"),myplot, width = 10, height = 10,units = "cm")
+  ggsave(filename = paste0("Result_figures/diversity_analysis/both_cohorts/otu/otu_",myvar,"_Simpson.pdf"),myplot, width = 10, height = 10,units = "cm")
   
   # Normal, genus level
   myplot <- generate_diversity_boxplot(genus_rare_alpha.df, variable = myvar,fill_palette = my_colour_palette_10_distinct,metric = "Chao1",variable_colours_available = T) + 
@@ -351,25 +380,25 @@ for (myvar in discrete_variables){
     ggtitle("Chao1") +
     scale_y_continuous(limits = c(0,200), breaks = seq(0,200,50))
   
-  ggsave(filename = paste0("Result_figures/diversity_analysis/genus/genus_",myvar,"_Chao1.pdf"),myplot, width = 10, height = 10,units = "cm")
+  ggsave(filename = paste0("Result_figures/diversity_analysis/both_cohorts/genus/genus_",myvar,"_Chao1.pdf"),myplot, width = 10, height = 10,units = "cm")
   
   myplot <- generate_diversity_boxplot(genus_rare_alpha.df, variable = myvar,fill_palette = my_colour_palette_10_distinct,metric = "Shannon",variable_colours_available = T) + 
     guides(fill = F, color = F) + 
     ggtitle("Shannon") +
     scale_y_continuous(limits = c(0,5), breaks = seq(0,5,.5))
-  ggsave(filename = paste0("Result_figures/diversity_analysis/genus/genus_",myvar,"_Shannon.pdf"),myplot, width = 10, height = 10,units = "cm")
+  ggsave(filename = paste0("Result_figures/diversity_analysis/both_cohorts/genus/genus_",myvar,"_Shannon.pdf"),myplot, width = 10, height = 10,units = "cm")
   
   myplot <- generate_diversity_boxplot(genus_rare_alpha.df, variable = myvar,fill_palette = my_colour_palette_10_distinct,metric = "Simpson",variable_colours_available = T) +
     guides(fill = F, color = F) +
     ggtitle("Simpson") +
     scale_y_continuous(limits = c(0,1), breaks = seq(0,1,.2))
-  ggsave(filename = paste0("Result_figures/diversity_analysis/genus/genus_",myvar,"_Simpson.pdf"),myplot, width = 10, height = 10,units = "cm")
+  ggsave(filename = paste0("Result_figures/diversity_analysis/both_cohorts/genus/genus_",myvar,"_Simpson.pdf"),myplot, width = 10, height = 10,units = "cm")
 }
 
 # -----------------------------------------------------------------------------------------------------------------
 # -----------------------------------------------------------------------------------------------------------------
 # -----------------------------------------------------------------------------------------------------------------
-# Create a subsampled dataset. Ensure the same number of patients and the same number of samples.
+# Create sub-/down-sampled datasets. Ensure the same number of patients and the same number of samples.
 # Try and make the selected samples well distributed, i.e. try and not bias a single patient
 
 # FIRST IMMUNOCOMPROMISED
@@ -377,28 +406,30 @@ for (myvar in discrete_variables){
 lowest_patient_group.df <- immunocompromised_genus_data.df %>% 
   group_by(Lesion_type_refined) %>% 
   select(Lesion_type_refined, Patient) %>% 
-  distinct() %>% 
-  tally() %>% 
-  summarise(Lesion_type_refined = Lesion_type_refined[which.min(n)], Count = min(n)) %>% 
+  dplyr::distinct() %>% 
+  dplyr::tally() %>% 
+  dplyr::summarise(Lesion_type_refined = Lesion_type_refined[which.min(n)], Count = min(n)) %>% 
   as.data.frame()
 
 # Get the group with the lowest number of samples
 lowest_sample_group.df <- immunocompromised_genus_data.df %>% 
   group_by(Lesion_type_refined) %>% 
   select(Lesion_type_refined, Index) %>% 
-  distinct() %>% 
-  tally() %>% 
-  summarise(Lesion_type_refined = Lesion_type_refined[which.min(n)], Count = min(n)) %>% 
+  dplyr::distinct() %>% 
+  dplyr::tally() %>% 
+  dplyr::summarise(Lesion_type_refined = Lesion_type_refined[which.min(n)], Count = min(n)) %>% 
   as.data.frame()
 
 # We know that the number of patients is always lower than sample number for each group, 
-lowest_patient_group.df$Count
-lowest_sample_group.df$Count
+lowest_patient_group.df
+lowest_sample_group.df
+# 8 patients, 21 samples
 
-# This is a not-so-great approach, though it works. Randomly sample samples until the number of unique patients
-# is the minimum. To have the sample number of samples, we have to limit to 15 samples
+# This is a not-so-great approach. Randomly sample samples until the number of unique patients
+# is the minimum. To have the same number of samples, we have to limit the number of samples (test different limits)
+# Current limit is 16 samples (assuming 21 samples is the lowest total)
 set.seed(1234)
-immunocompromised_down_sampled.df <- data.frame()
+immunocompromised_downsampled_genus.df <- data.frame()
 for (sf in unique(immunocompromised_genus_data.df$Lesion_type_refined)){
   full_data_subset_sf.df <- subset(immunocompromised_genus_data.df, Lesion_type_refined == sf)
   N_patients <- length(unique(full_data_subset_sf.df$Patient))
@@ -423,16 +454,24 @@ for (sf in unique(immunocompromised_genus_data.df$Lesion_type_refined)){
     # print(N_patients)
     # print(N_samples)
   }
-  immunocompromised_down_sampled.df <- rbind(immunocompromised_down_sampled.df, temp_downsampled)
+  immunocompromised_downsampled_genus.df <- rbind(immunocompromised_downsampled_genus.df, temp_downsampled)
 }
 
 # Check numbers of samples are (approximately) equal
-immunocompromised_down_sampled.df %>%
+immunocompromised_downsampled_genus.df %>%
   group_by(Lesion_type_refined) %>%
   select(Lesion_type_refined, Index) %>%
   distinct() %>%
   tally() %>%
   as.data.frame()
+
+immunocompromised_downsampled_genus.df %>%
+  group_by(Lesion_type_refined) %>%
+  select(Lesion_type_refined, Patient) %>%
+  distinct() %>%
+  tally() %>%
+  as.data.frame()
+
 
 # ------------------------------
 # NOW IMMUNOCOMPETENT
@@ -454,30 +493,30 @@ lowest_sample_group.df <- immunocompetent_genus_data.df %>%
   as.data.frame()
 
 # We know that the number of patients is always lower than sample number for each group, 
-lowest_patient_group.df$Count
-lowest_sample_group.df$Count
+lowest_patient_group.df
+lowest_sample_group.df
 # 10 33
 
-# This is a horrible approach. Randomly sample samples until the number of unique patients
+# Randomly sample samples until the number of unique patients
 # is the minimum. To have the sample number of samples, we have to limit to 31 samples
 set.seed(1234)
-immunocompetent_down_sampled.df <- data.frame()
+immunocompetent_downsampled_genus.df <- data.frame()
 for (sf in unique(immunocompetent_genus_data.df$Lesion_type_refined)){
   full_data_subset_sf.df <- subset(immunocompetent_genus_data.df, Lesion_type_refined == sf)
   N_patients <- length(unique(full_data_subset_sf.df$Patient))
   N_samples <- length(unique(full_data_subset_sf.df$Index))
-  # print(paste0(sf, " ", N_patients, " ", N_samples, " 1"))
+  print(paste0(sf, " ", N_patients, " ", N_samples, " 1"))
   iterations <- 0
-  if (sf %in% c("SCC", "AK")){
+  # if (sf %in% c("SCC", "AK")){
     while ( N_patients != lowest_patient_group.df$Count | N_samples != lowest_sample_group.df$Count-2){
-      
+
       temp_downsampled <- full_data_subset_sf.df %>% sample_n(lowest_sample_group.df$Count-2)
       N_patients <- length(unique(temp_downsampled$Patient))
       N_samples <- length(unique(temp_downsampled$Index))
       iterations <- sum(iterations, 1)
       print(paste0(sf, " ", N_patients, " ", N_samples, " 2 ", iterations))
     }
-  }
+  # }
   while ( N_patients != lowest_patient_group.df$Count){
     # print(sf)
     temp_downsampled <- full_data_subset_sf.df %>% sample_n(lowest_sample_group.df$Count-2)
@@ -489,17 +528,17 @@ for (sf in unique(immunocompetent_genus_data.df$Lesion_type_refined)){
     # print(N_patients)
     # print(N_samples)
   }
-  immunocompetent_down_sampled.df <- rbind(immunocompetent_down_sampled.df, temp_downsampled)
+  immunocompetent_downsampled_genus.df <- rbind(immunocompetent_downsampled_genus.df, temp_downsampled)
 }
 
-immunocompetent_down_sampled.df %>%
+immunocompetent_downsampled_genus.df %>%
   group_by(Lesion_type_refined) %>%
   select(Lesion_type_refined, Index) %>%
   distinct() %>%
   tally() %>%
   as.data.frame()
 
-immunocompetent_down_sampled.df %>%
+immunocompetent_downsampled_genus.df %>%
   group_by(Lesion_type_refined) %>%
   select(Lesion_type_refined, Patient) %>%
   distinct() %>%
@@ -507,862 +546,298 @@ immunocompetent_down_sampled.df %>%
   as.data.frame()
 # 10 patients, 30 samples
 
-full_downsampled.df <- rbind(immunocompetent_down_sampled.df, immunocompromised_down_sampled.df)
+both_cohorts_downsampled_genus.df <- rbind(immunocompetent_downsampled_genus.df, immunocompromised_downsampled_genus.df)
+both_cohorts_downsampled_otu.df <- rbind(immunocompetent_downsampled_otu.df, immunocompromised_downsampled_otu.df)
+
+immunocompetent_downsampled_otu.df <- otu_rare_alpha.df[otu_rare_alpha.df$Index %in% immunocompetent_downsampled_genus.df$Index,]
+immunocompromised_downsampled_otu.df <- otu_rare_alpha.df[otu_rare_alpha.df$Index %in% immunocompromised_downsampled_genus.df$Index,]
 
 
-# -----------------------------------------------------------------------------------------------------------------
-# -----------------------------------------------------------------------------------------------------------------
-# -----------------------------------------------------------------------------------------------------------------
+dim(both_cohorts_downsampled_genus.df)
+dim(both_cohorts_downsampled_otu.df)
+dim(immunocompetent_downsampled_genus.df)
+dim(immunocompetent_downsampled_otu.df)
+dim(immunocompromised_downsampled_genus.df)
+dim(immunocompromised_downsampled_otu.df)
 
-
-
-
-
-# Calculate number of unique features/OTUs per sample
-# temp <- otu_rare.m
-# temp[temp > 0] <- 1
-# temp <- melt(colSums(temp))
-# metadata.df$Number_of_features <- temp[rownames(metadata.df), ,]
-
-# Estimate alpha diversities
-otu_rare_alpha.df <- estimate_richness(otu_rare_phyloseq, measures = c("Chao1", "Simpson","Shannon"))
-otu_rare_alpha.df <- otu_rare_alpha.df[rownames(metadata.df),]
-otu_true_rare_alpha.df <- estimate_richness(otu_true_rare_phyloseq, measures = c("Chao1", "Simpson","Shannon"))
-otu_true_rare_alpha.df <- otu_true_rare_alpha.df[rownames(metadata.df),]
-
-# Combine the metadata and the diversity metrics into a single dataframe
-full=cbind(metadata.df, otu_rare_alpha.df)
-full_true_rare=cbind(metadata.df, otu_true_rare_alpha.df)
-
-# Create combined variables
-# full$Project_Sampletype_pooled <- with(full, paste0(Project, "_",Sampletype_pooled))
-# full_true_rare$Project_Sampletype_pooled <- with(full_true_rare, paste0(Project, "_",Sampletype_pooled))
-full$Project_Sampletype_final <- factor(with(full, paste0(Project, "_",Sampletype_final)))
-full_true_rare$Project_Sampletype_final <- factor(with(full_true_rare, paste0(Project, "_",Sampletype_final)))
-
-# EDIT 11/7/19 : Just use truly rarefied data
-full <- full_true_rare
-
-# Cohort specific data 
-immunocompetent_data.df <- subset(full, Project == "immunocompetent")
-immunocompromised_data.df <- subset(full, Project == "immunocompromised")
-# -----------------------------------------------------------------------------------------------------------------
-# Create a subsampled dataset. Ensure the same number of patients and the same number of samples.
-# Try and make the selected samples well distributed, i.e. try and not bias a single patient
-
-# FIRST IMMUNOCOMPROMISED
-# Get the group with the lowest number of patients
-lowest_patient_group.df <- immunocompromised_data.df %>% 
-  group_by(Sampletype_final) %>% 
-  select(Sampletype_final, Patient) %>% 
-  distinct() %>% 
-  tally() %>% 
-  summarise(Sampletype_final = Sampletype_final[which.min(n)], Count = min(n)) %>% 
-  as.data.frame()
-
-# Get the group with the lowest number of samples
-lowest_sample_group.df <- immunocompromised_data.df %>% 
-  group_by(Sampletype_final) %>% 
-  select(Sampletype_final, Index) %>% 
-  distinct() %>% 
-  tally() %>% 
-  summarise(Sampletype_final = Sampletype_final[which.min(n)], Count = min(n)) %>% 
-  as.data.frame()
-
-# 9 patients, 17 samples
-
-# We know that the number of patients is always lower than sample number for each group, 
-lowest_patient_group.df$Count
-lowest_sample_group.df$Count
-
-# This is a horrible approach. Randomly sample samples until the number of unique patients
-# is the minimum. To have the sample number of samples, we have to limit to 15 samples
-set.seed(1234)
-immunocompromised_down_sampled.df <- data.frame()
-for (sf in unique(immunocompromised_data.df$Sampletype_final)){
-  full_data_subset_sf.df <- subset(immunocompromised_data.df, Sampletype_final == sf)
-  N_patients <- length(unique(full_data_subset_sf.df$Patient))
-  N_samples <- length(unique(full_data_subset_sf.df$Index))
-  iterations <- 0
-  if (sf == "C"){
-    while ( N_patients != lowest_patient_group.df$Count | N_samples != lowest_sample_group.df$Count-5){
-      temp_downsampled <- full_data_subset_sf.df %>% sample_n(lowest_sample_group.df$Count-5)
-      N_patients <- length(unique(temp_downsampled$Patient))
-      N_samples <- length(unique(temp_downsampled$Index))
-    }
-  }
-  while ( N_patients != lowest_patient_group.df$Count){
-    temp_downsampled <- full_data_subset_sf.df %>% sample_n(lowest_sample_group.df$Count-5)
-    N_patients <- length(unique(temp_downsampled$Patient))
-    N_samples <- length(unique(temp_downsampled$Index))
-    iterations <- sum(iterations, 1)
-    # print(iterations)
-    # print(N_patients)
-    # print(N_samples)
-  }
-  immunocompromised_down_sampled.df <- rbind(immunocompromised_down_sampled.df, temp_downsampled)
-}
-# immunocompromised_down_sampled.df %>%
-#   group_by(Sampletype_final) %>%
-#   select(Sampletype_final, Index) %>%
-#   distinct() %>%
-#   tally() %>%
-#   as.data.frame()
-# 9 patients, 17 samples
-
-
-# NOW IMMUNOCOMPETENT
-lowest_patient_group.df <- immunocompetent_data.df %>% 
-  group_by(Sampletype_final) %>% 
-  select(Sampletype_final, Patient) %>% 
-  distinct() %>% 
-  tally() %>% 
-  summarise(Sampletype_final = Sampletype_final[which.min(n)], Count = min(n)) %>% 
-  as.data.frame()
-
-# Get the group with the lowest number of samples
-lowest_sample_group.df <- immunocompetent_data.df %>% 
-  group_by(Sampletype_final) %>% 
-  select(Sampletype_final, Index) %>% 
-  distinct() %>% 
-  tally() %>% 
-  summarise(Sampletype_final = Sampletype_final[which.min(n)], Count = min(n)) %>% 
-  as.data.frame()
-
-# We know that the number of patients is always lower than sample number for each group, 
-lowest_patient_group.df$Count
-lowest_sample_group.df$Count
-# 10 31
-
-# This is a horrible approach. Randomly sample samples until the number of unique patients
-# is the minimum. To have the sample number of samples, we have to limit to 31 samples
-set.seed(1234)
-immunocompetent_down_sampled.df <- data.frame()
-for (sf in unique(immunocompetent_data.df$Sampletype_final)){
-  full_data_subset_sf.df <- subset(immunocompetent_data.df, Sampletype_final == sf)
-  N_patients <- length(unique(full_data_subset_sf.df$Patient))
-  N_samples <- length(unique(full_data_subset_sf.df$Index))
-  # print(paste0(sf, " ", N_patients, " ", N_samples, " 1"))
-  iterations <- 0
-  if (sf %in% c("SCC", "AK")){
-    while ( N_patients != lowest_patient_group.df$Count | N_samples != lowest_sample_group.df$Count-1){
-      
-      temp_downsampled <- full_data_subset_sf.df %>% sample_n(lowest_sample_group.df$Count-1)
-      N_patients <- length(unique(temp_downsampled$Patient))
-      N_samples <- length(unique(temp_downsampled$Index))
-      # print(paste0(sf, " ", N_patients, " ", N_samples, " 2"))
-    }
-  }
-  while ( N_patients != lowest_patient_group.df$Count){
-    # print(sf) 
-    temp_downsampled <- full_data_subset_sf.df %>% sample_n(lowest_sample_group.df$Count-1)
-    N_patients <- length(unique(temp_downsampled$Patient))
-    N_samples <- length(unique(temp_downsampled$Index))
-    iterations <- sum(iterations, 1)
-    # print(paste0(sf, " ", N_patients, " ", N_samples, " 3"))
-    # print(iterations)
-    # print(N_patients)
-    # print(N_samples)
-  }
-  immunocompetent_down_sampled.df <- rbind(immunocompetent_down_sampled.df, temp_downsampled)
-}
-
-immunocompetent_down_sampled.df %>%
-  group_by(Sampletype_final) %>%
-  select(Sampletype_final, Index) %>%
+both_cohorts_downsampled_genus.df %>%
+  group_by(Cohort, Lesion_type_refined) %>%
+  select(Cohort, Lesion_type_refined, Patient) %>%
   distinct() %>%
   tally() %>%
   as.data.frame()
 
-immunocompetent_down_sampled.df %>%
-  group_by(Sampletype_final) %>%
-  select(Sampletype_final, Patient) %>%
+both_cohorts_downsampled_genus.df %>%
+  group_by(Cohort, Lesion_type_refined) %>%
+  select(Cohort,Lesion_type_refined, Index) %>%
   distinct() %>%
   tally() %>%
   as.data.frame()
-# 10 patients, 30 samples
-
-full_downsampled.df <- rbind(immunocompetent_down_sampled.df, immunocompromised_down_sampled.df)
-
 # -----------------------------------------------------------------------------------------------------------------
 
-# ------------------------------------------
-# Generate plots based on diversity values and metadata
+both_cohorts_downsampled_otu_alpha_diversity_summary.df <- summarise_diversities_each_variable(both_cohorts_downsampled_otu.df, variables = discrete_variables)
+both_cohorts_downsampled_otu_alpha_diversity_significances.df <- calculate_diversity_sigificances_each_variable(both_cohorts_downsampled_otu.df, variables = discrete_variables)
 
-generate_diversity_boxplot_2 <- function(mydata, variable, metric, variable_colours_available = T){
-  internal_data.df <- mydata[!is.na(mydata[variable]),]
-  variable_values <- factor(as.character(unique(internal_data.df[[variable]])))
-  if (variable_colours_available == T){
-    color_col_name <- paste0(variable, "_colour")
-    variable_colours <- setNames(as.character(unique(internal_data.df[[color_col_name]])), as.character(unique(internal_data.df[[variable]])))
-  } else{
-    variable_colours <- setNames(my_colour_pallete_206_distinct[1:length(variable_values)], variable_values)  
-  }
-  myplot <- ggplot(internal_data.df, aes(x = get(variable), y = get(metric))) +
-    geom_boxplot(outlier.shape = NA, aes(fill = get(variable))) +
-    scale_fill_manual(values = variable_colours, name = variable) +
-    geom_jitter(size=0.5, width = 0.10, height=0) +
-    guides(fill=FALSE) +
-    # scale_y_continuous(limits = c(0,4.5), breaks = seq(0,4.5,.5)) +
-    xlab("") +
-    ylab(metric)  +
-    common_theme +
-    theme(panel.border = element_blank(), 
-          panel.grid.major = element_blank(),
-          panel.grid.minor = element_blank(),
-          axis.line = element_line(colour = "black", size = 0.5),
-          panel.background = element_blank(),
-          strip.background = element_rect(fill = "white", colour = "white", size = 1),
-          strip.text = element_text(size = 6),
-          legend.key=element_blank(),
-          legend.direction="vertical",
-          legend.background = element_rect(colour ="white", size = .3),
-          legend.text.align = 0,
-          legend.title = element_text(size=10, face="bold"),
-          legend.title.align = 0.5,
-          legend.margin = margin(c(2,2,2,2)),
-          legend.key.height=unit(.4,"cm"),
-          legend.text = element_text(size = 8),
-          axis.text = element_text(size = 9, colour = "black"),
-          axis.title = element_text(size = 10,face = "bold"),
-          complete = F,
-          plot.title = element_text(size = 6))
-  myplot
+both_cohorts_downsampled_genus_alpha_diversity_summary.df <- summarise_diversities_each_variable(both_cohorts_downsampled_genus.df, variables = discrete_variables)
+both_cohorts_downsampled_genus_alpha_diversity_significances.df <- calculate_diversity_sigificances_each_variable(both_cohorts_downsampled_genus.df, variables = discrete_variables)
+
+immunocompromised_downsampled_otu_alpha_diversity_summary.df <- summarise_diversities_each_variable(immunocompromised_downsampled_genus.df, variables = discrete_variables)
+immunocompromised_downsampled_otu_alpha_diversity_significances.df <- calculate_diversity_sigificances_each_variable(immunocompromised_downsampled_genus.df, variables = discrete_variables)
+
+immunocompromised_downsampled_genus_alpha_diversity_summary.df <- summarise_diversities_each_variable(immunocompromised_downsampled_genus.df, variables = discrete_variables)
+immunocompromised_downsampled_genus_alpha_diversity_significances.df <- calculate_diversity_sigificances_each_variable(immunocompromised_downsampled_genus.df, variables = discrete_variables)
+
+immunocompetent_downsampled_otu_alpha_diversity_summary.df <- summarise_diversities_each_variable(immunocompetent_downsampled_otu.df, variables = discrete_variables)
+immunocompetent_downsampled_otu_alpha_diversity_significances.df <- calculate_diversity_sigificances_each_variable(immunocompetent_downsampled_otu.df, variables = discrete_variables)
+
+immunocompetent_downsampled_genus_alpha_diversity_summary.df <- summarise_diversities_each_variable(immunocompetent_downsampled_genus.df, variables = discrete_variables)
+immunocompetent_downsampled_genus_alpha_diversity_significances.df <- calculate_diversity_sigificances_each_variable(immunocompetent_downsampled_genus.df, variables = discrete_variables)
+
+# Both cohorts, OTU level
+write.csv(x = both_cohorts_downsampled_otu_alpha_diversity_summary.df, 
+                      file = paste0("Result_tables/diversity_analysis/both_cohorts/otu/otu_alpha_diversities_summary_downsampled.csv"), 
+                      quote = F, row.names = F)
+
+write.csv(x = both_cohorts_downsampled_otu_alpha_diversity_significances.df, 
+                      file = paste0("Result_tables/diversity_analysis/both_cohorts/otu/otu_alpha_diversities_significance_downsampled.csv"), 
+                      quote = F, row.names = F)
+
+# Both cohorts, Genus level
+write.csv(x = both_cohorts_downsampled_genus_alpha_diversity_summary.df, 
+                      file = paste0("Result_tables/diversity_analysis/both_cohorts/genus/genus_alpha_diversities_summary_downsampled.csv"), 
+                      quote = F, row.names = F)
+
+write.csv(x = both_cohorts_downsampled_genus_alpha_diversity_significances.df, 
+                      file = paste0("Result_tables/diversity_analysis/both_cohorts/genus/genus_alpha_diversities_significance_downsampled.csv"), 
+                      quote = F, row.names = F)
+
+# immunocompromised, OTU level
+write.csv(x = immunocompromised_downsampled_otu_alpha_diversity_summary.df, 
+                      file = paste0("Result_tables/diversity_analysis/immunocompromised/otu/otu_alpha_diversities_summary_downsampled.csv"), 
+                      quote = F, row.names = F)
+
+write.csv(x = immunocompromised_downsampled_otu_alpha_diversity_significances.df, 
+                      file = paste0("Result_tables/diversity_analysis/immunocompromised/otu/otu_alpha_diversities_significance_downsampled.csv"), 
+                      quote = F, row.names = F)
+
+# immunocompromised, Genus level
+write.csv(x = immunocompromised_downsampled_genus_alpha_diversity_summary.df, 
+                      file = paste0("Result_tables/diversity_analysis/immunocompromised/genus/genus_alpha_diversities_summary_downsampled.csv"), 
+                      quote = F, row.names = F)
+
+write.csv(x = immunocompromised_downsampled_genus_alpha_diversity_significances.df, 
+                      file = paste0("Result_tables/diversity_analysis/immunocompromised/genus/genus_alpha_diversities_significance_downsampled.csv"), 
+                      quote = F, row.names = F)
+
+# immunocompetent, OTU level
+write.csv(x = immunocompetent_downsampled_otu_alpha_diversity_summary.df, 
+                      file = paste0("Result_tables/diversity_analysis/immunocompetent/otu/otu_alpha_diversities_summary_downsampled.csv"), 
+                      quote = F, row.names = F)
+
+write.csv(x = immunocompetent_downsampled_otu_alpha_diversity_significances.df, 
+                      file = paste0("Result_tables/diversity_analysis/immunocompetent/otu/otu_alpha_diversities_significance_downsampled.csv"), 
+                      quote = F, row.names = F)
+
+# immunocompetent, Genus level
+write.csv(x = immunocompetent_downsampled_genus_alpha_diversity_summary.df, 
+                      file = paste0("Result_tables/diversity_analysis/immunocompetent/genus/genus_alpha_diversities_summary_downsampled.csv"), 
+                      quote = F, row.names = F)
+
+write.csv(x = immunocompetent_downsampled_genus_alpha_diversity_significances.df, 
+                      file = paste0("Result_tables/diversity_analysis/immunocompetent/genus/genus_alpha_diversities_significance_downsampled.csv"), 
+                      quote = F, row.names = F)
+
+
+
+for (myvar in discrete_variables){
+  # ----------------------------------------------------------------
+  # both cohorts, downsampled, otu level
+  myplot <- generate_diversity_boxplot(both_cohorts_downsampled_otu.df, variable = myvar,fill_palette = my_colour_palette_10_distinct,metric = "Chao1",variable_colours_available = T) + 
+    guides(fill = F, color = F) + 
+    ggtitle("Chao1") +
+    scale_y_continuous(limits = c(0,200), breaks = seq(0,200,50))
+  
+  ggsave(filename = paste0("Result_figures/diversity_analysis/both_cohorts/otu/otu_",myvar,"_downsampled_Chao1.pdf"),myplot, width = 10, height = 10,units = "cm")
+  
+  myplot <- generate_diversity_boxplot(both_cohorts_downsampled_otu.df, variable = myvar,fill_palette = my_colour_palette_10_distinct,metric = "Shannon",variable_colours_available = T) + 
+    guides(fill = F, color = F) + 
+    ggtitle("Shannon") +
+    scale_y_continuous(limits = c(0,5), breaks = seq(0,5,.5))
+  ggsave(filename = paste0("Result_figures/diversity_analysis/both_cohorts/otu/otu_",myvar,"_downsampled_Shannon.pdf"),myplot, width = 10, height = 10,units = "cm")
+  
+  myplot <- generate_diversity_boxplot(both_cohorts_downsampled_otu.df, variable = myvar,fill_palette = my_colour_palette_10_distinct,metric = "Simpson",variable_colours_available = T) +
+    guides(fill = F, color = F) +
+    ggtitle("Simpson") +
+    scale_y_continuous(limits = c(0,1), breaks = seq(0,1,.2))
+  ggsave(filename = paste0("Result_figures/diversity_analysis/both_cohorts/otu/otu_",myvar,"_downsampled_Simpson.pdf"),myplot, width = 10, height = 10,units = "cm")
+  
+  # ----------------------------------------------------------------
+  # both cohorts, downsampled, genus level
+  myplot <- generate_diversity_boxplot(both_cohorts_downsampled_genus.df, variable = myvar,fill_palette = my_colour_palette_10_distinct,metric = "Chao1",variable_colours_available = T) + 
+    guides(fill = F, color = F) + 
+    ggtitle("Chao1") +
+    scale_y_continuous(limits = c(0,200), breaks = seq(0,200,50))
+  
+  ggsave(filename = paste0("Result_figures/diversity_analysis/both_cohorts/genus/genus_",myvar,"_downsampled_Chao1.pdf"),myplot, width = 10, height = 10,units = "cm")
+  
+  myplot <- generate_diversity_boxplot(both_cohorts_downsampled_genus.df, variable = myvar,fill_palette = my_colour_palette_10_distinct,metric = "Shannon",variable_colours_available = T) + 
+    guides(fill = F, color = F) + 
+    ggtitle("Shannon") +
+    scale_y_continuous(limits = c(0,5), breaks = seq(0,5,.5))
+  ggsave(filename = paste0("Result_figures/diversity_analysis/both_cohorts/genus/genus_",myvar,"_downsampled_Shannon.pdf"),myplot, width = 10, height = 10,units = "cm")
+  
+  myplot <- generate_diversity_boxplot(both_cohorts_downsampled_genus.df, variable = myvar,fill_palette = my_colour_palette_10_distinct,metric = "Simpson",variable_colours_available = T) +
+    guides(fill = F, color = F) +
+    ggtitle("Simpson") +
+    scale_y_continuous(limits = c(0,1), breaks = seq(0,1,.2))
+  ggsave(filename = paste0("Result_figures/diversity_analysis/both_cohorts/genus/genus_",myvar,"_downsampled_Simpson.pdf"),myplot, width = 10, height = 10,units = "cm")
+  # ----------------------------------------------------------------
+  # Immunocompetent, downsampled, otu level
+  myplot <- generate_diversity_boxplot(immunocompetent_downsampled_otu.df, variable = myvar,fill_palette = my_colour_palette_10_distinct,metric = "Chao1",variable_colours_available = T) + 
+    guides(fill = F, color = F) + 
+    ggtitle("Chao1") +
+    scale_y_continuous(limits = c(0,200), breaks = seq(0,200,50))
+  
+  ggsave(filename = paste0("Result_figures/diversity_analysis/immunocompetent/otu/otu_",myvar,"_downsampled_Chao1.pdf"),myplot, width = 10, height = 10,units = "cm")
+  
+  myplot <- generate_diversity_boxplot(immunocompetent_downsampled_otu.df, variable = myvar,fill_palette = my_colour_palette_10_distinct,metric = "Shannon",variable_colours_available = T) + 
+    guides(fill = F, color = F) + 
+    ggtitle("Shannon") +
+    scale_y_continuous(limits = c(0,5), breaks = seq(0,5,.5))
+  ggsave(filename = paste0("Result_figures/diversity_analysis/immunocompetent/otu/otu_",myvar,"_downsampled_Shannon.pdf"),myplot, width = 10, height = 10,units = "cm")
+  
+  myplot <- generate_diversity_boxplot(immunocompetent_downsampled_otu.df, variable = myvar,fill_palette = my_colour_palette_10_distinct,metric = "Simpson",variable_colours_available = T) +
+    guides(fill = F, color = F) +
+    ggtitle("Simpson") +
+    scale_y_continuous(limits = c(0,1), breaks = seq(0,1,.2))
+  ggsave(filename = paste0("Result_figures/diversity_analysis/immunocompetent/otu/otu_",myvar,"_downsampled_Simpson.pdf"),myplot, width = 10, height = 10,units = "cm")
+  # ----------------------------------------------------------------
+  # Immunocompetent, downsampled, genus level
+  myplot <- generate_diversity_boxplot(immunocompetent_downsampled_genus.df, variable = myvar,fill_palette = my_colour_palette_10_distinct,metric = "Chao1",variable_colours_available = T) + 
+    guides(fill = F, color = F) + 
+    ggtitle("Chao1") +
+    scale_y_continuous(limits = c(0,200), breaks = seq(0,200,50))
+  
+  ggsave(filename = paste0("Result_figures/diversity_analysis/immunocompetent/genus/genus_",myvar,"_downsampled_Chao1.pdf"),myplot, width = 10, height = 10,units = "cm")
+  
+  myplot <- generate_diversity_boxplot(immunocompetent_downsampled_genus.df, variable = myvar,fill_palette = my_colour_palette_10_distinct,metric = "Shannon",variable_colours_available = T) + 
+    guides(fill = F, color = F) + 
+    ggtitle("Shannon") +
+    scale_y_continuous(limits = c(0,5), breaks = seq(0,5,.5))
+  ggsave(filename = paste0("Result_figures/diversity_analysis/immunocompetent/genus/genus_",myvar,"_downsampled_Shannon.pdf"),myplot, width = 10, height = 10,units = "cm")
+  
+  myplot <- generate_diversity_boxplot(immunocompetent_downsampled_genus.df, variable = myvar,fill_palette = my_colour_palette_10_distinct,metric = "Simpson",variable_colours_available = T) +
+    guides(fill = F, color = F) +
+    ggtitle("Simpson") +
+    scale_y_continuous(limits = c(0,1), breaks = seq(0,1,.2))
+  ggsave(filename = paste0("Result_figures/diversity_analysis/immunocompetent/genus/genus_",myvar,"_downsampled_Simpson.pdf"),myplot, width = 10, height = 10,units = "cm")
+  # ----------------------------------------------------------------
+  # ----------------------------------------------------------------
+  # Immunocompromised, downsampled, otu level
+  myplot <- generate_diversity_boxplot(immunocompromised_downsampled_otu.df, variable = myvar,fill_palette = my_colour_palette_10_distinct,metric = "Chao1",variable_colours_available = T) + 
+    guides(fill = F, color = F) + 
+    ggtitle("Chao1") +
+    scale_y_continuous(limits = c(0,200), breaks = seq(0,200,50))
+  
+  ggsave(filename = paste0("Result_figures/diversity_analysis/immunocompromised/otu/otu_",myvar,"_downsampled_Chao1.pdf"),myplot, width = 10, height = 10,units = "cm")
+  
+  myplot <- generate_diversity_boxplot(immunocompromised_downsampled_otu.df, variable = myvar,fill_palette = my_colour_palette_10_distinct,metric = "Shannon",variable_colours_available = T) + 
+    guides(fill = F, color = F) + 
+    ggtitle("Shannon") +
+    scale_y_continuous(limits = c(0,5), breaks = seq(0,5,.5))
+  ggsave(filename = paste0("Result_figures/diversity_analysis/immunocompromised/otu/otu_",myvar,"_downsampled_Shannon.pdf"),myplot, width = 10, height = 10,units = "cm")
+  
+  myplot <- generate_diversity_boxplot(immunocompromised_downsampled_otu.df, variable = myvar,fill_palette = my_colour_palette_10_distinct,metric = "Simpson",variable_colours_available = T) +
+    guides(fill = F, color = F) +
+    ggtitle("Simpson") +
+    scale_y_continuous(limits = c(0,1), breaks = seq(0,1,.2))
+  ggsave(filename = paste0("Result_figures/diversity_analysis/immunocompromised/otu/otu_",myvar,"_downsampled_Simpson.pdf"),myplot, width = 10, height = 10,units = "cm")
+  
+  # ----------------------------------------------------------------
+  # Immunocompromised, downsampled, genus level
+  myplot <- generate_diversity_boxplot(immunocompromised_downsampled_genus.df, variable = myvar,fill_palette = my_colour_palette_10_distinct,metric = "Chao1",variable_colours_available = T) + 
+    guides(fill = F, color = F) + 
+    ggtitle("Chao1") +
+    scale_y_continuous(limits = c(0,200), breaks = seq(0,200,50))
+  
+  ggsave(filename = paste0("Result_figures/diversity_analysis/immunocompromised/genus/genus_",myvar,"_downsampled_Chao1.pdf"),myplot, width = 10, height = 10,units = "cm")
+  
+  myplot <- generate_diversity_boxplot(immunocompromised_downsampled_genus.df, variable = myvar,fill_palette = my_colour_palette_10_distinct,metric = "Shannon",variable_colours_available = T) + 
+    guides(fill = F, color = F) + 
+    ggtitle("Shannon") +
+    scale_y_continuous(limits = c(0,5), breaks = seq(0,5,.5))
+  ggsave(filename = paste0("Result_figures/diversity_analysis/immunocompromised/genus/genus_",myvar,"_downsampled_Shannon.pdf"),myplot, width = 10, height = 10,units = "cm")
+  
+  myplot <- generate_diversity_boxplot(immunocompromised_downsampled_genus.df, variable = myvar,fill_palette = my_colour_palette_10_distinct,metric = "Simpson",variable_colours_available = T) +
+    guides(fill = F, color = F) +
+    ggtitle("Simpson") +
+    scale_y_continuous(limits = c(0,1), breaks = seq(0,1,.2))
+  ggsave(filename = paste0("Result_figures/diversity_analysis/immunocompromised/genus/genus_",myvar,"_downsampled_Simpson.pdf"),myplot, width = 10, height = 10,units = "cm")
+  # ----------------------------------------------------------------
 }
 
-# For each cohort (Project)
-myplot <- generate_diversity_boxplot_2(full, "Project", "Chao1", variable_colours_available = T)
-ggsave(filename = paste0("Result_figures/diversity_analysis/Project_Chao1.pdf"),myplot, width = 9, height = 8,units = "cm")
-myplot <- generate_diversity_boxplot_2(full, "Project", "Shannon", variable_colours_available = T)
-ggsave(filename = paste0("Result_figures/diversity_analysis/Project_Shannon.pdf"),myplot, width = 9, height = 8,units = "cm")
-myplot <- generate_diversity_boxplot_2(full, "Project", "Simpson", variable_colours_available = T)
-ggsave(filename = paste0("Result_figures/diversity_analysis/Project_Simpson.pdf"),myplot, width =9, height = 8,units = "cm")
-
-# myplot <- generate_diversity_boxplot_2(full_true_rare, "Project", "Chao1", variable_colours_available = T)
-# ggsave(filename = paste0("Result_figures/diversity_analysis/Project_Chao1_true_rare.pdf"),myplot, width = 9, height = 8,units = "cm")
+# -----------------------------------------------------------------------------------------------------------------
+# -----------------------------------------------------------------------------------------------------------------
+# -----------------------------------------------------------------------------------------------------------------
 
 
-# For each Sampletype_pooled (cohorts combined)
-# myplot <- generate_diversity_boxplot_2(full, "Sampletype_pooled", "Chao1", variable_colours_available = T)
-# ggsave(filename = paste0("Result_figures/diversity_analysis/both_cohorts_sampletype_pooled_Chao1.pdf"),myplot, width = 8, height = 8,units = "cm")
-# 
-# myplot <- generate_diversity_boxplot_2(full, "Sampletype_pooled", "Shannon", variable_colours_available = T)
-# ggsave(filename = paste0("Result_figures/diversity_analysis/both_cohorts_sampletype_pooled_Shannon.pdf"),myplot, width = 8, height = 8,units = "cm")
-# 
-# myplot <- generate_diversity_boxplot_2(full, "Sampletype_pooled", "Simpson", variable_colours_available = T)
-# ggsave(filename = paste0("Result_figures/diversity_analysis/both_cohorts_sampletype_pooled_Simpson.pdf"),myplot, width = 8, height = 8,units = "cm")
 
-# For each Sampletype_final for both cohorts
-myplot <- generate_diversity_boxplot_2(full, "Sampletype_final", "Chao1", variable_colours_available = T) +facet_wrap(~Project)
-ggsave(filename = paste0("Result_figures/diversity_analysis/sampletype_final_Chao1.pdf"),myplot, width = 11, height = 8,units = "cm")
-
-myplot <- generate_diversity_boxplot_2(full, "Sampletype_final", "Shannon", variable_colours_available = T) +facet_wrap(~Project)
-ggsave(filename = paste0("Result_figures/diversity_analysis/sampletype_final_Shannon.pdf"),myplot, width = 11, height = 8,units = "cm")
-
-myplot <- generate_diversity_boxplot_2(full, "Sampletype_final", "Simpson", variable_colours_available = T) +facet_wrap(~Project)
-ggsave(filename = paste0("Result_figures/diversity_analysis/sampletype_final_Simpson.pdf"),myplot, width = 11, height = 8,units = "cm")
-
-# For each Sampletype_final both cohorts, downsampled
-myplot <- generate_diversity_boxplot_2(full_downsampled.df, "Sampletype_final", "Chao1", variable_colours_available = T) +facet_wrap(~Project)
-ggsave(filename = paste0("Result_figures/diversity_analysis/sampletype_final_down_sampled_Chao1.pdf"),myplot, width = 11, height = 8,units = "cm")
-
-myplot <- generate_diversity_boxplot_2(full_downsampled.df, "Sampletype_final", "Shannon", variable_colours_available = T) +facet_wrap(~Project)
-ggsave(filename = paste0("Result_figures/diversity_analysis/sampletype_final_down_sampled_Shannon.pdf"),myplot, width = 11, height = 8,units = "cm")
-
-myplot <- generate_diversity_boxplot_2(full_downsampled.df, "Sampletype_final", "Simpson", variable_colours_available = T) +facet_wrap(~Project)
-ggsave(filename = paste0("Result_figures/diversity_analysis/sampletype_final_down_sampled_Simpson.pdf"),myplot, width = 11, height = 8,units = "cm")
-
-# For each Sampletype_final down sampled (immunocompromised)
-myplot <- generate_diversity_boxplot_2(immunocompromised_down_sampled.df, "Sampletype_final", "Chao1", variable_colours_available = T)+facet_wrap(~Project)
-ggsave(filename = paste0("Result_figures/diversity_analysis/immunocompromised_sampletype_final_down_sampled_Chao1.pdf"),myplot, width = 8, height = 8,units = "cm")
-
-myplot <- generate_diversity_boxplot_2(immunocompromised_down_sampled.df, "Sampletype_final", "Shannon", variable_colours_available = T)+facet_wrap(~Project)
-ggsave(filename = paste0("Result_figures/diversity_analysis/immunocompromised_sampletype_final_down_sampled_Shannon.pdf"),myplot, width = 8, height = 8,units = "cm")
-
-myplot <- generate_diversity_boxplot_2(immunocompromised_down_sampled.df, "Sampletype_final", "Simpson", variable_colours_available = T)+facet_wrap(~Project)
-ggsave(filename = paste0("Result_figures/diversity_analysis/immunocompromised_sampletype_final_down_sampled_Simpson.pdf"),myplot, width = 8, height = 8,units = "cm")
-
-# For each Sampletype_final down sampled (immunocompetent)
-myplot <- generate_diversity_boxplot_2(immunocompetent_down_sampled.df, "Sampletype_final", "Chao1", variable_colours_available = T)+facet_wrap(~Project)
-ggsave(filename = paste0("Result_figures/diversity_analysis/immunocompetent_sampletype_final_down_sampled_Chao1.pdf"),myplot, width = 8, height = 8,units = "cm")
-
-myplot <- generate_diversity_boxplot_2(immunocompetent_down_sampled.df, "Sampletype_final", "Shannon", variable_colours_available = T)+facet_wrap(~Project)
-ggsave(filename = paste0("Result_figures/diversity_analysis/immunocompetent_sampletype_final_down_sampled_Shannon.pdf"),myplot, width = 8, height = 8,units = "cm")
-
-myplot <- generate_diversity_boxplot_2(immunocompetent_down_sampled.df, "Sampletype_final", "Simpson", variable_colours_available = T)+facet_wrap(~Project)
-ggsave(filename = paste0("Result_figures/diversity_analysis/immunocompetent_sampletype_final_down_sampled_Simpson.pdf"),myplot, width = 8, height = 8,units = "cm")
-
-
-# ------------
-# True rare, Sampletype_pooled
-# myplot <- generate_diversity_boxplot_2(full_true_rare, "Sampletype_pooled", "Chao1", variable_colours_available = T) +facet_wrap(~Project)
-# ggsave(filename = paste0("Result_figures/diversity_analysis/sampletype_pooled_true_rare_Chao1.pdf"),myplot, width = 11, height = 8,units = "cm")
-# 
-# myplot <- generate_diversity_boxplot_2(full_true_rare, "Sampletype_pooled", "Shannon", variable_colours_available = T) +facet_wrap(~Project)
-# ggsave(filename = paste0("Result_figures/diversity_analysis/sampletype_pooled_true_rare_Shannon.pdf"),myplot, width = 11, height = 8,units = "cm")
-# 
-# myplot <- generate_diversity_boxplot_2(full_true_rare, "Sampletype_pooled", "Simpson", variable_colours_available = T) +facet_wrap(~Project)
-# ggsave(filename = paste0("Result_figures/diversity_analysis/sampletype_pooled_true_rare_Simpson.pdf"),myplot, width = 11, height = 8,units = "cm")
-
-# True rare, Sampletype_compromised_refined (immunocompromised)
-# myplot <- generate_diversity_boxplot_2(full_true_rare, "Sampletype_compromised_refined", "Chao1", variable_colours_available = T)+facet_wrap(~Project)
-# ggsave(filename = paste0("Result_figures/diversity_analysis/sampletype_compromised_refined_true_rare_Chao1.pdf"),myplot, width = 8, height = 8,units = "cm")
-# 
-# myplot <- generate_diversity_boxplot_2(full_true_rare, "Sampletype_compromised_refined", "Shannon", variable_colours_available = T)+facet_wrap(~Project)
-# ggsave(filename = paste0("Result_figures/diversity_analysis/sampletype_compromised_refined_true_rare_Shannon.pdf"),myplot, width = 8, height = 8,units = "cm")
-# 
-# myplot <- generate_diversity_boxplot_2(full_true_rare, "Sampletype_compromised_refined", "Simpson", variable_colours_available = T)+facet_wrap(~Project)
-# ggsave(filename = paste0("Result_figures/diversity_analysis/sampletype_compromised_refined_true_rare_Simpson.pdf"),myplot, width = 8, height = 8,units = "cm")
-
-# ------------
-
-# For Patient_group
-# myplot <- generate_diversity_boxplot_2(full, "Patient_group", "Chao1", variable_colours_available = T)# + labs(title = "Patient group")
-# ggsave(filename = paste0("Result_figures/diversity_analysis/Patient_group_Chao1.pdf"),myplot, width = 8, height = 8,units = "cm")
-# 
-# myplot <- generate_diversity_boxplot_2(full, "Patient_group", "Shannon", variable_colours_available = T)
-# ggsave(filename = paste0("Result_figures/diversity_analysis/Patient_group_Shannon.pdf"),myplot, width = 8, height = 8,units = "cm")
-# 
-# myplot <- generate_diversity_boxplot_2(full, "Patient_group", "Simpson", variable_colours_available = T)
-# ggsave(filename = paste0("Result_figures/diversity_analysis/Patient_group_Simpson.pdf"),myplot, width = 8, height = 8,units = "cm")
-
-# For Number_of_meds
-# myplot <- generate_diversity_boxplot_2(full, "Number_of_meds", "Chao1", variable_colours_available = T)
-# ggsave(filename = paste0("Result_figures/diversity_analysis/Number_of_meds_Chao1.pdf"),myplot, width = 8, height = 8,units = "cm")
-# 
-# myplot <- generate_diversity_boxplot_2(full, "Number_of_meds", "Shannon", variable_colours_available = T)
-# ggsave(filename = paste0("Result_figures/diversity_analysis/Number_of_meds_Shannon.pdf"),myplot, width = 8, height = 8,units = "cm")
-# 
-# myplot <- generate_diversity_boxplot_2(full, "Number_of_meds", "Simpson", variable_colours_available = T)
-# ggsave(filename = paste0("Result_figures/diversity_analysis/Number_of_meds_Simpson.pdf"),myplot, width = 8, height = 8,units = "cm")
-
-# For Fitzpatrick_skin_type
-# myplot <- generate_diversity_boxplot_2(full, "Fitzpatrick_skin_type", "Chao1", variable_colours_available = T)
-# ggsave(filename = paste0("Result_figures/diversity_analysis/Fitzpatrick_skin_type_Chao1.pdf"),myplot, width = 8, height = 8,units = "cm")
-# 
-# myplot <- generate_diversity_boxplot_2(full, "Fitzpatrick_skin_type", "Shannon", variable_colours_available = T)
-# ggsave(filename = paste0("Result_figures/diversity_analysis/Fitzpatrick_skin_type_Shannon.pdf"),myplot, width = 8, height = 8,units = "cm")
-# 
-# myplot <- generate_diversity_boxplot_2(full, "Fitzpatrick_skin_type", "Simpson", variable_colours_available = T)
-# ggsave(filename = paste0("Result_figures/diversity_analysis/Fitzpatrick_skin_type_Simpson.pdf"),myplot, width = 8, height = 8,units = "cm")
 
 # ------------------------------------------------------------------------
 # ------------------------------------------------------------------------
 # Plot the Bacterial_load_CFU against the diversities
-plot_CFU <- function(mydata, variable_to_plot, metric, variable_colours_available = T, use_shapes = T){
-  internal_data.df <- mydata
-  internal_data.df[[variable_to_plot]] <- factor(internal_data.df[[variable_to_plot]])
-  variable_values <- levels(internal_data.df[[variable_to_plot]])
-
-  # If variable colour column "variable_colour" in metadata, use colours from there
-  if (variable_colours_available == T){
-    colour_col_name <- paste0(variable_to_plot, "_colour")
-    variable_colours <- setNames(as.character(unique(internal_data.df[[colour_col_name]])), as.character(variable_values))
-  } else{
-    variable_colours <- setNames(colour_palette[1:length(variable_values)], variable_values)  
-  }
-  if (use_shapes == T){
-    variable_shapes <- setNames(rep(c(25,24,23,22,21),length(variable_values))[1:length(variable_values)],variable_values)
-  } else{
-    variable_shapes <- setNames(rep(c(21),length(variable_values))[1:length(variable_values)],variable_values)  
-  }
-  
-  correlations.df <- data.frame(row.names = unique(internal_data.df[,variable_to_plot]))
-  correlations.df[,variable_to_plot] <- rownames(correlations.df)
-  correlations.df$p_value_pearson <- NA
-  correlations.df$p_value_spearman <- NA
-  correlations.df$cor_value_pearson <- NA
-  correlations.df$cor_value_spearman <- NA
-  
-  for (group in unique(internal_data.df[,variable_to_plot])){
-    data_subset <- subset(internal_data.df, get(variable_to_plot) == group)
-    pearson_test <- with(data_subset, cor.test(Chao1, Bacterial_load_CFU,method = "pearson"))
-    spearman_test <- with(data_subset, cor.test(Chao1, Bacterial_load_CFU,method = "spearman", exact = F))
-    p_value_pearson <- round(pearson_test$p.value,4)
-    p_value_spearman <- round(spearman_test$p.value,4)
-    cor_value_pearson <- round(pearson_test$estimate,2)
-    cor_value_spearman <- round(spearman_test$estimate,2)
-    correlations.df[group,]$p_value_pearson <- p_value_pearson
-    correlations.df[group,]$p_value_spearman <- p_value_spearman
-    correlations.df[group,]$cor_value_pearson <- cor_value_pearson
-    correlations.df[group,]$cor_value_spearman <- cor_value_spearman
-  }
-
-  myplot <- ggplot(internal_data.df, aes(x = get(metric), y = log(Bacterial_load_CFU, 10))) +
-    geom_point(aes(shape = get(variable_to_plot), fill = get(variable_to_plot))) +
-    geom_smooth(method = "lm",se = F,na.rm = T, linetype = "dashed", color = "black", size = .5) +
-    geom_text(data= correlations.df,parse = T, aes(x = -Inf, y = Inf, label = paste0("rho==", cor_value_pearson, "*','~italic(p)==", p_value_pearson)), hjust=-0.2, vjust=1.2, size = 3) +
-    geom_text(data= correlations.df,parse = T, aes(x = -Inf, y = Inf, label = paste0("r[s]==", cor_value_spearman, "*','~italic(p)==", p_value_spearman)), hjust=-0.2, vjust=3.2, size = 3) +
-    scale_shape_manual(values = variable_shapes, name = variable_to_plot)+
-    scale_fill_manual(values = variable_colours, name = variable_to_plot) +
-    ylab(expression(paste(log[10]~"(Bacterial load CFU)"))) +
-    xlab(metric) +
-    facet_wrap(~get(variable_to_plot)) +
-    common_theme +
-    theme(strip.text = element_text(size = 10))
-  
-  myplot
-}
-  
-# immunocompromised_data_filtered.df <- immunocompromised_data.df[!is.na(immunocompromised_data.df$Bacterial_load_CFU),]
-
-immunocompromised_data_true_rare.df <- subset(full_true_rare, Project == "immunocompromised")
-immunocompromised_data_true_rare.df <- immunocompromised_data_true_rare.df[!is.na(immunocompromised_data_true_rare.df$Bacterial_load_CFU),]
-
-# Patient_group, chao1
-# for (group in unique(immunocompromised_data.df$Patient_group)){
-#     data_subset <- subset(immunocompromised_data.df, Patient_group == group)
-#     myplot <- plot_CFU(data_subset, variable_to_plot = "Patient_group", metric = "Chao1") + 
-#       scale_y_continuous(limits = c(0,7), breaks = seq(0,7,1)) + theme(legend.position = "none")
-#     ggsave(plot = myplot,
-#            filename = paste0("Result_figures/diversity_analysis/", "Patient_group_",group, "__Chao1.pdf"),
-#            width = 12,height = 10,units = "cm") 
-# }
-
-# Patient_group, Shannon
-# for (group in unique(immunocompromised_data.df$Patient_group)){
-#   data_subset <- subset(immunocompromised_data.df, Patient_group == group)
-#   myplot <- plot_CFU(data_subset, variable_to_plot = "Patient_group", metric = "Shannon") + 
-#     scale_y_continuous(limits = c(0,7), breaks = seq(0,7,1)) + theme(legend.position = "none")
-#   ggsave(plot = myplot,
-#          filename = paste0("Result_figures/diversity_analysis/", "Patient_group_",group, "__Shannon.pdf"),
-#          width = 12,height = 10,units = "cm") 
-# }
-
-# # Sampletype_pooled, chao1
-# for (group in unique(immunocompromised_data.df$Sampletype_pooled)){
-#   data_subset <- subset(immunocompromised_data.df, Sampletype_pooled == group)
-#   myplot <- plot_CFU(data_subset, variable_to_plot = "Sampletype_pooled", metric = "Chao1") + 
-#     scale_y_continuous(limits = c(0,7), breaks = seq(0,7,1)) + theme(legend.position = "none")
-#   ggsave(plot = myplot,
-#          filename = paste0("Result_figures/diversity_analysis/", "Sampletype_pooled_",group, "__Chao1.pdf"),
-#          width = 12,height = 10,units = "cm") 
-# }
-# # ---------------
-# for (group in unique(immunocompromised_data_true_rare.df$Sampletype_pooled)){
-#   data_subset <- subset(immunocompromised_data_true_rare.df, Sampletype_pooled == group)
-#   myplot <- plot_CFU(data_subset, variable_to_plot = "Sampletype_pooled", metric = "Chao1") + 
-#     scale_y_continuous(limits = c(0,7), breaks = seq(0,7,1)) + theme(legend.position = "none")
-#   ggsave(plot = myplot,
-#          filename = paste0("Result_figures/diversity_analysis/", "Sampletype_pooled_",group, "_true_rare__Chao1.pdf"),
-#          width = 12,height = 10,units = "cm") 
-# }
-# # ---------------
+# plot_CFU <- function(mydata, variable_to_plot, metric, variable_colours_available = T, use_shapes = T){
+#   internal_data.df <- mydata
+#   internal_data.df[[variable_to_plot]] <- factor(internal_data.df[[variable_to_plot]])
+#   variable_values <- levels(internal_data.df[[variable_to_plot]])
 # 
-# # Sampletype_pooled, Shannon
-# for (group in unique(immunocompromised_data.df$Sampletype_pooled)){
-#   data_subset <- subset(immunocompromised_data.df, Sampletype_pooled == group)
-#   myplot <- plot_CFU(data_subset, variable_to_plot = "Sampletype_pooled", metric = "Shannon") + 
-#     scale_y_continuous(limits = c(0,7), breaks = seq(0,7,1)) + theme(legend.position = "none")
-#   ggsave(plot = myplot,
-#          filename = paste0("Result_figures/diversity_analysis/", "Sampletype_pooled_",group, "__Shannon.pdf"),
-#          width = 12,height = 10,units = "cm") 
-# }
-# 
-# 
-# # Sampletype_compromised_refined, Chao1
-# for (group in unique(immunocompromised_data.df$Sampletype_compromised_refined)){
-#   data_subset <- subset(immunocompromised_data.df, Sampletype_compromised_refined == group)#& !is.na(Bacterial_load_CFU)
-#   myplot <- plot_CFU(data_subset, variable_to_plot = "Sampletype_compromised_refined", metric = "Shannon") + 
-#     scale_y_continuous(limits = c(0,7), breaks = seq(0,7,1)) + theme(legend.position = "none")
-#   ggsave(plot = myplot,
-#          filename = paste0("Result_figures/diversity_analysis/", "Sampletype_compromised_refined_",group, "__Chao1.pdf"),
-#          width = 12,height = 10,units = "cm") 
-# }
-# 
-# 
-# # Number_of_meds, chao1
-# for (group in unique(immunocompromised_data.df$Number_of_meds)){
-#   data_subset <- subset(immunocompromised_data.df, Number_of_meds == group)
-#   myplot <- plot_CFU(data_subset, variable_to_plot = "Number_of_meds", metric = "Chao1") + 
-#     scale_y_continuous(limits = c(0,7), breaks = seq(0,7,1)) + theme(legend.position = "none")
-#   ggsave(plot = myplot,
-#          filename = paste0("Result_figures/diversity_analysis/", "Number_of_meds_",group, "__Chao1.pdf"),
-#          width = 12,height = 10,units = "cm") 
-# }
-# 
-# # Number_of_meds, Shannon
-# for (group in unique(immunocompromised_data.df$Number_of_meds)){
-#   data_subset <- subset(immunocompromised_data.df, Number_of_meds == group)
-#   myplot <- plot_CFU(data_subset, variable_to_plot = "Number_of_meds", metric = "Shannon") + 
-#     scale_y_continuous(limits = c(0,7), breaks = seq(0,7,1)) + theme(legend.position = "none")
-#   ggsave(plot = myplot,
-#          filename = paste0("Result_figures/diversity_analysis/", "Number_of_meds_", group, "__Shannon.pdf"),
-#          width = 12,height = 10,units = "cm") 
-# }
-# 
-# # Fitzpatrick_skin_type, chao1
-# for (group in unique(immunocompromised_data.df$Fitzpatrick_skin_type)){
-#   data_subset <- subset(immunocompromised_data.df, Fitzpatrick_skin_type == group)
-#   myplot <- plot_CFU(data_subset, variable_to_plot = "Fitzpatrick_skin_type", metric = "Chao1") + 
-#     scale_y_continuous(limits = c(0,7), breaks = seq(0,7,1)) + theme(legend.position = "none")
-#   ggsave(plot = myplot,
-#          filename = paste0("Result_figures/diversity_analysis/", "Fitzpatrick_skin_type_",group, "__Chao1.pdf"),
-#          width = 12,height = 10,units = "cm") 
-# }
-# # Fitzpatrick_skin_type, Shannon
-# for (group in unique(immunocompromised_data.df$Fitzpatrick_skin_type)){
-#   data_subset <- subset(immunocompromised_data.df, Fitzpatrick_skin_type == group)
-#   myplot <- plot_CFU(data_subset, variable_to_plot = "Fitzpatrick_skin_type", metric = "Shannon") + 
-#     scale_y_continuous(limits = c(0,7), breaks = seq(0,7,1)) + theme(legend.position = "none")
-#   ggsave(plot = myplot,
-#          filename = paste0("Result_figures/diversity_analysis/", "Fitzpatrick_skin_type_",group, "__Shannon.pdf"),
-#          width = 12,height = 10,units = "cm") 
-# }
-
-
-# ------------------------------------------------------------------------
-# ------------------------------------------------------------------------
-
-# Generate the diversity summary tables for each variable
-# For each discrete variable, calculate the diversity index mean, max, min, median and stdev
-# and write to file
-# Use down sampled datasets
-
-for (var in discrete_variables) {
-  diversity_summary <- full_downsampled.df %>% 
-    dplyr::group_by_(var) %>%
-    dplyr::summarise(
-      Shannon_Mean=mean(Shannon), 
-      Shannon_Max=max(Shannon), 
-      Shannon_Min=min(Shannon), 
-      Shannon_Median=median(Shannon), 
-      # Shannon_Std=sd(Shannon),
-      
-      Simpson_Mean=mean(Simpson), 
-      Simpson_Max=max(Simpson), 
-      Simpson_Min=min(Simpson), 
-      Simpson_Median=median(Simpson), 
-      # Simpson_Std=sd(Simpson),
-      
-      Chao1_Mean=mean(Chao1), 
-      Chao1_Max=max(Chao1), 
-      Chao1_Min=min(Chao1), 
-      Chao1_Median=median(Chao1), 
-      # Chao1_Std=sd(Chao1),
-      N_patients=n_distinct(Patient),
-      N_samples=n_distinct(Index)
-      ) %>% 
-    as.data.frame()
-  outfilename <- paste0("Result_tables/diversity_analysis/", var, "_diversity_summary.csv")
-  write.csv(x = diversity_summary, outfilename, row.names = F,quote = F)
-}
-
-# Repeat but within each Cohort
-for (var in discrete_variables) {
-  if (var  == "Project") {next}
-  diversity_summary <- full_downsampled.df %>% 
-    dplyr::group_by_("Project", var) %>%
-    dplyr::summarise(
-      Shannon_Mean=mean(Shannon), 
-      Shannon_Max=max(Shannon), 
-      Shannon_Min=min(Shannon), 
-      Shannon_Median=median(Shannon), 
-      # Shannon_Std=sd(Shannon),
-      
-      Simpson_Mean=mean(Simpson), 
-      Simpson_Max=max(Simpson), 
-      Simpson_Min=min(Simpson), 
-      Simpson_Median=median(Simpson), 
-      # Simpson_Std=sd(Simpson),
-      
-      Chao1_Mean=mean(Chao1), 
-      Chao1_Max=max(Chao1), 
-      Chao1_Min=min(Chao1), 
-      Chao1_Median=median(Chao1), 
-      # Chao1_Std=sd(Chao1),
-      
-      N_patients=n_distinct(Patient),
-      N_samples=n_distinct(Index)
-    ) %>% 
-    as.data.frame()
-  outfilename <- paste0("Result_tables/diversity_analysis/", var, "_diversity_summary_within_cohort.csv")
-  write.csv(x = diversity_summary, outfilename, row.names = F,quote = F)
-}
-
-# Repeat for immunocompromised specific variables
-# for (var in discrete_variables_immunocompromised) {
-#   diversity_summary <- immunocompromised_data.df %>% 
-#     dplyr::group_by_(var) %>%
-#     dplyr::summarise(
-#       Shannon_Mean=mean(Shannon), 
-#       Shannon_Max=max(Shannon), 
-#       Shannon_Min=min(Shannon), 
-#       Shannon_Median=median(Shannon), 
-#       # Shannon_Std=sd(Shannon),
-#       
-#       Simpson_Mean=mean(Simpson), 
-#       Simpson_Max=max(Simpson), 
-#       Simpson_Min=min(Simpson), 
-#       Simpson_Median=median(Simpson), 
-#       # Simpson_Std=sd(Simpson),
-#       
-#       Chao1_Mean=mean(Chao1), 
-#       Chao1_Max=max(Chao1), 
-#       Chao1_Min=min(Chao1), 
-#       Chao1_Median=median(Chao1), 
-#       # Chao1_Std=sd(Chao1),
-#       N_patients=n_distinct(Patient),
-#       N_samples=n_distinct(Index)
-#     ) %>% 
-#     as.data.frame()
-#   outfilename <- paste0("Result_tables/diversity_analysis/", var, "_diversity_summary.csv")
-#   write.csv(x = diversity_summary, outfilename, row.names = F,quote = F)
-# }
-
-# ------------------------------------------------------------------------------------------------------------------------------
-# Takes awhile to calculate, uncomment to run
-
-# Calculate the beta-diversity for each variable 
-# Centre-log transform the counts first and use a euclidean distance. This should be equivalent or superior to 
-# a bray curtis transform/distance used on counts. 
-# It is unclear whether un-rarefied vs rarefied data should be used. Our data is partially rarefied, this should be ok.
-# As far as I can tell in the literature, the euclidean distance between CLR values is an appropriate beta diversity measure
-
-# beta_diversity_significances <- data.frame("Variable" = character(),
-#                                            "P_value" = numeric(),
-#                                            "R_value" = numeric()
-# )
-# for (myvar in discrete_variables){
-#   metadata_subset.df <- metadata.df[!is.na(metadata.df[,myvar]),]
-#   otu_rare_subset.m <- otu_rare.m[,rownames(metadata_subset.df)]
-#   # print(myvar)
-#   temp <- with(metadata_subset.df, anosim(t(clr(otu_rare_subset.m)),get(myvar), distance = "euclidean",permutations = 999))
-#   beta_diversity_significances <- rbind(beta_diversity_significances, data.frame("Variable" = myvar,
-#                                                                                  "P_value" = temp$signif,
-#                                                                                  "R_value" = temp$statistic))
-# }
-# 
-# beta_diversity_significances$padj <- round(p.adjust(beta_diversity_significances$P_value,method = "BH"),6)
-# write.csv(beta_diversity_significances, file = "Result_tables/diversity_analysis/variable_beta_diversity_significance.csv", row.names = F, quote = F)
-# 
-# # Calculate the beta-diversity for each variable within each cohort
-# beta_diversity_significances <- data.frame("Project" = character(),
-#                                            "Variable" = character(),
-#                                            "P_value" = numeric(),
-#                                            "R_value" = numeric()
-# )
-# 
-# for (cohort in unique(metadata.df$Project)){
-#   discrete_variables_cohort <- discrete_variables
-#   if (cohort == "immunocompromised"){
-#     discrete_variables_cohort <- c(discrete_variables, discrete_variables_immunocompromised)
+#   # If variable colour column "variable_colour" in metadata, use colours from there
+#   if (variable_colours_available == T){
+#     colour_col_name <- paste0(variable_to_plot, "_colour")
+#     variable_colours <- setNames(as.character(unique(internal_data.df[[colour_col_name]])), as.character(variable_values))
+#   } else{
+#     variable_colours <- setNames(colour_palette[1:length(variable_values)], variable_values)  
 #   }
-#   for (myvar in discrete_variables_cohort){
-#     if (myvar == "Project") {next}
-#     metadata_subset.df <- subset(metadata.df, Project == cohort)
-#     metadata_subset.df <- metadata_subset.df[!is.na(metadata_subset.df[,myvar]),]
-#     otu_rare_subset.m <- otu_rare.m[,rownames(metadata_subset.df)]
-#     # print(all(colnames(otu_rare_subset.m) == rownames(metadata_subset.df)))
-#     # print(myvar)
-#     temp <- with(metadata_subset.df, anosim(t(clr(otu_rare_subset.m)),get(myvar), distance = "euclidean",permutations = 999))
-#     beta_diversity_significances <- rbind(beta_diversity_significances, data.frame("Project" = cohort,
-#                                                                                    "Variable" = myvar,
-#                                                                                    "P_value" = temp$signif,
-#                                                                                    "R_value" = temp$statistic))
+#   if (use_shapes == T){
+#     variable_shapes <- setNames(rep(c(25,24,23,22,21),length(variable_values))[1:length(variable_values)],variable_values)
+#   } else{
+#     variable_shapes <- setNames(rep(c(21),length(variable_values))[1:length(variable_values)],variable_values)  
 #   }
-# }
-# # beta_diversity_significances$padj <- 0
-# # beta_diversity_significances[beta_diversity_significances$Project == "immunocompetent",]$padj <- round(p.adjust(beta_diversity_significances[beta_diversity_significances$Project == "immunocompetent",]$P_value,method = "BH"),6)
-# # beta_diversity_significances[beta_diversity_significances$Project == "immunocompromised",]$padj <- round(p.adjust(beta_diversity_significances[beta_diversity_significances$Project == "immunocompromised",]$P_value,method = "BH"),6)
-# beta_diversity_significances$padj <- round(p.adjust(beta_diversity_significances$P_value,method = "BH"),6)
-# write.csv(beta_diversity_significances, file = "Result_tables/diversity_analysis/within_cohort_variable_beta_diversity_significance.csv", row.names = F, quote = F)
-
-# ------------------------------------------------------------------------------------------------------------------------------
-
-# Now that we have calculated the diversities for each sample, we can test if diversity distributions are significantly different between groups:
-# Lesion types
-# Cohort
+#   
+#   correlations.df <- data.frame(row.names = unique(internal_data.df[,variable_to_plot]))
+#   correlations.df[,variable_to_plot] <- rownames(correlations.df)
+#   correlations.df$p_value_pearson <- NA
+#   correlations.df$p_value_spearman <- NA
+#   correlations.df$cor_value_pearson <- NA
+#   correlations.df$cor_value_spearman <- NA
+#   
+#   for (group in unique(internal_data.df[,variable_to_plot])){
+#     data_subset <- subset(internal_data.df, get(variable_to_plot) == group)
+#     pearson_test <- with(data_subset, cor.test(Chao1, Bacterial_load_CFU,method = "pearson"))
+#     spearman_test <- with(data_subset, cor.test(Chao1, Bacterial_load_CFU,method = "spearman", exact = F))
+#     p_value_pearson <- round(pearson_test$p.value,4)
+#     p_value_spearman <- round(spearman_test$p.value,4)
+#     cor_value_pearson <- round(pearson_test$estimate,2)
+#     cor_value_spearman <- round(spearman_test$estimate,2)
+#     correlations.df[group,]$p_value_pearson <- p_value_pearson
+#     correlations.df[group,]$p_value_spearman <- p_value_spearman
+#     correlations.df[group,]$cor_value_pearson <- cor_value_pearson
+#     correlations.df[group,]$cor_value_spearman <- cor_value_spearman
+#   }
 # 
-# And for immunocompromised
-# Patient_group (discrete)
-# Number_of_meds (discrete)
-# Fitzpatrick_skin_type (discrete)
-# Sampletype_compromised_refined (discrete)
-
-# Tests that can be used to compare multiple discrete groups include:
-# kruskal-wallis (non-parametric, data does not need to be normal, typically used for more than two groups though can be used for pairs)
-# anova
-# t-tests (for two-groups)
-# Wilcoxon rank sum test (non-parametric)
-# general linear models
-# general mix linear models (includes a random effect)
-
-# ------------------------------
-
-# ----------------------------
-# Mann–Whitney U / Wilcox test
-# Unpaired = "Wilcoxon rank sum test" or "Mann-Whitney U test"
-
-calculate_diversity_significance <- function(mydata, variable){
-  # Assumes there are Shannon, Chao1 and Simpson columns
-  # This is run assuming unpaired data.
-  # In reality, for skin for example, we may be comparing 
-  # lesion types from the same patient. In this case the data is paired.
-  # However this is not the case for all patients / lesions and hence would suggest
-  # that unpaired is sufficient.
-  results.df <- data.frame("Group_1" = character(),
-                           "Group_2" = character(),
-                           "Shannon_MannW_pvalue" = character(),
-                           "Simpson_MannW_pvalue" = character(),
-                           "Chao1_MannW_pvalue" = character(),
-                           "Shannon_KrusW_pvalue" = character(),
-                           "Simpson_KrusW_pvalue" = character(),
-                           "Chao1_KrusW_pvalue" = character())
-  group_combinations <- combn(as.character(unique(mydata[,variable])), 2)
+#   myplot <- ggplot(internal_data.df, aes(x = get(metric), y = log(Bacterial_load_CFU, 10))) +
+#     geom_point(aes(shape = get(variable_to_plot), fill = get(variable_to_plot))) +
+#     geom_smooth(method = "lm",se = F,na.rm = T, linetype = "dashed", color = "black", size = .5) +
+#     geom_text(data= correlations.df,parse = T, aes(x = -Inf, y = Inf, label = paste0("rho==", cor_value_pearson, "*','~italic(p)==", p_value_pearson)), hjust=-0.2, vjust=1.2, size = 3) +
+#     geom_text(data= correlations.df,parse = T, aes(x = -Inf, y = Inf, label = paste0("r[s]==", cor_value_spearman, "*','~italic(p)==", p_value_spearman)), hjust=-0.2, vjust=3.2, size = 3) +
+#     scale_shape_manual(values = variable_shapes, name = variable_to_plot)+
+#     scale_fill_manual(values = variable_colours, name = variable_to_plot) +
+#     ylab(expression(paste(log[10]~"(Bacterial load CFU)"))) +
+#     xlab(metric) +
+#     facet_wrap(~get(variable_to_plot)) +
+#     common_theme +
+#     theme(strip.text = element_text(size = 10))
+#   
+#   myplot
+# }
   
-  # kruskal_shannon_test <- kruskal.test(Shannon~get(variable), data = mydata)
-  # kruskal_simpson_test <- kruskal.test(Simpson~get(variable), data = mydata)
-  # kruskal_chao1_test <- kruskal.test(Chao1~get(variable), data = mydata)
-  # all_group_result_string <- paste0("Kruskal-Wallis all groups: ",
-  #       "\nShannon=",round(kruskal_shannon_test$p.value, 6),
-  #       "\nSimpson=",round(kruskal_simpson_test$p.value, 6),
-  #       "\nChao1=", round(kruskal_chao1_test$p.value, 6))
-  # cat(sprintf(all_group_result_string))
-  
-  for (i in 1:ncol(group_combinations)) {
-    group_1 <- group_combinations[1,i]
-    group_2 <- group_combinations[2,i]
-    group_1_meta <- subset(mydata, get(variable) == group_1)
-    group_2_meta <- subset(mydata, get(variable) == group_2)
-    
-    # Mann-Whitney test on the Shannon diversity
-    wilcox_shannon_test <- wilcox.test(group_1_meta$Shannon, group_2_meta$Shannon, exact = F)
-    # Mann-Whitney test on the Simpson diversity
-    wilcox_simpson_test <- wilcox.test(group_1_meta$Simpson, group_2_meta$Simpson, exact = F)
-    # Mann-Whitney test on the Chao1 diversity
-    wilcox_chao1_test <- wilcox.test(group_1_meta$Chao1, group_2_meta$Chao1, exact = F)
-    
-    # Kruskal-Wallis (pairwise) test on the Shannon diversity
-    kruskal_shannon_test <- kruskal.test(Shannon~get(variable), data = subset(mydata, get(variable) %in% c(group_1, group_2)))
-    # Kruskal-Wallis (pairwise) test on the Simpson diversity
-    kruskal_simpson_test <- kruskal.test(Simpson~get(variable), data = subset(mydata, get(variable) %in% c(group_1, group_2)))
-    # Kruskal-Wallis (pairwise) test on the Chao1 diversity
-    kruskal_chao1_test <- kruskal.test(Chao1~get(variable), data = subset(mydata, get(variable) %in% c(group_1, group_2)))
-    
-    results.df <- rbind(results.df, data.frame("Group_1" = group_1, 
-                                               "Group_2" = group_2, 
-                                               "Shannon_MannW_pvalue" = round(wilcox_shannon_test$p.value,6),
-                                               "Simpson_MannW_pvalue" = round(wilcox_simpson_test$p.value,6),
-                                               "Chao1_MannW_pvalue" = round(wilcox_chao1_test$p.value,6),
-                                               "Shannon_KrusW_pvalue" = round(kruskal_shannon_test$p.value,6),
-                                               "Simpson_KrusW_pvalue" = round(kruskal_simpson_test$p.value,6),
-                                               "Chao1_KrusW_pvalue" = round(kruskal_chao1_test$p.value,6)
-                                               ))
-  }
-  results.df$Shannon_MannW_padj <- round(p.adjust(results.df$Shannon_MannW_pvalue,method = "BH"),6)
-  results.df$Simpson_MannW_padj <- round(p.adjust(results.df$Simpson_MannW_pvalue,method = "BH"),6)
-  results.df$Chao1_MannW_padj <- round(p.adjust(results.df$Chao1_MannW_pvalue,method = "BH"),6)
-  results.df$Shannon_KrusW_padj <- round(p.adjust(results.df$Shannon_KrusW_pvalue,method = "BH"),6)
-  results.df$Simpson_KrusW_padj <- round(p.adjust(results.df$Simpson_KrusW_pvalue,method = "BH"),6)
-  results.df$Chao1_KrusW_padj <- round(p.adjust(results.df$Chao1_KrusW_pvalue,method = "BH"),6)
-  results.df
-}
-# Cohort significance
-cohorts_diversity_significance.df <- calculate_diversity_significance(full_downsampled.df, "Project")
-write.csv(cohorts_diversity_significance.df, file = "Result_tables/diversity_analysis/cohort_wilcox.csv", row.names = F, quote = F)
-
-# Sampletype_final significance
-sampletype_final_diversity_significance.df <- calculate_diversity_significance(full_downsampled.df, "Sampletype_final")
-sampletype_final_diversity_significance.df
-write.csv(sampletype_final_diversity_significance.df, file = "Result_tables/diversity_analysis/sampletype_final_wilcox.csv", row.names = F, quote = F)
-
-# --------------------
-# Project_Sampletype_final significance
-# temp <- subset(full_downsampled.df,Project_Sampletype_final != "immunocompromised_C")
-# temp <- full_downsampled.df
-# temp$Project_Sampletype_final <- factor(temp$Project_Sampletype_final)
-both_cohorts_sampletype_final_diversity_significance.df <- calculate_diversity_significance(full_downsampled.df, "Project_Sampletype_final")
-both_cohorts_sampletype_final_diversity_significance.df
-# both_cohorts_sampletype_pooled_diversity_significance_true_rare.df <- calculate_diversity_significance(full_true_rare, "Project_Sampletype_final")
-# both_cohorts_sampletype_pooled_diversity_significance_true_rare.df
-
-# pairwise.wilcox.test(full$Chao1, full$Project_Sampletype_pooled, p.adjust.method = "BH",paired = F)
-# both_cohorts_sampletype_pooled_diversity_significance.df$temp <- p.adjust(both_cohorts_sampletype_pooled_diversity_significance.df$Chao1_p.value,method = "BH")
-# pairwise.wilcox.test(full$Chao1, full$Project_Sampletype_pooled, p.adjust.method = "none",paired = F)
-write.csv(both_cohorts_sampletype_final_diversity_significance.df, file = "Result_tables/diversity_analysis/cohort_sampletype_final_wilcox.csv", row.names = F, quote = F)
-# write.csv(both_cohorts_sampletype_pooled_diversity_significance_true_rare.df, file = "Result_tables/diversity_analysis/cohort_sampletype_true_rare_wilcox.csv", row.names = F, quote = F)
-# --------------------
-
-# ------------------------------------------------------------
-# Immunocompromised specific
-# Sampletype_compromised_refined
-# immunocompromised_sampletype_compromised_refined_diversity_significance.df <- calculate_diversity_significance(immunocompromised_data.df, "Sampletype_compromised_refined")
-# write.csv(immunocompromised_sampletype_compromised_refined_diversity_significance.df, file = "Result_tables/diversity_analysis/immunocompromised_sampletype_compromised_refined_group_wilcox.csv", row.names = F, quote = F)
-
-# Sampletype_compromised_refined for down sampled data set
-immunocompromised_sampletype_compromised_refined_down_sampled_diversity_significance.df <- calculate_diversity_significance(immunocompromised_down_sampled.df, "Sampletype_final")
-write.csv(immunocompromised_sampletype_compromised_refined_down_sampled_diversity_significance.df, file = "Result_tables/diversity_analysis/immunocompromised_sampletype_final_down_sampled_group_wilcox.csv", row.names = F, quote = F)
-
-# Patient_group
-# immunocompromised_patient_group_diversity_significance.df <- calculate_diversity_significance(immunocompromised_data.df, "Patient_group")
-# write.csv(immunocompromised_patient_group_diversity_significance.df, file = "Result_tables/diversity_analysis/immunocompromised_patient_group_wilcox.csv", row.names = F, quote = F)
-
-# Number_of_meds
-# immunocompromised_number_of_meds_diversity_significance.df <- calculate_diversity_significance(immunocompromised_data.df, "Number_of_meds")
-# write.csv(immunocompromised_number_of_meds_diversity_significance.df, file = "Result_tables/diversity_analysis/immunocompromised_number_of_meds_wilcox.csv", row.names = F, quote = F)
-
-# Fitzpatrick_skin_type
-# immunocompromised_skin_type_diversity_significance.df <- calculate_diversity_significance(immunocompromised_data.df, "Fitzpatrick_skin_type")
-# write.csv(immunocompromised_skin_type_diversity_significance.df, file = "Result_tables/diversity_analysis/immunocompromised_fitzpatrick_skin_type_wilcox.csv", row.names = F, quote = F)
-
-# ------------------------------------------------------------
-# Immunocompetent specific
-
-# Sampletype_compromised_refined for down sampled data set
-immunocompetent_sampletype_compromised_refined_down_sampled_diversity_significance.df <- calculate_diversity_significance(immunocompetent_down_sampled.df, "Sampletype_final")
-write.csv(immunocompetent_sampletype_compromised_refined_down_sampled_diversity_significance.df, file = "Result_tables/diversity_analysis/immunocompetent_sampletype_final_down_sampled_group_wilcox.csv", row.names = F, quote = F)
-# ------------------------------------------------------------
-
-kruskal.test(Chao1~Sampletype_compromised_refined, data = immunocompromised_down_sampled.df)
-kruskal.test(Shannon~Sampletype_compromised_refined, data = immunocompromised_down_sampled.df)
-kruskal.test(Chao1~Sampletype_compromised_refined, data = immunocompromised_data.df)
-kruskal.test(Shannon~Sampletype_compromised_refined, data = immunocompromised_data.df)
-
-#     metadata_subset.df <- subset(full, Sample_Type == st) # Subset the metadata to only entries in the sample type
-#     metadata_subset.df <- metadata_subset.df[!is.na(metadata_subset.df[[variable]]),] # remove NA entries
-#     # ....................................
-#     # All groups together
-#     # Perform the Kruskal wallace test on the Chao1 diversity
-#     kw_chao1_test <- kruskal.test(Chao1~get(variable), data = metadata_subset.df)
-
-
-
-
-summary(aov(formula = Chao1~Sample_Type, data = full))
-summary(aov(formula = Chao1~DX_Groups, data = full))
-# ANOVA on 
-summary(aov(formula = Chao1~Sample_Type + DX_Groups + AGE + BMI + Gender, data = full))
-
-# lme requires a random effect variable to be specified. Simply make this the sample ID (Index or Sample_No, the latter is the patient ID)
-full$Index <- rownames(full)
-
-
-# Run linear mixed model for Chao1 index
-chao1full_model <- lme(fixed = Chao1 ~ DX_Groups + Sample_Type + Gender + AGE + BMI,
-                       data = full, random = ~ 1 | Index) 
-summary(chao1full_model)
-
-# Run linear model to test significance of variables across all variables
-# lm will apply an anova or t-test where appropriate
-lm_sample_type_chao <- lm(Chao1 ~ Sample_Type, data = full)
-lm_dx_groups_chao <- lm(Chao1 ~ DX_Groups, data = full)
-
-summary(aov(formula = Chao1~Sample_Type, data = full))
-summary(lm_sample_type_chao)
-summary(aov(formula = Chao1~DX_Groups, data = full))
-summary(lm_dx_groups_chao)
-
-lm_sample_type_simpson <- lm(Simpson ~ Sample_Type, data = full)
-lm_dx_groups_simpson <- lm(Simpson ~ DX_Groups, data = full)
-
-
-
-summary(lm_sample_type_simpson)
-summary(lm_dx_groups_simpson)
-
-
-# --------------------------------------------------------------------------------------------------------------------
-# --------------------------------------------------------------------------------------------------------------------
-# --------------------------------------------------------------------------------------------------------------------
-# --------------------------------------------------------------------------------------------------------------------

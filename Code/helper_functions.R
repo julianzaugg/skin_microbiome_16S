@@ -925,9 +925,35 @@ summarise_alpha_diversities <- function(mydata, group_by_columns){
               Chao1_Min=min(Chao1), 
               Chao1_Median=median(Chao1),
               
+              N_patients=n_distinct(Patient),
               N_samples = n_distinct(Index)
               ) %>% as.data.frame()
   summary.df
+}
+
+summarise_alpha_diversities2 <- function(d, x, ...){
+  d %>% dplyr::group_by(...) %>%
+    dplyr::summarise(Shannon_Mean =mean(Shannon),
+                     Shannon_Stdev=sd(Shannon),
+                     Shannon_Max=max(Shannon), 
+                     Shannon_Min=min(Shannon), 
+                     Shannon_Median=median(Shannon), 
+                     
+                     Simpson_Mean=mean(Simpson), 
+                     Simpson_Stdev=sd(Simpson),
+                     Simpson_Max=max(Simpson), 
+                     Simpson_Min=min(Simpson), 
+                     Simpson_Median=median(Simpson), 
+                     
+                     Chao1_Mean=mean(Chao1), 
+                     Chao1_Stdev=sd(Chao1),
+                     Chao1_Max=max(Chao1), 
+                     Chao1_Min=min(Chao1), 
+                     Chao1_Median=median(Chao1),
+                     
+                     N_patients=n_distinct(Patient),
+                     N_samples = n_distinct(Index)
+    )
 }
 
 
@@ -1028,5 +1054,460 @@ run_anosim_custom <- function(my_metadata, my_data, my_group, my_method = "eucli
 # ------------------------------------------------------------------------------------------------
 # ------------------------------------------------------------------------------------------------
 # ------------------------------------------------------------------------------------------------
+# Correlation analysis
 
+# calculate_correlation_matrix_stats <- function(correlation_matrix, method = "pearson", adjust = "none"){
+#   cor_result <- corr.test(correlation_matrix, adjust = adjust, method = method)
+#   cor_result$p
+# }
 
+calculate_correlation_matrix <- function(mydata, method = "pearson", adjust = "BH"){
+  
+  # Remove row entries that don't vary across all samples
+  internal_data.m <- mydata
+  zv <- apply(internal_data.m, 1, function(x) length(unique(x)) == 1)
+  internal_data.m <- internal_data.m[!zv, ]
+  
+  # Take a two vectors and perform a signficance/correlation test
+  calculate_stats <- function(x, y, dist.name) {
+    k <- cor.test(x, y, method=dist.name)
+    c(k$estimate, k$stat, k$p.value)
+  }
+  
+  # cor_result <- corr.test(t(internal_data.m), adjust = adjust, method = method)
+  r <- apply(t(internal_data.m), 2,function(col) 
+    t(apply(t(internal_data.m), 2, calculate_stats, col, dist.name = method))[,1,drop =F])
+  p <- apply(t(internal_data.m), 2,function(col) 
+    t(apply(t(internal_data.m), 2, calculate_stats, col, dist.name = method))[,3,drop =F])
+  padj <- apply(t(internal_data.m), 2,function(col) 
+    p.adjust(t(apply(t(internal_data.m), 2, calculate_stats, col, dist.name = method))[,3,drop =F],
+             method = adjust))
+  
+  rownames(r) <- colnames(r)
+  rownames(p) <- colnames(p)
+  rownames(padj) <- colnames(padj)
+  r <- signif(r, digits = 5)
+  p <- signif(p, digits = 5)
+  padj <- signif(padj, digits = 5)
+  
+  # r	The matrix of correlations
+  # n	Number of cases per correlation
+  # t	value of t-test for each correlation
+  # p	two tailed probability of t for each correlation. For symmetric matrices, p values adjusted for multiple tests are reported above the diagonal.
+  # se	standard error of the correlation
+  # ci	the alpha/2 lower and upper values, as well as the (Holm or Bonferroni) adjusted confidence intervals.
+  # list(cor_matrix = cor_result$r, cor_pval_matrix = cor_result$p)
+  list(cor_matrix = r, cor_pval_matrix = p, cor_padj_matrix = padj)
+}
+
+# Calculates correlations between a feature and all other features. Works by row.
+# Assumes feature is in the row, generally sample will be the column
+calculate_feature_correlations <- function(mydata, feature, method = "pearson", adjust = "BH", filename = NULL){
+  
+  # Remove entries that don't vary across all samples
+  internal_data.m <- mydata
+  zv <- apply(internal_data.m, 1, function(x) length(unique(x)) == 1)
+  internal_data.m <- internal_data.m[!zv, ]
+  if (!feature %in% rownames(internal_data.m)){
+    print(paste0("feature ", feature, " not found in input data. Possibly does not vary across samples?"))
+    sig.df <- NULL
+    return(sig.df)
+  }
+  
+  # Take a two vectors and perform a signficance/correlation test
+  calculate_stats <- function(x, y, dist.name) {
+    k<-cor.test(x, y, method=dist.name);
+    c(k$estimate, k$stat, k$p.value)
+  }
+  
+  feature_data <- t(internal_data.m)[,feature]
+  correlation_results.m <- apply(t(internal_data.m), 2, calculate_stats, feature_data, method);
+  correlation_results.m <- t(correlation_results.m)
+  # fdr.col <- p.adjust(correlation_results.m[,3], "fdr");
+  pval_adj.col <- p.adjust(correlation_results.m[,3], adjust);
+  # correlation_results.m <- cbind(correlation_results.m,fdr.col, pval_adj.col)
+  correlation_results.m <- cbind(correlation_results.m, pval_adj.col)
+  # colnames(correlation_results.m) <- c("correlation", "t-stat", "p-value", "FDR", "pval_adj_BH");
+  colnames(correlation_results.m) <- c("correlation", "t-stat", "p-value", "pval_adj_BH");
+  ord.inx <- order(correlation_results.m[,3]) # order by p-value
+  sig.m <- signif(correlation_results.m[ord.inx,],5); # Round values
+  
+  # Remove self-comparison
+  sig.m <- sig.m[!rownames(sig.m) == feature, ]
+  
+  # Write to file
+  if (!is.null(filename)){
+    write.csv(sig.m, file = filename)
+  }
+  
+  # Remove Inf values from table
+  sig.df <- as.data.frame(sig.m)
+  is.na(sig.df) <- sapply(sig.df, is.infinite);
+  sig.df[is.na(sig.df)] <- 0
+  
+  sig.df
+}
+
+# Given data matrix, plot correlations between a feature/variable and other features/variables
+plot_feature_correlations <- function(mydata, feature, method = "pearson", adjust = "BH", top_n = 25,
+                                      filename = NULL, plot_width = 10, plot_height = 10, format = "pdf"){
+  # internal_data.m <- mydata
+  # internal_data.m <- internal_data.m[apply(internal_data.m, 1, function(x) {length(which(x > 0))}) /length(internal_data.m[1,]) > 0.1,]
+  
+  correlation_result.df <- calculate_feature_correlations(mydata, feature, method = method, adjust = adjust)
+  if(is.null(correlation_result.df)){
+    return()
+  }
+  
+  # First get most signficant correlations (p-value)
+  ord.inx <- order(correlation_result.df[,3]);
+  correlation_result.df <- correlation_result.df[ord.inx,] # Should be ordered already, though just ensure
+  
+  if(nrow(correlation_result.df) > top_n){
+    correlation_result.df <- correlation_result.df[1:top_n, ];
+  }
+  
+  # Then order by correlation direction
+  ord.inx <- order(correlation_result.df[,1]);
+  
+  if(sum(correlation_result.df[,1] > 0) == 0){ # all negative correlation
+    ord.inx <- rev(ord.inx);
+  }
+  correlation_result.df <- correlation_result.df[ord.inx,]
+  if (!is.null(filename)){
+    Cairo::Cairo(file = filename, unit="cm", dpi=100, width=plot_width, height=plot_height, type=format, bg="white",units = "cm");
+  }
+  plot_title <- paste("Top",nrow(correlation_result.df), "features correlated with", feature);
+  
+  cols <- ifelse(correlation_result.df[,1] > 0, "mistyrose","lightblue");
+  
+  par(xaxt = "n")
+  xticks <- seq(-1,1,by = .2)
+  dotchart(correlation_result.df[,1], 
+           labels = rownames(correlation_result.df),
+           pch="", 
+           xlim=c(-1.1,1.1), 
+           xlab="Correlation Coefficients", 
+           # main=title,
+           # yaxs = "n"
+           cex = 0.7)
+  par(xaxt = "s")
+  axis(1, at=xticks, cex.axis=0.7) 
+  title(main = plot_title, cex.main = 0.7)
+  # rownames(correlation_result.m) <- NULL;
+  barplot(correlation_result.df[,1], 
+          space=c(0.5, rep(0, nrow(correlation_result.df)-1)),
+          xlim=c(-1,1),
+          xaxt="n", 
+          col = cols, 
+          add=T,
+          horiz=T);
+  
+  for (row in 1:nrow(correlation_result.df)){
+    offset <- ifelse(correlation_result.df[row,"correlation"] < 0, -0.1, 0.1)
+    if (correlation_result.df[row,"pval_adj_BH"] <= 0.05 & correlation_result.df[row,"pval_adj_BH"] > 0.01){
+      text(correlation_result.df[row,"correlation"] + offset, row, labels = "*")
+    } else if (correlation_result.df[row,"pval_adj_BH"] <= 0.01 & correlation_result.df[row,"pval_adj_BH"] > 0.001){
+      text(correlation_result.df[row,"correlation"] + offset, row, labels = "**")
+    } else if (correlation_result.df[row,"pval_adj_BH"] <= 0.001){
+      text(correlation_result.df[row,"correlation"] + offset, row, labels = "***")
+    }
+  }
+  if (!is.null(filename)){
+    dev.off()
+  }
+}
+
+# Given correlation matrix and (optional) p-value matrix, 
+# plot correlations between a feature/variable and other features/variables
+plot_feature_correlations_external <- function(cor_matrix, feature, p_value_matrix = NULL, top_n = 25,
+                                               y_label_size = 0.6,
+                                               filename = NULL, plot_width = 50, plot_height = 50, format = "pdf"){
+  
+  cor_feature.m <- cor_matrix[,feature, drop =F]
+  
+  if (!is.null(p_value_matrix)){
+    p_value_feature.m <- p_value_matrix[,feature,drop =F] 
+    correlation_result.df <- as.data.frame(cbind(cor_feature.m,p_value_feature.m))
+    names(correlation_result.df) <- c("correlation", "p_value")
+  } else{
+    correlation_result.df <- as.data.frame(cor_feature.m)
+    names(correlation_result.df) <- c("correlation")
+  }
+  
+  # First get most signficant correlations (p-value)
+  if (!is.null(p_value_matrix)){
+    ord.inx <- order(correlation_result.df[,2])
+    correlation_result.df <- correlation_result.df[ord.inx,,drop =F]
+    if(nrow(correlation_result.df) > top_n){
+      correlation_result.df <- correlation_result.df[1:top_n,,drop =F]
+    }  
+  }
+  
+  # Order by degree of correlation if no p-value matrix provided
+  if (is.null(p_value_matrix)){
+    ord.inx <- order(abs(correlation_result.df[,1]),decreasing = T)
+    correlation_result.df <- correlation_result.df[ord.inx,,drop =F]
+    if(nrow(correlation_result.df) > top_n){
+      correlation_result.df <- correlation_result.df[1:top_n,,drop =F]
+    }
+  }
+  
+  # Order by correlation direction
+  ord.inx <- order(correlation_result.df[,1])
+  if(sum(correlation_result.df[,1] > 0) == 0){ # all negative correlation
+    ord.inx <- rev(ord.inx);
+  }
+  correlation_result.df <- correlation_result.df[ord.inx,,drop =F]
+  
+  if (!is.null(filename)){
+    Cairo::Cairo(file = filename, unit="cm", dpi=200, width=plot_width, height=plot_height, type=format, bg="white",units = "cm")
+  }
+  plot_title <- paste("Top",nrow(correlation_result.df), "features correlated with", feature);
+  
+  cols <- ifelse(correlation_result.df[,1] > 0, "mistyrose","lightblue");
+  
+  par(xaxt = "n")
+  xticks <- seq(-1,1,by = .2)
+  dotchart(correlation_result.df[,1], 
+           labels = rownames(correlation_result.df),
+           pch="", 
+           xlim=c(-1.1,1.1), 
+           xlab="Correlation Coefficients", 
+           # main=title,
+           # yaxs = "n"
+           cex = 0.7)
+  par(xaxt = "s")
+  axis(1, at=xticks, cex.axis=0.7) 
+  title(main = plot_title, cex.main = 0.7)
+  
+  barplot(correlation_result.df[,1], 
+          space=c(0.5, rep(0, nrow(correlation_result.df)-1)), 
+          xlim=c(-1,1), 
+          xaxt="n", 
+          col = cols, 
+          add=T,
+          horiz=T)
+  
+  if (!is.null(p_value_matrix)){
+    for (row in 1:nrow(correlation_result.df)){
+      offset <- ifelse(correlation_result.df[row,"correlation"] < 0, -0.1, 0.1)
+      if (correlation_result.df[row,"p_value"] <= 0.05 & correlation_result.df[row,"p_value"] > 0.01){
+        text(correlation_result.df[row,"correlation"] + offset, row, labels = "*")
+      } else if (correlation_result.df[row,"p_value"] <= 0.01 & correlation_result.df[row,"p_value"] > 0.001){
+        text(correlation_result.df[row,"correlation"] + offset, row, labels = "**")
+      } else if (correlation_result.df[row,"p_value"] <= 0.001){
+        text(correlation_result.df[row,"correlation"] + offset, row, labels = "***")
+      }
+    }
+  }
+  
+  if (!is.null(filename)){
+    dev.off()
+  }
+}
+
+# ------------------------------------------------
+generate_correlation_network_from_count_data <- function(mydata, p_value_threshold = 0.05, cor_threshold = 0.5, method = "pearson", adjust = "BH"){
+  correlation_results <- calculate_correlation_matrix(mydata, adjust = adjust, method = method)
+  cor.m <- correlation_results$cor_matrix
+  cor_pval.m <- correlation_results$cor_pval_matrix
+  generate_correlation_network(cor.m, cor_pval.m,p_value_threshold = 0.05, cor_threshold = 0.5)
+}
+
+# Generate a correlation network
+generate_correlation_network <- function(cor_matrix, p_matrix = NULL, p_value_threshold = 0.05, cor_threshold = 0.5,
+                                         filename = NULL, relabeller_function = NULL,
+                                         node_size = 4, node_colour = "grey20", node_fill = "grey20", node_shape = 21,
+                                         label_colour = "black",label_size = 1,
+                                         plot_height = 10, plot_width = 10, plot_title = "",
+                                         edge_width_min = .3, edge_width_max = 1,
+                                         network_layout = "fr", exclude_to_from_df = NULL,
+                                         myseed=NULL, edgetype = "link", show_p_label=F,
+                                         file_type = "pdf"){
+  if (!is.null(myseed)){
+    set.seed(myseed)  
+  }
+  
+  cor.m <- as.matrix(cor_matrix)
+  
+  if (!is.null(relabeller_function)){
+    colnames(cor.m) <- relabeller_function(colnames(cor.m))
+    rownames(cor.m) <- relabeller_function(rownames(cor.m))
+  }
+  
+  if (!is.null(p_matrix)){
+    cor_pval.m <- as.matrix(p_matrix)  
+    if (!is.null(relabeller_function)){
+      colnames(cor_pval.m) <- relabeller_function(colnames(cor_pval.m))
+      rownames(cor_pval.m) <- relabeller_function(rownames(cor_pval.m))
+    }
+  }
+  
+  # Melt correlation matrix
+  graph.df <- melt(cor.m,value.name = "Correlation",varnames = c("Variable_1", "Variable_2"))
+  if (!is.null(p_matrix)){
+    graph.df$P_value <- melt(cor_pval.m)$value
+    graph.df <- graph.df[graph.df$P_value <= p_value_threshold,]  
+    graph.df$P_value_label <- NA
+    if (show_p_label==T){
+      graph.df$P_value_label <- lapply(graph.df$P_value, function(x) ifelse(x <= 0.001, "***", ifelse(x <= 0.01, "**", ifelse(x <= 0.05, "*", ""))))  
+    }
+    # graph.df$P_value_label <- round(graph.df$Correlation,2) # For sanity testing
+    
+  } else{
+    graph.df$P_value_label <- NA
+    # graph.df$P_value_label <- round(graph.df$Correlation,2) # For sanity testing
+    names(graph.df) <- c("Variable_1", "Variable_2", "Correlation", "P_value_label")
+  }
+  
+  # Remove bidirectional links
+  graph.df$ordered_label <- apply(graph.df, 1, function(x) {paste0(sort(c(as.character(x[1]), as.character(x[2]))),collapse = ":")})
+  graph.df <- graph.df[!duplicated(graph.df$ordered_label),]
+  
+  # Remove edges with a correlation of 0, regardless what threshold
+  graph.df <- graph.df[graph.df$Correlation != 0,]
+  
+  # Remove edges that are below the correlation threshold
+  graph.df <- graph.df[abs(graph.df$Correlation) >= cor_threshold,]
+  
+  # Remove edges specified in supplied dataframe.
+  if (!is.null(exclude_to_from_df)){
+    graph.df <- graph.df[!paste0(graph.df$Variable_1, "-", graph.df$Variable_2) %in% paste0(edges_to_remove.df[,1], "-", edges_to_remove.df[,2]),]
+    graph.df <- graph.df[!paste0(graph.df$Variable_1, "-", graph.df$Variable_2) %in% paste0(edges_to_remove.df[,2], "-", edges_to_remove.df[,1]),]
+  }
+  
+  # Generate graph object and remove looped edges and isolated nodes
+  graph.df <- as_tbl_graph(graph.df) %>%
+    # Remove loops
+    activate(edges) %>%
+    filter(!edge_is_loop()) %>%
+    # filter(!edge_is_mutual()) %>%
+    # filter(!edge_is_multiple()) %>%
+    # Remove isolated nodes
+    activate(nodes) %>%
+    filter(!node_is_isolated())
+  
+  # Build plot
+  set_graph_style(plot_margin = margin(1,1,1,1))
+  correlation_graph_plot <- ggraph(graph.df, layout = network_layout)
+  if (edgetype == "link"){
+    correlation_graph_plot <- correlation_graph_plot + 
+      geom_edge_link(aes(colour = Correlation, width=abs(Correlation), label = P_value_label),  show.legend = T, alpha = 1,
+                     angle_calc = "along", label_colour = "black",
+                     label_dodge=unit(1,"mm"),label_push=unit(-1,"mm"))
+  } else if (edgetype == "fan"){
+    correlation_graph_plot <- correlation_graph_plot +
+      geom_edge_fan(aes(colour = Correlation, width=abs(Correlation), label = P_value_label), show.legend = T, alpha = 1,
+                    angle_calc = "along", label_colour = "black",
+                    label_dodge=unit(1,"mm"),label_push=unit(-1,"mm"))
+  } else if (edgetype == "elbow"){
+    correlation_graph_plot <- correlation_graph_plot +
+      geom_edge_elbow(aes(colour = Correlation, width=abs(Correlation), label = P_value_label), show.legend = T, alpha = 1, strength = 1,
+                      angle_calc = "along", label_colour = "black",
+                      label_dodge=unit(1,"mm"),label_push=unit(-1,"mm"))
+  } else if (edgetype == "bend"){
+    correlation_graph_plot <- correlation_graph_plot +
+      geom_edge_bend(aes(colour = Correlation, width=abs(Correlation), label = P_value_label), show.legend = T, alpha = 1, strength = 1,
+                     angle_calc = "along", label_colour = "black",
+                     label_dodge=unit(1,"mm"),label_push=unit(-1,"mm"))
+  } else if (edgetype == "hive"){
+    correlation_graph_plot <- correlation_graph_plot + 
+      geom_edge_hive(aes(colour = Correlation, width=abs(Correlation), label = P_value_label), show.legend = T, alpha = 1, strength = 1,
+                     angle_calc = "along", label_colour = "black",
+                     label_dodge=unit(1,"mm"),label_push=unit(-1,"mm"))
+  }
+  correlation_graph_plot <- correlation_graph_plot +
+    scale_edge_width_continuous(name="Correlation", range = c(edge_width_min,edge_width_max),
+                                breaks = seq(-1,1,.2)) +
+    scale_edge_colour_gradientn(colours = colorRampPalette(rev(c("#67001F", "#B2182B", "#D6604D",
+                                                                 "#F4A582", "#FDDBC7", "#FFFFFF", "#D1E5F0", "#92C5DE",
+                                                                 "#4393C3", "#2166AC", "#053061")))(11),
+                                limits = c(-1,1), # limit colours to full corrrelation range
+                                breaks = seq(-1,1,.2), # Break colours from -1 to 1 in steps of 0.2
+                                guide = guide_edge_colourbar(barwidth = 0.5, barheight = 10)) +
+    geom_node_point(colour = node_colour, fill = node_fill, pch = node_shape, size =node_size)  +
+    geom_node_text(aes(label = name), colour = label_colour, 
+                   size = label_size, nudge_y = -.01, #fontface = "bold",
+                   point.padding = unit(0.3, "lines"),
+                   segment.size = 0.3,
+                   segment.colour = "grey",
+                   # family = "serif",
+                   repel = T) +
+    ggtitle(label = plot_title) +
+    theme_graph(background = "white")
+  # Override edge colour to show coloured width, entries for width need to match the
+  # breaks defined in the colour gradient (at least in length)
+  # guides(edge_color = guide_legend(override.aes = list(edge_width = abs(seq(-1,1,.2)*1.2))),
+  break_length <- length(seq(-1,1,.2))
+  edge_widths <- abs(c(rev(rev(seq(-edge_width_max, -edge_width_min, length.out = break_length/2))[-1]),
+                       rev(seq(edge_width_max, edge_width_min, length.out = break_length/2))))
+  # edge_widths <- abs(seq(-1,1,.2))
+  # edge_widths <- abs(edge_widths *seq(-1,1,.2))
+  correlation_graph_plot <- correlation_graph_plot +
+    guides(edge_color = guide_legend(override.aes = list(edge_width = edge_widths)),
+           edge_width = F)
+  
+  # Save plot to file
+  if (!is.null(filename)){
+    if (file_type == "pdf"){
+      cairo_pdf(filename = filename,height = plot_height, width = plot_width)
+      plot(correlation_graph_plot)
+      dev.off()      
+    } else if (file_type == "svg"){
+      svg(filename = filename,height = plot_height, width = plot_width)
+      plot(correlation_graph_plot)
+      dev.off()
+    }
+  }
+  list(network_data = graph.df, network_plot = correlation_graph_plot)
+}
+
+# Generate a dot correlation plot generated by corrplot
+plot_corrplot <- function(correlation_matrix, p_value_matrix = NULL, 
+                          plot_title = "", plot_title_size = .6,plot_height = 10, plot_width = 10,
+                          p_value_threshold = 0.05, label_size = 1,
+                          relabeller_function = NULL, filename = NULL){
+  
+  cor.m <- correlation_matrix
+  cor_pval.m <- p_value_matrix
+  
+  if (!is.null(relabeller_function)){
+    colnames(cor.m) <- relabeller_function(colnames(cor.m))
+    rownames(cor.m) <- relabeller_function(rownames(cor.m))
+    colnames(cor_pval.m) <- relabeller_function(colnames(cor_pval.m))
+    rownames(cor_pval.m) <- relabeller_function(rownames(cor_pval.m))
+  }
+  
+  if (!is.null(filename)){
+    pdf(file = filename,height = plot_height, width = plot_width)
+  }
+  corrplot(corr = cor.m,
+           outline = T,
+           tl.col = "black",
+           tl.cex = label_size,
+           # title = plot_title,
+           col = colorRampPalette(rev(c("#67001F", "#B2182B", "#D6604D", 
+                                        "#F4A582", "#FDDBC7", "#FFFFFF", "#D1E5F0", "#92C5DE", 
+                                        "#4393C3", "#2166AC", "#053061")))(200),
+           type = "lower",
+           diag = F,
+           order = "hclust",
+           hclust.method = "average",
+           p.mat = cor_pval.m,
+           sig.level = p_value_threshold,
+           insig = "blank",
+           pch = 4,
+           pch.cex = .1,
+           pch.col = "black",
+           cl.pos = 'r',
+           mar=c(1,0,3,1))
+  title(main = plot_title,cex.main = plot_title_size)
+  if (!is.null(filename)){
+    dev.off()
+  }
+}
+
+# ------------------------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------------------------
