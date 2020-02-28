@@ -648,7 +648,7 @@ write.csv(x = immunocompetent_downsampled_genus_alpha_diversity_significances.df
                       quote = F, row.names = F)
 
 
-
+# Generate boxplots
 for (myvar in discrete_variables){
   # ----------------------------------------------------------------
   # both cohorts, downsampled, otu level

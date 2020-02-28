@@ -1,5 +1,6 @@
-# Script to calculate / format the abundances for different groupings
+# Calculate the abundances for different groupings
 # Some basic plotting of abundance data
+# Significance tests comparing abundances
 
 library(dplyr)
 library(reshape2)
@@ -64,19 +65,15 @@ metadata.df <- read.csv("Result_tables/other/processed_metadata.csv", sep =",", 
 rownames(metadata.df) <- metadata.df$Index
 
 # We are only interested in C,AK_PL,IEC_PL,SCC_PL,AK,IEC and SCC lesions. 
-# Remove samples for different lesion types (nasal,scar,scar_PL,KA,KA_PL,VV,VV_PL,SF,SF_PL,other,other_PL) from metadata and otu table
-# metadata.df <- metadata.df[metadata.df$Sampletype %in% c("C","AK_PL","IEC_PL","SCC_PL","AK","IEC","SCC", "NLC"),]
-metadata.df <- metadata.df[metadata.df$Sampletype %in% c("C","AK_PL","IEC_PL","SCC_PL","AK","IEC","SCC", "LC"),]
+metadata.df <- metadata.df[metadata.df$Lesion_type %in% c("C","AK_PL","IEC_PL","SCC_PL","AK","IEC","SCC", "LC"),]
 
 # Factorise discrete columns
 metadata.df$Patient <- factor(metadata.df$Patient)
-metadata.df$Sampletype <- factor(metadata.df$Sampletype)
-metadata.df$Sampletype_pooled <- factor(metadata.df$Sampletype_pooled)
-metadata.df$Sampletype_compromised_refined <- factor(metadata.df$Sampletype_compromised_refined)
-metadata.df$Project <- factor(metadata.df$Project)
-metadata.df$Patient_group <- factor(metadata.df$Patient_group)
-metadata.df$Gender <- factor(metadata.df$Gender)
-metadata.df$Number_of_meds <- factor(metadata.df$Number_of_meds)
+metadata.df$Lesion_type_refined <- factor(metadata.df$Lesion_type_refined)
+metadata.df$Cohort <- factor(metadata.df$Cohort)
+# metadata.df$Patient_group <- factor(metadata.df$Patient_group)
+# metadata.df$Gender <- factor(metadata.df$Gender)
+# metadata.df$Number_of_meds <- factor(metadata.df$Number_of_meds)
 
 # Load unfiltered data
 # unfiltered_data.df <- read.csv(file = "Result_tables/other/project_otu_table_unfiltered.csv",header = T)
@@ -165,6 +162,7 @@ generate_taxa_summary <- function(mydata, taxa_column, group_by_columns){
     as.data.frame()
   return(taxa_group_summary)
 }
+
 filter_summary_to_top_n <- function(taxa_summary, grouping_variables, abundance_column, my_top_n = 10){
   # Get the top N taxa as described in a provided taxa summary table.
   out <- 

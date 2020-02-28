@@ -24,8 +24,6 @@ my_colour_palette_10_soft <- c("#9E788F","#4C5B61","#678D58","#AD5233","#A0A083"
 my_colour_palette_12_soft <-c("#9E788F","#4C5B61","#678D58","#AD5233","#A0A083","#4D456A","#588578","#D0AC4C","#2A7BA0","#931621", "#c75a93", "#7c7731")
 
 
-
-
 # ------------------------------------------------------------------------------------------
 
 common_theme <- theme(
@@ -50,33 +48,34 @@ common_theme <- theme(
   plot.title = element_text(size = 8))
 
 # ------------------------------------------------------------------------------------------
+genus_relabeller_function <- function(my_labels){
+  unlist(lapply(my_labels, 
+                function(x) {
+                  phylostring <- unlist(strsplit(x, split = ";"))
+                  # paste(phylostring[2],phylostring[3], phylostring[6], sep = ";")
+                  paste(phylostring[5], phylostring[6], sep = ";")
+                }))
+}
 
 # Set the working directory
 setwd("/Users/julianzaugg/Desktop/ACE/major_projects/skin_microbiome_16S/")
 
 # Just load the combined metadata and abundance tables for simplicity
-genus_data.df <- read.csv("Result_tables/other/genus_counts_abundances_and_metadata.csv")
+genus_data.df <- read.csv("Result_tables/combined_counts_abundances_and_metadata_tables/genus_counts_abundances_and_metadata.csv")
 
-# Remove negative samples
-genus_data.df <- subset(genus_data.df, Sampletype != "negative")
-
-# FIXME Make simpler taxonomy strings
-genus_data.df$Family_Genus <- as.character(genus_data.df$taxonomy_genus)
-genus_data.df$Family_Genus <- gsub(".*(f__.*)", "\\1",genus_data.df$Family_Genus)
-genus_data.df$Family_Genus <- gsub("(d__Eukaryota).*(o__.*)D.*;(D_10__.*)", "\\1;\\2\\3",genus_data.df$Family_Genus)
-
+# Make simpler taxonomy string(s)
+genus_data.df$Family_Genus <- genus_relabeller_function(as.character(genus_data.df$taxonomy_genus))
 genus_data_all.df <- genus_data.df
 
 # Filter to immunocompromised or snapshot samples
-genus_data.df <- subset(genus_data.df, Project == "immunocompromised" | Snapshot_sample_1 == "yes")
+genus_data.df <- subset(genus_data.df, Project == "immunocompromised" | Snapshot_sample_5 == "yes")
 
-
-immunocompromised_genus_data.df <- subset(genus_data.df, Project == "immunocompromised")
-immunocompetent_genus_data.df <- subset(genus_data.df, Project == "immunocompetent")
-immunocompetent_genus_data_all.df <- subset(genus_data_all.df, Project == "immunocompetent")
+immunocompromised_genus_data.df <- subset(genus_data.df, Cohort == "immunocompromised")
+immunocompetent_genus_data.df <- subset(genus_data.df, Cohort == "immunocompetent")
+immunocompetent_genus_data_all.df <- subset(genus_data_all.df, Cohort == "immunocompetent")
 
 # ------------------------------------------------------------------------------------------
-generate_taxa_summary <- function(mydata, taxa_column, abundance_column= "Relative_abundance_rarefied"){
+generate_taxa_summary_simple <- function(mydata, taxa_column, abundance_column= "Relative_abundance"){
   # Generate a summary table of each taxa for each group. Use this to filter to taxa of interest
   # For each taxa, count the :
   #   number of samples it is in
@@ -117,18 +116,16 @@ relabel_low_abundance_taxa <- function(mydata, taxa_summary, my_top_n = 10){
 }
 
 
-
 # ------------------------------------------------------------------------------------
 # ------------------------------------------------------------------------------------
 #                 Create pie charts
-
 make_pie_graph <- function(mydata, taxonomy_column, mytitle = NULL,  mysubtitle = NULL, my_colour_list = NULL, n_taxa = 10){
   # my_colour_list should be a named list with the corresponding colours provided
   internal_mydata <- mydata
   variable <- names(mydata)[1]
   
   # Generate taxonomy summary (to get mean for each genus)
-  taxa_summary.df <- generate_taxa_summary(internal_mydata, taxa_column = taxonomy_column, abundance_column = "Relative_abundance_rarefied")
+  taxa_summary.df <- generate_taxa_summary_simple(internal_mydata, taxa_column = taxonomy_column, abundance_column = "Relative_abundance")
   
   # Get top taxa
   top_taxa <- get_top_taxa(taxa_summary = taxa_summary.df, my_top_n = n_taxa)
@@ -138,14 +135,14 @@ make_pie_graph <- function(mydata, taxonomy_column, mytitle = NULL,  mysubtitle 
   # taxa_data_processed.df <- relabel_low_abundance_taxa(internal_mydata, taxa_summary.df, my_top_n =n_taxa)
   
   # Put the re-labelled data back through the summary function. This will calculate the mean abundance for the Other taxa!
-  # taxa_data_processed_summary.df <- generate_taxa_summary(taxa_data_processed.df, taxa_column = taxonomy_column, abundance_column = "Relative_abundance_rarefied")
+  # taxa_data_processed_summary.df <- generate_taxa_summary_simple(taxa_data_processed.df, taxa_column = taxonomy_column, abundance_column = "Relative_abundance_rarefied")
   
   # Normalise the mean abundance
-  # taxa_data_processed_summary.df$normalised_mean_abundance <- taxa_data_processed_summary.df$Mean_abundance / sum(taxa_data_processed_summary.df$Mean_abundance)
-  # taxa_data_processed_summary.df$normalised_mean_abundance <- taxa_data_processed_summary.df$Mean_abundance # For debugging
+  # taxa_data_processed_summary.df$Normalised_mean_abundance <- taxa_data_processed_summary.df$Mean_abundance / sum(taxa_data_processed_summary.df$Mean_abundance)
+  # taxa_data_processed_summary.df$Normalised_mean_abundance <- taxa_data_processed_summary.df$Mean_abundance # For debugging
   # --------------------------------------------
   # Normalise the mean abundance
-  taxa_summary.df$normalised_mean_abundance <- taxa_summary.df$Mean_abundance / sum(taxa_summary.df$Mean_abundance)
+  taxa_summary.df$Normalised_mean_abundance <- taxa_summary.df$Mean_abundance / sum(taxa_summary.df$Mean_abundance)
   
   # Relabel each taxa not in top # to 'Other'
   taxa_summary.df[! taxa_summary.df[,taxonomy_column] %in% top_taxa,][,taxonomy_column] <- "Other"
@@ -154,10 +151,10 @@ make_pie_graph <- function(mydata, taxonomy_column, mytitle = NULL,  mysubtitle 
   taxa_summary.df <- taxa_summary.df %>% group_by(Family_Genus) %>% summarise(normalised_mean_abundance = sum(normalised_mean_abundance)) %>% as.data.frame()
   
   # Create pie label
-  # taxa_data_processed_summary.df$pie_label <- lapply(taxa_data_processed_summary.df$normalised_mean_abundance, function(x) ifelse(x >= 0.01, paste0(round(x*100), "%"), "<1%"))
-  taxa_summary.df$pie_label <- lapply(taxa_summary.df$normalised_mean_abundance, function(x) ifelse(x >= 0.05, paste0(round(x*100), "%"), ""))
+  # taxa_data_processed_summary.df$pie_label <- lapply(taxa_data_processed_summary.df$Normalised_mean_abundance, function(x) ifelse(x >= 0.01, paste0(round(x*100), "%"), "<1%"))
+  taxa_summary.df$pie_label <- lapply(taxa_summary.df$Normalised_mean_abundance, function(x) ifelse(x >= 0.05, paste0(round(x*100), "%"), ""))
   # Order by normalised_mean_abundance
-  taxa_summary.df <- taxa_summary.df[rev(order(taxa_summary.df$normalised_mean_abundance)),]
+  taxa_summary.df <- taxa_summary.df[rev(order(taxa_summary.df$Normalised_mean_abundance)),]
   # Create the taxa label
   # FIXME - double check working correctly for all but genus
   # taxa_data_processed_summary.df$taxa_label <- gsub(".*(f__.*)", "\\1",taxa_data_processed_summary.df[,taxonomy_column])
@@ -213,37 +210,36 @@ make_pie_graph <- function(mydata, taxonomy_column, mytitle = NULL,  mysubtitle 
   pie_chart
 } 
 # -------------------------------------------------------
-# immunocompromised and immunocompetent Sampletype_final_refined
+# immunocompromised and immunocompetent Lesion_type_refined
 immunocompromised_lesions_top_genus <- c()
 immunocompetent_lesions_top_genus <- c()
 immunocompromised_lesions_forearm_top_genus <-c()
-
 immunocompetent_all_lesions_top_genus <- c()
 
 forearm_swab_ids <- c("1383","1385","1470","1561","1599","1647","1649")
 forearm_indices <- c("R1383_J1425", "SA6550_J1427", "R1368_J1477", "R1460_J1425", "R1498_J1425", "SB4909_J1426", "SB4911_J1426")
 
 # Get the top # genera for immunocompromised cohort
-for (lesion in unique(immunocompromised_genus_data.df$Sampletype_final_refined)){
+for (lesion in unique(immunocompromised_genus_data.df$Lesion_type_refined)){
   if (is.na(lesion)) {next}
-  data_subset <- subset(immunocompromised_genus_data.df, Sampletype_final_refined == lesion)
-  taxa_summary <- generate_taxa_summary(data_subset, taxa_column = "Family_Genus",abundance_column = "Relative_abundance_rarefied")
+  data_subset <- subset(immunocompromised_genus_data.df, Lesion_type_refined == lesion)
+  taxa_summary <- generate_taxa_summary_simple(data_subset, taxa_column = "Family_Genus", abundance_column = "Relative_abundance")
   immunocompromised_lesions_top_genus <- unique(c(immunocompromised_lesions_top_genus, get_top_taxa(taxa_summary,my_top_n = 9)))
 }
 
 
 # Get the top # genera for immunocompetent cohort
-for (lesion in unique(immunocompetent_genus_data.df$Sampletype_final_refined)){
+for (lesion in unique(immunocompetent_genus_data.df$Lesion_type_refined)){
   if (is.na(lesion)) {next}
-  data_subset <- subset(immunocompetent_genus_data.df, Sampletype_final_refined == lesion)
-  taxa_summary <- generate_taxa_summary(data_subset, taxa_column = "Family_Genus",abundance_column = "Relative_abundance_rarefied")
+  data_subset <- subset(immunocompetent_genus_data.df, Lesion_type_refined == lesion)
+  taxa_summary <- generate_taxa_summary_simple(data_subset, taxa_column = "Family_Genus",abundance_column = "Relative_abundance_rarefied")
   immunocompetent_lesions_top_genus <- unique(c(immunocompetent_lesions_top_genus, get_top_taxa(taxa_summary,my_top_n = 9)))
 }
 
-for (lesion in unique(immunocompetent_genus_data_all.df$Sampletype_final_refined)){
+for (lesion in unique(immunocompetent_genus_data_all.df$Lesion_type_refined)){
   if (is.na(lesion)) {next}
-  data_subset <- subset(immunocompetent_genus_data_all.df, Sampletype_final_refined == lesion)
-  taxa_summary <- generate_taxa_summary(data_subset, taxa_column = "Family_Genus",abundance_column = "Relative_abundance_rarefied")
+  data_subset <- subset(immunocompetent_genus_data_all.df, Lesion_type_refined == lesion)
+  taxa_summary <- generate_taxa_summary_simple(data_subset, taxa_column = "Family_Genus",abundance_column = "Relative_abundance_rarefied")
   immunocompetent_all_lesions_top_genus <- unique(c(immunocompetent_all_lesions_top_genus, get_top_taxa(taxa_summary,my_top_n = 9)))
 }
 
@@ -255,12 +251,12 @@ for (lesion in unique(immunocompetent_genus_data_all.df$Sampletype_final_refined
 # Get the top genera for immunocompromised cohort, forearm only
 immunocompromised_forearm.df <- immunocompromised_genus_data.df[immunocompromised_genus_data.df$Swab_ID %in% forearm_swab_ids,]
 immunocompromised_forearm.df <- subset(immunocompromised_forearm.df, Sampletype_final == "SCC") # ensure only SCC samples
-immunocompromised_forearm.df$Sampletype_final_refined <- factor(immunocompromised_forearm.df$Sampletype_final_refined)
+immunocompromised_forearm.df$Lesion_type_refined <- factor(immunocompromised_forearm.df$Lesion_type_refined)
 
-for (lesion in unique(immunocompromised_forearm.df$Sampletype_final_refined)){
+for (lesion in unique(immunocompromised_forearm.df$Lesion_type_refined)){
   if (is.na(lesion)) {next}
-  data_subset <- subset(immunocompromised_forearm.df, Sampletype_final_refined == lesion)
-  taxa_summary <- generate_taxa_summary(data_subset, taxa_column = "Family_Genus",abundance_column = "Relative_abundance_rarefied")
+  data_subset <- subset(immunocompromised_forearm.df, Lesion_type_refined == lesion)
+  taxa_summary <- generate_taxa_summary_simple(data_subset, taxa_column = "Family_Genus",abundance_column = "Relative_abundance_rarefied")
   immunocompromised_lesions_forearm_top_genus <- unique(c(immunocompromised_lesions_top_genus, get_top_taxa(taxa_summary,my_top_n = 9)))
 }
 
@@ -284,9 +280,9 @@ for (cohort in c("immunocompromised", "immunocompetent", "immunocompromised_fore
   else {
     dataset <- immunocompetent_genus_data.df
     }
-  for (lesion in unique(dataset$Sampletype_final_refined)){
+  for (lesion in unique(dataset$Lesion_type_refined)){
     if (is.na(lesion)) {next}
-    data_subset <- subset(dataset, Sampletype_final_refined == lesion)
+    data_subset <- subset(dataset, Lesion_type_refined == lesion)
     n_patients <- length(unique(data_subset$Patient))
     n_samples <- length(unique(data_subset$Sample))
     my_title <- paste0(cohort,", ", lesion) 
@@ -298,9 +294,9 @@ for (cohort in c("immunocompromised", "immunocompetent", "immunocompromised_fore
   }
 }
 
-for (lesion in unique(immunocompetent_genus_data_all.df$Sampletype_final_refined)){
+for (lesion in unique(immunocompetent_genus_data_all.df$Lesion_type_refined)){
   if (is.na(lesion)) {next}
-  data_subset <- subset(immunocompetent_genus_data_all.df, Sampletype_final_refined == lesion)
+  data_subset <- subset(immunocompetent_genus_data_all.df, Lesion_type_refined == lesion)
   n_patients <- length(unique(data_subset$Patient))
   n_samples <- length(unique(data_subset$Sample))
   my_title <- paste0("immunocompetent all, ", lesion) 
@@ -352,7 +348,7 @@ immunocompromised_forearm.df$Sampletype_final <- factor(immunocompromised_forear
 for (lesion in unique(immunocompromised_forearm.df$Sampletype_final)){
   if (is.na(lesion)) {next}
   data_subset <- subset(immunocompromised_forearm.df, Sampletype_final == lesion)
-  taxa_summary <- generate_taxa_summary(data_subset, taxa_column = "Family_Genus",abundance_column = "Relative_abundance_rarefied")
+  taxa_summary <- generate_taxa_summary_simple(data_subset, taxa_column = "Family_Genus",abundance_column = "Relative_abundance_rarefied")
   immunocompromised_lesions_top_genus <- unique(c(immunocompromised_lesions_top_genus, get_top_taxa(taxa_summary,my_top_n = 10)))
 }
 # immunocompromised_genus_palette <- setNames(my_colour_palette_30_distinct[1:length(immunocompromised_lesions_top_genus)], immunocompromised_lesions_top_genus)
@@ -385,7 +381,7 @@ ggsave(myplot, filename = paste0("Result_figures/abundance_analysis_plots/immuno
 immunocompetent_lesions_top_genus <- c()
 for (lesion in unique(genus_data.df$Sampletype_pooled)){
   data_subset <- subset(genus_data.df, Project == "immunocompetent" & Sampletype_pooled == lesion)
-  taxa_summary <- generate_taxa_summary(data_subset, taxa_column = "taxonomy_genus",abundance_column = "Relative_abundance_rarefied")
+  taxa_summary <- generate_taxa_summary_simple(data_subset, taxa_column = "taxonomy_genus",abundance_column = "Relative_abundance_rarefied")
   immunocompetent_lesions_top_genus <- unique(c(immunocompetent_lesions_top_genus, get_top_taxa(taxa_summary,my_top_n = 10)))
 }
 immunocompetent_genus_palette <- setNames(my_colour_palette_30_distinct[1:length(immunocompetent_lesions_top_genus)], immunocompetent_lesions_top_genus)
@@ -413,7 +409,7 @@ temp <- subset(genus_data.df, Project == "immunocompromised")
 immunocompromised_patient_group_top_genus <- c()
 for (pg in unique(temp$Patient_group)){
   data_subset <- subset(temp, Patient_group == pg)
-  taxa_summary <- generate_taxa_summary(data_subset, taxa_column = "taxonomy_genus",abundance_column = "Relative_abundance_rarefied")
+  taxa_summary <- generate_taxa_summary_simple(data_subset, taxa_column = "taxonomy_genus",abundance_column = "Relative_abundance_rarefied")
   immunocompromised_patient_group_top_genus <- unique(c(immunocompromised_patient_group_top_genus, get_top_taxa(taxa_summary,my_top_n = 10)))
 }
 immunocompromised_genus_palette <- setNames(my_colour_palette_30_distinct[1:length(immunocompromised_patient_group_top_genus)], immunocompromised_patient_group_top_genus)
@@ -439,7 +435,7 @@ ggsave(myplot, filename = paste0("Result_figures/abundance_analysis_plots/immuno
 immunocompromised_nmed_top_genus <- c()
 for (nmed in unique(temp$Number_of_meds)){
   data_subset <- subset(temp, Number_of_meds == nmed)
-  taxa_summary <- generate_taxa_summary(data_subset, taxa_column = "taxonomy_genus",abundance_column = "Relative_abundance_rarefied")
+  taxa_summary <- generate_taxa_summary_simple(data_subset, taxa_column = "taxonomy_genus",abundance_column = "Relative_abundance_rarefied")
   immunocompromised_nmed_top_genus <- unique(c(immunocompromised_nmed_top_genus, get_top_taxa(taxa_summary,my_top_n = 10)))
 }
 immunocompromised_genus_palette <- setNames(my_colour_palette_30_distinct[1:length(immunocompromised_nmed_top_genus)], immunocompromised_nmed_top_genus)
@@ -464,7 +460,7 @@ ggsave(myplot, filename = paste0("Result_figures/abundance_analysis_plots/immuno
 immunocompromised_f_skin_type_top_genus <- c()
 for (fst in unique(temp$Fitzpatrick_skin_type)){
   data_subset <- subset(temp, Fitzpatrick_skin_type == fst)
-  taxa_summary <- generate_taxa_summary(data_subset, taxa_column = "taxonomy_genus",abundance_column = "Relative_abundance_rarefied")
+  taxa_summary <- generate_taxa_summary_simple(data_subset, taxa_column = "taxonomy_genus",abundance_column = "Relative_abundance_rarefied")
   immunocompromised_f_skin_type_top_genus <- unique(c(immunocompromised_f_skin_type_top_genus, get_top_taxa(taxa_summary,my_top_n = 10)))
 }
 immunocompromised_genus_palette <- setNames(my_colour_palette_30_distinct[1:length(immunocompromised_f_skin_type_top_genus)], immunocompromised_f_skin_type_top_genus)
@@ -492,7 +488,7 @@ ggsave(myplot, filename = paste0("Result_figures/abundance_analysis_plots/immuno
 project_top_genus <- c()
 for (cohort in unique(genus_data.df$Project)){
   data_subset <- subset(genus_data.df, Project == cohort)
-  taxa_summary <- generate_taxa_summary(data_subset, taxa_column = "taxonomy_genus",abundance_column = "Relative_abundance_rarefied")
+  taxa_summary <- generate_taxa_summary_simple(data_subset, taxa_column = "taxonomy_genus",abundance_column = "Relative_abundance_rarefied")
   project_top_genus <- unique(c(project_top_genus, get_top_taxa(taxa_summary,my_top_n = 9)))
 }
 project_genus_palette <- setNames(my_colour_palette_12_soft[1:length(project_top_genus)], project_top_genus)
@@ -524,25 +520,25 @@ ggsave(myplot, filename = paste0("Result_figures/abundance_analysis_plots/projec
 # names(genus_data.df)[names(genus_data.df) == "taxonomy_species"] <- "taxonomy_genus"
 
 # Generate taxonomy summary (to get mean for each genus)
-genus_taxa_summary.df <- generate_taxa_summary(genus_data.df,
+genus_taxa_summary.df <- generate_taxa_summary_simple(genus_data.df,
                                                taxa_column = "taxonomy_genus",
                                                abundance_column = "Relative_abundance_rarefied")
 # Relabel each genus not in top 10 to 'Other'
 genus_data_processed.df <- relabel_low_abundance_taxa(genus_data.df, genus_taxa_summary.df, my_top_n =10)
 
 # Put the re-labelled data back through the summary function. This will calculate the mean abundance for the Other taxa!
-genus_data_processed_summary.df <- generate_taxa_summary(genus_data_processed.df,
+genus_data_processed_summary.df <- generate_taxa_summary_simple(genus_data_processed.df,
                                                          taxa_column = "taxonomy_genus",
                                                          abundance_column = "Relative_abundance_rarefied")
 
 # Normalise the mean abundance
-genus_data_processed_summary.df$normalised_mean_abundance <- genus_data_processed_summary.df$Mean_abundance / sum(genus_data_processed_summary.df$Mean_abundance)
+genus_data_processed_summary.df$Normalised_mean_abundance <- genus_data_processed_summary.df$Mean_abundance / sum(genus_data_processed_summary.df$Mean_abundance)
 
 # Create pie label
-genus_data_processed_summary.df$pie_label <- lapply(genus_data_processed_summary.df$normalised_mean_abundance, function(x) ifelse(x >= 0.01, paste0(round(x*100), "%"), "<1%"))
+genus_data_processed_summary.df$pie_label <- lapply(genus_data_processed_summary.df$Normalised_mean_abundance, function(x) ifelse(x >= 0.01, paste0(round(x*100), "%"), "<1%"))
 
 # Order by normalised_mean_abundance
-genus_data_processed_summary.df <- genus_data_processed_summary.df[rev(order(genus_data_processed_summary.df$normalised_mean_abundance)),]
+genus_data_processed_summary.df <- genus_data_processed_summary.df[rev(order(genus_data_processed_summary.df$Normalised_mean_abundance)),]
 
 # Create the taxa label
 genus_data_processed_summary.df$taxa_label <- gsub(".*(f__.*)", "\\1",genus_data_processed_summary.df$taxonomy_genus)
@@ -587,32 +583,32 @@ ggsave(pie_chart, filename = "Result_figures/abundance_analysis_plots/pie_chart_
 # ------------------------------------------------------------------------
 # top 10 genus by mean relative abundances for each community. Values are normalised for pie chart.
 # Generate taxonomy summary (to get mean for each genus)
-genus_taxa_summary_immunocompromised.df <- generate_taxa_summary(subset(genus_data.df, Project == "immunocompromised"),taxa_column = "taxonomy_genus", abundance_column = "Relative_abundance_rarefied")
-genus_taxa_summary_immunocompetent.df <- generate_taxa_summary(subset(genus_data.df, Project == "immunocompetent"),taxa_column = "taxonomy_genus", abundance_column = "Relative_abundance_rarefied")
+genus_taxa_summary_immunocompromised.df <- generate_taxa_summary_simple(subset(genus_data.df, Project == "immunocompromised"),taxa_column = "taxonomy_genus", abundance_column = "Relative_abundance_rarefied")
+genus_taxa_summary_immunocompetent.df <- generate_taxa_summary_simple(subset(genus_data.df, Project == "immunocompetent"),taxa_column = "taxonomy_genus", abundance_column = "Relative_abundance_rarefied")
 
 # Relabel each genus not in top 10 to 'Other'
 genus_data_processed_immunocompromised.df <- relabel_low_abundance_taxa(subset(genus_data.df, Project == "immunocompromised"), genus_taxa_summary_immunocompromised.df, my_top_n =8)
 genus_data_processed_immunocompetent.df <- relabel_low_abundance_taxa(subset(genus_data.df, Project == "immunocompetent"), genus_taxa_summary_immunocompetent.df, my_top_n =8)
 
 # Put the re-labelled data back through the summary function. This will calculate the mean abundance for the Other taxa!
-genus_data_processed_immunocompromised_summary.df <- generate_taxa_summary(genus_data_processed_immunocompromised.df,taxa_column = "taxonomy_genus",abundance_column = "Relative_abundance_rarefied")
-genus_data_processed_immunocompetent_summary.df <- generate_taxa_summary(genus_data_processed_immunocompetent.df,taxa_column = "taxonomy_genus",abundance_column = "Relative_abundance_rarefied")
+genus_data_processed_immunocompromised_summary.df <- generate_taxa_summary_simple(genus_data_processed_immunocompromised.df,taxa_column = "taxonomy_genus",abundance_column = "Relative_abundance_rarefied")
+genus_data_processed_immunocompetent_summary.df <- generate_taxa_summary_simple(genus_data_processed_immunocompetent.df,taxa_column = "taxonomy_genus",abundance_column = "Relative_abundance_rarefied")
 
 # Assign community
 genus_data_processed_immunocompromised_summary.df$Project <- "immunocompromised"
 genus_data_processed_immunocompetent_summary.df$Project <- "immunocompetent"
 
 # Normalise the mean abundance
-genus_data_processed_immunocompromised_summary.df$normalised_mean_abundance <- genus_data_processed_immunocompromised_summary.df$Mean_abundance / sum(genus_data_processed_immunocompromised_summary.df$Mean_abundance)
-genus_data_processed_immunocompetent_summary.df$normalised_mean_abundance <- genus_data_processed_immunocompetent_summary.df$Mean_abundance / sum(genus_data_processed_immunocompetent_summary.df$Mean_abundance)
+genus_data_processed_immunocompromised_summary.df$Normalised_mean_abundance <- genus_data_processed_immunocompromised_summary.df$Mean_abundance / sum(genus_data_processed_immunocompromised_summary.df$Mean_abundance)
+genus_data_processed_immunocompetent_summary.df$Normalised_mean_abundance <- genus_data_processed_immunocompetent_summary.df$Mean_abundance / sum(genus_data_processed_immunocompetent_summary.df$Mean_abundance)
 
 # Create pie label
-genus_data_processed_immunocompromised_summary.df$pie_label <- lapply(genus_data_processed_immunocompromised_summary.df$normalised_mean_abundance, function(x) ifelse(x >= 0.01, paste0(round(x*100), "%"), "<1%"))
-genus_data_processed_immunocompetent_summary.df$pie_label <- lapply(genus_data_processed_immunocompetent_summary.df$normalised_mean_abundance, function(x) ifelse(x >= 0.01, paste0(round(x*100), "%"), "<1%"))
+genus_data_processed_immunocompromised_summary.df$pie_label <- lapply(genus_data_processed_immunocompromised_summary.df$Normalised_mean_abundance, function(x) ifelse(x >= 0.01, paste0(round(x*100), "%"), "<1%"))
+genus_data_processed_immunocompetent_summary.df$pie_label <- lapply(genus_data_processed_immunocompetent_summary.df$Normalised_mean_abundance, function(x) ifelse(x >= 0.01, paste0(round(x*100), "%"), "<1%"))
 
 # Order by normalised_mean_abundance
-genus_data_processed_immunocompromised_summary.df <- genus_data_processed_immunocompromised_summary.df[rev(order(genus_data_processed_immunocompromised_summary.df$normalised_mean_abundance)),]
-genus_data_processed_immunocompetent_summary.df <- genus_data_processed_immunocompetent_summary.df[rev(order(genus_data_processed_immunocompetent_summary.df$normalised_mean_abundance)),]
+genus_data_processed_immunocompromised_summary.df <- genus_data_processed_immunocompromised_summary.df[rev(order(genus_data_processed_immunocompromised_summary.df$Normalised_mean_abundance)),]
+genus_data_processed_immunocompetent_summary.df <- genus_data_processed_immunocompetent_summary.df[rev(order(genus_data_processed_immunocompetent_summary.df$Normalised_mean_abundance)),]
 
 # Create the taxa label
 genus_data_processed_immunocompromised_summary.df$taxa_label <- gsub(".*(f__.*)", "\\1",genus_data_processed_immunocompromised_summary.df$taxonomy_genus)

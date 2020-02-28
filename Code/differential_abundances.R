@@ -11,25 +11,7 @@ library(DESeq2)
 ############################################################
 ######################## Functions #########################
 
-# Function that calculates the geometric mean with some error-protection bits. 
-# DESeq2 does not appear to work (will throw an error) if every OTU (or genus or genome etc.) 
-# contains at least one count of zero in every row of the count data.
-# Specifically, the function "dds<-DESeq(dds, betaPrior = FALSE)" will fail
-# One way to address this is to use the function below as input to DESeq2 to transform the data.
-# Calculate the geometric means prior to estimating the size factors
-gm_mean = function(x, na.rm=TRUE){
-  # The geometric mean, with some error-protection bits.
-  exp(sum(log(x[x > 0 & !is.na(x)]), na.rm=na.rm) / length(x))
-}
-
-# Center log ratio transform
-clr = function(x, base=2){
-  x <- log((x / gm_mean(x)), base)
-  x[!is.finite(x) | is.na(x)] <- 0.0
-  return(x)
-}
-
-matrix2df <- function(mymatrix, column_name){
+m2df <- function(mymatrix, column_name){
   out <- as.data.frame(mymatrix)
   out_names <- colnames(out)
   out$placeholder <- rownames(out)
@@ -58,7 +40,6 @@ filter_and_sort_dds_results <- function(x, p_value_threshold = 0.05){
   return(filtered_table)
 }
 
-
 filter_matrix_rows <- function(my_matrix, row_max){
   rows_before <- dim(my_matrix)[1]
   rows_after <- dim(my_matrix[apply(my_matrix,1,max) >= row_max,])[1]
@@ -72,19 +53,7 @@ filter_matrix_rows <- function(my_matrix, row_max){
 
 # Set the working directory
 setwd("/Users/julianzaugg/Desktop/ACE/major_projects/skin_microbiome_16S/")
-
-
-# Load count table at the OTU level. These are the counts for OTUs that were above our abundance thresholds
-otu_rare.m <- as.matrix(read.table("Result_tables/count_tables/OTU_counts_rarefied.csv", sep =",", header =T, row.names = 1))
-genus_rare.m <- as.matrix(read.table("Result_tables/count_tables/Genus_counts_rarefied.csv", sep =",", header =T, row.names = 1))
-
-# Filter out features that do not have at # reads in at least one sample
-head(melt(sort(colSums(otu_rare.m))))
-otu_rare.m <- filter_matrix_rows(otu_rare.m,15)
-# dim(otu_rare.m[apply(otu_rare.m, 1, max) == 0,])
-head(melt(sort(colSums(otu_rare.m))))
-
-genus_rare.m <- filter_matrix_rows(genus_rare.m,15)
+source("Code/helper_functions.R")
 
 # Load the OTU - taxonomy mapping file
 otu_taxonomy_map.df <- read.csv("Result_tables/other/otu_taxonomy_map.csv", header = T)
@@ -92,24 +61,31 @@ otu_taxonomy_map.df <- read.csv("Result_tables/other/otu_taxonomy_map.csv", head
 # Load the processed metadata
 metadata.df <- read.csv("Result_tables/other/processed_metadata.csv", sep =",", header = T)
 
-# We are only interested in C,AK_PL,IEC_PL,SCC_PL,AK,IEC, NLC and SCC lesions. 
-# metadata.df <- metadata.df[metadata.df$Sampletype %in% c("C","AK_PL","IEC_PL","SCC_PL","AK","IEC","SCC", "NLC"),]
-metadata.df <- metadata.df[metadata.df$Sampletype %in% c("C","AK_PL","IEC_PL","SCC_PL","AK","IEC","SCC", "LC"),]
-
 # Filter to snapshot or immunocompromised samples
-metadata.df <- subset(metadata.df,Project == "immunocompromised" | Snapshot_sample == "yes")
+metadata.df <- subset(metadata.df, Cohort == "immunocompromised" | Snapshot_sample_5 == "yes")
+
+# Define the variables of interest
+discrete_variables <- c("Lesion_type_refined","Gender","Patient", "Cohort", "Length_of_immunosuppression_group_1", "Length_of_immunosuppression_group_2")
+
+# Load count table at the OTU level. These are the counts for OTUs that were above our abundance thresholds
+otu.m <- as.matrix(read.table("Result_tables/count_tables/OTU_counts.csv", sep =",", header =T, row.names = 1))
+genus.m <- as.matrix(read.table("Result_tables/count_tables/Genus_counts.csv", sep =",", header =T, row.names = 1))
+
+# Filter out features/taxa that do not have at # reads in at least one sample
+head(melt(sort(colSums(otu.m))))
+otu.m <- filter_matrix_rows(otu.m,10)
+genus.m <- filter_matrix_rows(genus.m,10)
+# dim(otu.m[apply(otu.m, 1, max) == 0,])
+head(melt(sort(colSums(otu.m))))
 
 # Only keep columns (samples) in the metadata
-otu_rare.m <- otu_rare.m[,colnames(otu_rare.m) %in% as.character(metadata.df$Index)]
-genus_rare.m <- genus_rare.m[,colnames(genus_rare.m) %in% as.character(metadata.df$Index)]
+# metadata.df$Index <- with(metadata.df, paste0(Internal_name, "_", Job_ID))
+# colnames(otu.m)[!colnames(otu.m) %in% as.character(metadata.df$Index)]
+otu.m <- otu.m[,colnames(otu.m) %in% as.character(metadata.df$Index)]
+genus.m <- genus.m[,colnames(genus.m) %in% as.character(metadata.df$Index)]
 
 # Order the metadata.df by the index value
 metadata.df <- metadata.df[order(metadata.df$Index),]
-
-# Since we likely removed samples from the count matrix
-# in the main script, remove them from the metadata.df here
-samples_removed <- metadata.df$Index[!metadata.df$Index %in% colnames(otu_rare.m)]
-metadata.df <- metadata.df[! metadata.df$Index %in% samples_removed,]
 
 # Order the metadata.df by the index value
 metadata.df <- metadata.df[order(metadata.df$Index),]
@@ -118,33 +94,27 @@ metadata.df <- metadata.df[order(metadata.df$Index),]
 rownames(metadata.df) <- metadata.df$Index
 
 # Order the otu_tables the same order as the metadata
-otu_rare.m <- otu_rare.m[,rownames(metadata.df)]
-genus_rare.m <- genus_rare.m[,rownames(metadata.df)]
-
-dim(otu_rare.m)
-dim(metadata.df)
+otu.m <- otu.m[,rownames(metadata.df)]
+genus.m <- genus.m[,rownames(metadata.df)]
 
 # Ensure names of the otu / genus count matrices match the order of the metadata.df!
 # Assumes number of samples in metadata.df and count data are the same
-all(colnames(otu_rare.m) == metadata.df$Index) # Should be 'True'
-all(colnames(otu_rare.m) == rownames(metadata.df)) # Should be 'True'
+all(colnames(otu.m) == metadata.df$Index) # Should be 'True'
+all(colnames(otu.m) == rownames(metadata.df)) # Should be 'True'
 
-### Create new variables where different lesions types have been grouped
-metadata.df$Sampletype_pooled_cohort <- factor(paste0(metadata.df$Sampletype_pooled, "_", metadata.df$Project))
-metadata.df$Sampletype_final_cohort <- factor(paste0(metadata.df$Sampletype_final, "_", metadata.df$Project))
+### IGNORE Create new variables where different lesions types have been grouped
 
-# Factorise other variables
-metadata.df$Sampletype_pooled <- factor(metadata.df$Sampletype_pooled)
-metadata.df$Sampletype_final <- factor(metadata.df$Sampletype_final)
+# Convert variables to factors
+metadata.df[discrete_variables] <- lapply(metadata.df[discrete_variables], factor)
 
 # Create cohort specific data sets
 immunocompromised_metadata.df <- metadata.df[metadata.df$Project == "immunocompromised",]
-immunocompromised_otu_rare.m <- otu_rare.m[,rownames(immunocompromised_metadata.df)]
-immunocompromised_genus_rare.m <- genus_rare.m[,rownames(immunocompromised_metadata.df)]
+immunocompromised_otu.m <- otu.m[,rownames(immunocompromised_metadata.df)]
+immunocompromised_genus.m <- genus.m[,rownames(immunocompromised_metadata.df)]
 
 immunocompetent_metadata.df <- metadata.df[metadata.df$Project == "immunocompetent",]
-immunocompetent_otu_rare.m <- otu_rare.m[,rownames(immunocompetent_metadata.df)]
-immunocompetent_genus_rare.m <- genus_rare.m[,rownames(immunocompetent_metadata.df)]
+immunocompetent_otu.m <- otu.m[,rownames(immunocompetent_metadata.df)]
+immunocompetent_genus.m <- genus.m[,rownames(immunocompetent_metadata.df)]
 
 
 # ---------------------------------------------------------------------------------------------------------
@@ -155,15 +125,182 @@ immunocompetent_genus_rare.m <- genus_rare.m[,rownames(immunocompetent_metadata.
 # how the counts for each OTU/genus depend on the variables defined in the 'colData'. See help(DESeqDataSetFromMatrix) for more information.
 # The first column of the metadata.df ('colData') must match the ordering of the columns of the countData
 
-patient_lesion_counts <- data.frame()
-for (patient in unique(metadata.df$Patient)){
-  temp <- melt(summary(factor(metadata.df[metadata.df$Patient == patient,]$Sampletype_pooled)), value.name = "Count")
-  temp$Lesion <- rownames(temp)
-  rownames(temp) <- NULL
-  temp$Patient <- patient
-  patient_lesion_counts <- rbind(patient_lesion_counts, temp)
+
+
+patient_lesion_counts <- metadata.df %>% group_by(Patient, Lesion_type_refined) %>% dplyr::summarise(Count = n()) %>% as.data.frame()
+
+compare_groups_deseq <- function(mydata.m, mymetadata.df, myvariables, assign_taxonomy = T){
+  # Compare groups for all variables
+  combined_results_ordered.df <- data.frame()
+
+  for (myvar in myvariables){
+    print(paste0("Processing ", myvar))
+    
+    # Get all non-NA entries in the metadata
+    mymetadata_filtered.df <- mymetadata.df[!is.na(mymetadata.df[,myvar]),]
+    
+    # Ensure factored variable
+    mymetadata_filtered.df[,myvar] <- factor(mymetadata_filtered.df[,myvar])
+    
+    # Extract corresponding entries from data
+    mydata_filtered.m <- mydata.m[,rownames(mymetadata_filtered.df)]
+    
+    # If the number of samples is 1 or there is only one unique variable
+    if (dim(mymetadata_filtered.df)[2] == 1 | length(unique(mymetadata_filtered.df[,myvar])) == 1){
+      print("Only one sample or only one unique group")
+      break
+    }
+    if (dim(mymetadata_filtered.df)[1] == 0 | dim(mydata_filtered.m)[2] == 0){
+      print("No samples after filtering")
+      break
+    }
+    
+    # If the column and rownames do not match, entries are missing
+    if (!all(rownames(mymetadata_filtered.df) == colnames(mydata_filtered.m))){
+      print("Colnames and metadata names don't match!!!")
+      break
+    }
+    
+    # Run DESeq
+    dds <- DESeqDataSetFromMatrix(countData = mydata_filtered.m, colData = mymetadata_filtered.df, design = as.formula(paste0("~", myvar)))
+    
+    geoMeans <- apply(counts(dds), 1, gm_mean)
+    dds <- estimateSizeFactors(dds, geoMeans = geoMeans)
+    dds <- try(DESeq(dds, test = "Wald", fitType = "parametric", parallel = T))
+    if(inherits(dds, "try-error")) {
+      next
+    }
+    group_combinations <- combn(sort(unique(mymetadata_filtered.df[,myvar])),2)
+    
+    for (i in 1:ncol(group_combinations)){
+      group_1 <- as.character(group_combinations[1,i])
+      group_2 <- as.character(group_combinations[2,i])
+      
+      # group_1_meta <- subset(full, get(myvar) == group_1)
+      # group_2_meta <- subset(full, get(myvar) == group_2)
+      # n_group_1 <- dim(group_1_meta)[1]
+      # n_group_2 <- dim(group_2_meta)[1]
+      
+      n_group_1 <- dim(subset(mymetadata_filtered.df, get(myvar) == group_1))[1]
+      n_group_2 <- dim(subset(mymetadata_filtered.df, get(myvar) == group_2))[1]
+      
+      # Extract results for contrasted groups
+      print(paste0(myvar, ": ", group_1, " vs ", group_2))
+      resMFSource <- results(dds, contrast = c(myvar,group_1,group_2), alpha=0.01, independentFiltering = F, cooksCutoff = F,parallel = T)
+      resMFSource$Group_1 <- group_1
+      resMFSource$Group_2 <- group_2
+      resMFSource$Variable <- myvar
+      resMFSource$N_Group_1 <- n_group_1
+      resMFSource$N_Group_2 <- n_group_2
+      
+      # Assign the taxonomy to the results. Assumes feature.
+      if (assign_taxonomy == T){
+        resMFSource$Taxonomy <- assign_taxonomy_to_otu(resMFSource, otu_taxonomy_map.df)   
+        # Convert to dataframe
+        resMFSource <- m2df(resMFSource, "OTU")
+      } else{
+        # Convert to dataframe
+        resMFSource <- m2df(resMFSource, "Taxonomy")
+      }
+      # print(resMFSource)
+      resMFSource <- filter_and_sort_dds_results(resMFSource, 0.01)
+      combined_results_ordered.df <- rbind(combined_results_ordered.df, resMFSource)
+    }
+  }
+  combined_results_ordered.df
 }
-print(patient_lesion_counts,row.names = F)
+
+compare_groups_deseq_within_group <- function(mydata.m, mymetadata.df, myvariables, within_group_variable, assign_taxonomy = F){
+  combined_results.df <- data.frame()
+  reduced_variables <- myvariables[which(!myvariables == within_group_variable)]
+  for (myvar_value in unique(metadata.df[,within_group_variable])){
+    print(paste0("Processing ", myvar_value))
+    temp <- compare_groups_deseq(mydata.m = mydata.m, 
+                                 mymetadata.df = subset(mymetadata.df, get(within_group_variable) == myvar_value), 
+                                 myvariables = reduced_variables, 
+                                 assign_taxonomy = assign_taxonomy)
+    if (dim(temp)[1] == 0){
+      next
+    }
+    temp[,within_group_variable] <- myvar_value
+    combined_results.df <- rbind(combined_results.df, temp)
+  }
+  combined_results.df
+}
+
+# Compare groups 
+otu_group_comparison.df <- compare_groups_deseq(mydata.m = otu.m, mymetadata.df = metadata.df, myvariables = discrete_variables, assign_taxonomy = T)
+genus_group_comparison.df <- compare_groups_deseq(mydata.m = genus.m, mymetadata.df = metadata.df, myvariables = discrete_variables, assign_taxonomy = F)
+
+write.csv(x =otu_group_comparison.df,file ="Result_tables/DESeq_results/OTU_deseq.csv",quote = F, row.names =F)
+write.csv(x =genus_group_comparison.df,file ="Result_tables/DESeq_results/Genus_deseq.csv",quote = F, row.names =F)
+
+# Compare all lesion types within each patient
+otu_group_comparison_within_patient.df <- compare_groups_deseq_within_group(mydata.m = otu.m, 
+                                                                            mymetadata.df = metadata.df,
+                                                                            myvariables = discrete_variables,
+                                                                            within_group_variable = "Patient",
+                                                                            assign_taxonomy = T)
+
+genus_group_comparison_within_patient.df <- compare_groups_deseq_within_group(mydata.m = genus.m, 
+                                                                              mymetadata.df = metadata.df,
+                                                                              myvariables = discrete_variables,
+                                                                              within_group_variable = "Patient",
+                                                                              assign_taxonomy = F)
+
+write.csv(x =otu_group_comparison_within_patient.df,file ="Result_tables/DESeq_results/OTU_within_patient_deseq.csv",quote = F, row.names =F)
+write.csv(x =genus_group_comparison_within_patient.df,file ="Result_tables/DESeq_results/Genus_within_patient_deseq.csv",quote = F, row.names =F)
+
+# Compare all lesion types within each cohort
+otu_group_comparison_within_cohort.df <- compare_groups_deseq_within_group(mydata.m = otu.m, 
+                                                                           mymetadata.df = metadata.df,
+                                                                           myvariables = discrete_variables,
+                                                                           within_group_variable = "Cohort",
+                                                                           assign_taxonomy = T)
+
+genus_group_comparison_within_cohort.df <- compare_groups_deseq_within_group(mydata.m = genus.m, 
+                                                                             mymetadata.df = metadata.df,
+                                                                             myvariables = discrete_variables,
+                                                                             within_group_variable = "Cohort",
+                                                                             assign_taxonomy = F)
+
+write.csv(x =otu_group_comparison_within_cohort.df,file ="Result_tables/DESeq_results/OTU_within_cohort_deseq.csv",quote = F, row.names =F)
+write.csv(x =genus_group_comparison_within_cohort.df,file ="Result_tables/DESeq_results/Genus_within_cohort_deseq.csv",quote = F, row.names =F)
+
+# Comparing the same lesion types between cohorts. Always compare compromised vs competent, e.g. compromised AK vs competent AK
+# The trick is to group by the lesion type and then only compare groups within the Cohort variable
+otu_cohort_comparison_within_lesion.df <- compare_groups_deseq_within_group(mydata.m = otu.m, 
+                                                                            mymetadata.df = metadata.df,
+                                                                            myvariables = c("Cohort"),
+                                                                            within_group_variable = "Lesion_type_refined",
+                                                                            assign_taxonomy = T)
+
+genus_cohort_comparison_within_lesion.df <- compare_groups_deseq_within_group(mydata.m = genus.m, 
+                                                                              mymetadata.df = metadata.df,
+                                                                              myvariables = c("Cohort"),
+                                                                              within_group_variable = "Lesion_type_refined",
+                                                                              assign_taxonomy = F)
+
+write.csv(x =otu_cohort_comparison_within_lesion.df,file ="Result_tables/DESeq_results/OTU_cohort_within_lesion_deseq.csv",quote = F, row.names =F)
+write.csv(x =genus_cohort_comparison_within_lesion.df,file ="Result_tables/DESeq_results/Genus_cohort_within_lesion_deseq.csv",quote = F, row.names =F)
+
+
+
+
+
+
+
+if (cohort == "immunocompromised"){
+  my_levels <- c("C" ,"LC", "AK", "SCC")  
+} else{
+  my_levels <- c("LC", "AK", "SCC")
+}
+
+
+
+
+
+
 
 
 # Compare Sampletype_final within each patient (can use another lesion grouping)
@@ -255,10 +392,10 @@ run_per_patient_deseq <- function(my_otu_matrix, my_metadata, variable = "Sample
       if (assign_taxonomy == T){
         resMFSource$Taxonomy <- assign_taxonomy_to_otu(resMFSource, otu_taxonomy_map.df)   
         # Convert to dataframe
-        resMFSource <- matrix2df(resMFSource, "OTU")
+        resMFSource <- m2df(resMFSource, "OTU")
       } else{
         # Convert to dataframe
-        resMFSource <- matrix2df(resMFSource, "Taxonomy")
+        resMFSource <- m2df(resMFSource, "Taxonomy")
       }
       
       # Order the results by the adjusted p-value and filter out entries with p-values below threshold
@@ -288,11 +425,11 @@ run_per_patient_deseq <- function(my_otu_matrix, my_metadata, variable = "Sample
   write.csv(all_patients_combined_results.df, file=outfilename, quote = F, row.names = F)
 }
 
-run_per_patient_deseq(immunocompromised_otu_rare.m,immunocompromised_metadata.df,  "Sampletype_final", cohort="immunocompromised", my_levels <- c("C","LC", "AK", "SCC"),assign_taxonomy = T)
-run_per_patient_deseq(immunocompromised_genus_rare.m,immunocompromised_metadata.df, "Sampletype_final", cohort="immunocompromised", my_levels <- c("C","LC", "AK", "SCC"),assign_taxonomy = F)
+run_per_patient_deseq(immunocompromised_otu.m,immunocompromised_metadata.df,  "Sampletype_final", cohort="immunocompromised", my_levels <- c("C","LC", "AK", "SCC"),assign_taxonomy = T)
+run_per_patient_deseq(immunocompromised_genus.m,immunocompromised_metadata.df, "Sampletype_final", cohort="immunocompromised", my_levels <- c("C","LC", "AK", "SCC"),assign_taxonomy = F)
 
-run_per_patient_deseq(immunocompetent_otu_rare.m,immunocompetent_metadata.df, "Sampletype_final", cohort="immunocompetent", my_levels <- c("LC", "AK", "SCC"),assign_taxonomy = T)
-run_per_patient_deseq(immunocompetent_genus_rare.m,immunocompetent_metadata.df, "Sampletype_final", cohort="immunocompetent", my_levels <- c("LC", "AK", "SCC"),assign_taxonomy = F)
+run_per_patient_deseq(immunocompetent_otu.m,immunocompetent_metadata.df, "Sampletype_final", cohort="immunocompetent", my_levels <- c("LC", "AK", "SCC"),assign_taxonomy = T)
+run_per_patient_deseq(immunocompetent_genus.m,immunocompetent_metadata.df, "Sampletype_final", cohort="immunocompetent", my_levels <- c("LC", "AK", "SCC"),assign_taxonomy = F)
 
 
 # Comparing the same lesion types between cohorts
@@ -384,10 +521,10 @@ run_lesion_cohorts_deseq <- function(my_otu_matrix, variable = "Sampletype_final
       if (assign_taxonomy == T){
         resMFSource$Taxonomy <- assign_taxonomy_to_otu(resMFSource, otu_taxonomy_map.df)   
         # Convert to dataframe
-        resMFSource <- matrix2df(resMFSource, "OTU")
+        resMFSource <- m2df(resMFSource, "OTU")
       } else{
         # Convert to dataframe
-        resMFSource <- matrix2df(resMFSource, "Taxonomy")
+        resMFSource <- m2df(resMFSource, "Taxonomy")
       }
       
       # Order the results by the adjusted p-value and filter out entries with p-values below threshold
@@ -416,8 +553,8 @@ run_lesion_cohorts_deseq <- function(my_otu_matrix, variable = "Sampletype_final
   write.csv(all_combined_results.df, file=outfilename, quote = F, row.names = F)
 }
 
-run_lesion_cohorts_deseq(otu_rare.m, "Sampletype_final",assign_taxonomy = T)
-run_lesion_cohorts_deseq(genus_rare.m, "Sampletype_final",assign_taxonomy = F)
+run_lesion_cohorts_deseq(otu.m, "Sampletype_final",assign_taxonomy = T)
+run_lesion_cohorts_deseq(genus.m, "Sampletype_final",assign_taxonomy = F)
 
 
 # Compare all lesion types within a cohort
@@ -491,10 +628,10 @@ run_cohort_lesion_type_deseq <- function(my_otu_matrix, my_metadata, cohort, ass
     if (assign_taxonomy == T){
       resMFSource$Taxonomy <- assign_taxonomy_to_otu(resMFSource, otu_taxonomy_map.df)   
       # Convert to dataframe
-      resMFSource <- matrix2df(resMFSource, "OTU")
+      resMFSource <- m2df(resMFSource, "OTU")
     } else{
       # Convert to dataframe
-      resMFSource <- matrix2df(resMFSource, "Taxonomy")
+      resMFSource <- m2df(resMFSource, "Taxonomy")
     }
     
     # Order the results by the adjusted p-value and filter out entries with p-values below threshold
@@ -512,11 +649,11 @@ run_cohort_lesion_type_deseq <- function(my_otu_matrix, my_metadata, cohort, ass
   write.csv(all_combined_results.df, file=outfilename, quote = F, row.names = F)
 }
 
-run_cohort_lesion_type_deseq(immunocompromised_otu_rare.m, immunocompromised_metadata.df, "immunocompromised", assign_taxonomy = T)
-run_cohort_lesion_type_deseq(immunocompromised_genus_rare.m, immunocompromised_metadata.df, "immunocompromised", assign_taxonomy = F)
+run_cohort_lesion_type_deseq(immunocompromised_otu.m, immunocompromised_metadata.df, "immunocompromised", assign_taxonomy = T)
+run_cohort_lesion_type_deseq(immunocompromised_genus.m, immunocompromised_metadata.df, "immunocompromised", assign_taxonomy = F)
 
-run_cohort_lesion_type_deseq(immunocompetent_otu_rare.m, immunocompetent_metadata.df, "immunocompetent", assign_taxonomy = T)
-run_cohort_lesion_type_deseq(immunocompetent_genus_rare.m, immunocompetent_metadata.df, "immunocompetent", assign_taxonomy = F)
+run_cohort_lesion_type_deseq(immunocompetent_otu.m, immunocompetent_metadata.df, "immunocompetent", assign_taxonomy = T)
+run_cohort_lesion_type_deseq(immunocompetent_genus.m, immunocompetent_metadata.df, "immunocompetent", assign_taxonomy = F)
 
 
 
@@ -591,10 +728,10 @@ run_immunocompromised_n_meds_deseq <- function(my_otu_matrix, my_metadata, assig
     if (assign_taxonomy == T){
       resMFSource$Taxonomy <- assign_taxonomy_to_otu(resMFSource, otu_taxonomy_map.df)   
       # Convert to dataframe
-      resMFSource <- matrix2df(resMFSource, "OTU")
+      resMFSource <- m2df(resMFSource, "OTU")
     } else{
       # Convert to dataframe
-      resMFSource <- matrix2df(resMFSource, "Taxonomy")
+      resMFSource <- m2df(resMFSource, "Taxonomy")
     }
     
     # Order the results by the adjusted p-value and filter out entries with p-values below threshold
@@ -613,11 +750,11 @@ run_immunocompromised_n_meds_deseq <- function(my_otu_matrix, my_metadata, assig
   
 }
 immunocompromised_metadata.df <- metadata.df[metadata.df$Project == "immunocompromised",]
-immunocompromised_otu_rare.m <- otu_rare.m[,rownames(immunocompromised_metadata.df)]
-immunocompromised_genus_rare.m <- genus_rare.m[,rownames(immunocompromised_metadata.df)]
+immunocompromised_otu.m <- otu.m[,rownames(immunocompromised_metadata.df)]
+immunocompromised_genus.m <- genus.m[,rownames(immunocompromised_metadata.df)]
 
-run_immunocompromised_n_meds_deseq(immunocompromised_otu_rare.m, immunocompromised_metadata.df, assign_taxonomy = T)
-run_immunocompromised_n_meds_deseq(immunocompromised_genus_rare.m, immunocompromised_metadata.df, assign_taxonomy = F)
+run_immunocompromised_n_meds_deseq(immunocompromised_otu.m, immunocompromised_metadata.df, assign_taxonomy = T)
+run_immunocompromised_n_meds_deseq(immunocompromised_genus.m, immunocompromised_metadata.df, assign_taxonomy = F)
 
 # Patient group
 run_immunocompromised_patient_group_deseq <- function(my_otu_matrix, my_metadata, assign_taxonomy = T){
@@ -685,10 +822,10 @@ run_immunocompromised_patient_group_deseq <- function(my_otu_matrix, my_metadata
     if (assign_taxonomy == T){
       resMFSource$Taxonomy <- assign_taxonomy_to_otu(resMFSource, otu_taxonomy_map.df)   
       # Convert to dataframe
-      resMFSource <- matrix2df(resMFSource, "OTU")
+      resMFSource <- m2df(resMFSource, "OTU")
     } else{
       # Convert to dataframe
-      resMFSource <- matrix2df(resMFSource, "Taxonomy")
+      resMFSource <- m2df(resMFSource, "Taxonomy")
     }
     
     # Order the results by the adjusted p-value and filter out entries with p-values below threshold
@@ -707,11 +844,11 @@ run_immunocompromised_patient_group_deseq <- function(my_otu_matrix, my_metadata
   
 }
 immunocompromised_metadata.df <- metadata.df[metadata.df$Project == "immunocompromised",]
-immunocompromised_otu_rare.m <- otu_rare.m[,rownames(immunocompromised_metadata.df)]
-immunocompromised_genus_rare.m <- genus_rare.m[,rownames(immunocompromised_metadata.df)]
+immunocompromised_otu.m <- otu.m[,rownames(immunocompromised_metadata.df)]
+immunocompromised_genus.m <- genus.m[,rownames(immunocompromised_metadata.df)]
 
-run_immunocompromised_patient_group_deseq(immunocompromised_otu_rare.m, immunocompromised_metadata.df, assign_taxonomy = T)
-run_immunocompromised_patient_group_deseq(immunocompromised_genus_rare.m, immunocompromised_metadata.df, assign_taxonomy = F)
+run_immunocompromised_patient_group_deseq(immunocompromised_otu.m, immunocompromised_metadata.df, assign_taxonomy = T)
+run_immunocompromised_patient_group_deseq(immunocompromised_genus.m, immunocompromised_metadata.df, assign_taxonomy = F)
 
 # ------------------------------------------------------------------------------------
 # ------------------------------------------------------------------------------------
@@ -720,7 +857,7 @@ run_immunocompromised_patient_group_deseq(immunocompromised_genus_rare.m, immuno
 # patient_metadata.df <- metadata.df[metadata.df$Patient == "MST016",] # Get the patient metadata
 # patient_samples.v <- as.character(patient_metadata.df$Index) # Get the number of samples associated with the patient
 # patient_sample_lesion_types.v <- factor(patient_metadata.df[,"Sampletype_pooled"]) # get the lesion types
-# patient_feature_table.m <- otu_rare.m[,patient_samples.v]
+# patient_feature_table.m <- otu.m[,patient_samples.v]
 # patient_feature_table.m <- patient_feature_table.m[,order(rownames(patient_metadata.df))]
 # patient_metadata.df <- patient_metadata.df[order(rownames(patient_metadata.df)),]
 # 
@@ -754,7 +891,7 @@ run_immunocompromised_patient_group_deseq(immunocompromised_genus_rare.m, immuno
 # resMFSource$Group_2 <- "SCC"
 # resMFSource$Variable <- "MST016"
 # resMFSource$Taxonomy <- assign_taxonomy_to_otu(resMFSource, otu_taxonomy_map.df)  
-# resMFSource <- matrix2df(resMFSource, "OTU")
+# resMFSource <- m2df(resMFSource, "OTU")
 # resMFSourceOrdered <- filter_and_sort_dds_results(resMFSource, 0.01)
 
 # ------------------------------------------------------------------------------------
