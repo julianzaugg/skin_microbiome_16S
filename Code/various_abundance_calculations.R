@@ -52,8 +52,8 @@ my_colour_palette_12_soft <-c("#9E788F","#4C5B61","#678D58","#AD5233","#A0A083",
 
 
 # ------------------------------------------------------------------------------------------
-
 setwd("/Users/julianzaugg/Desktop/ACE/major_projects/skin_microbiome_16S/")
+source("Code/helper_functions.R")
 
 # Load the OTU - taxonomy mapping file
 otu_taxonomy_map.df <- read.csv("Result_tables/other/otu_taxonomy_map.csv", header = T)
@@ -64,19 +64,10 @@ metadata.df <- read.csv("Result_tables/other/processed_metadata.csv", sep =",", 
 # Set the Index to be the rowname
 rownames(metadata.df) <- metadata.df$Index
 
-# We are only interested in C,AK_PL,IEC_PL,SCC_PL,AK,IEC and SCC lesions. 
-metadata.df <- metadata.df[metadata.df$Lesion_type %in% c("C","AK_PL","IEC_PL","SCC_PL","AK","IEC","SCC", "LC"),]
-
 # Factorise discrete columns
 metadata.df$Patient <- factor(metadata.df$Patient)
 metadata.df$Lesion_type_refined <- factor(metadata.df$Lesion_type_refined)
 metadata.df$Cohort <- factor(metadata.df$Cohort)
-# metadata.df$Patient_group <- factor(metadata.df$Patient_group)
-# metadata.df$Gender <- factor(metadata.df$Gender)
-# metadata.df$Number_of_meds <- factor(metadata.df$Number_of_meds)
-
-# Load unfiltered data
-# unfiltered_data.df <- read.csv(file = "Result_tables/other/project_otu_table_unfiltered.csv",header = T)
 
 # Load filtered/processed abundance data with metadata
 # otu_data.df <- read.csv("Result_tables/other/OTU_counts_abundances_and_metadata.csv")
@@ -87,95 +78,19 @@ genus_data.df <- read.csv("Result_tables/other/genus_counts_abundances_and_metad
 # phylum_data.df <- read.csv("Result_tables/other/phylum_counts_abundances_and_metadata.csv")
 
 # First, filter out non-snapshot samples from immunocompetent
-genus_data.df <- subset(genus_data.df, Project == "immunocompromised" | Snapshot_sample == "yes")
+genus_data.df <- subset(genus_data.df, Cohort == "immunocompromised" | Snapshot_sample_5 == "yes")
 
-genus_data.df <- genus_data.df[genus_data.df$Sample %in% rownames(metadata.df),]
 
 # Set levels
-genus_data.df$Sampletype_pooled <- factor(genus_data.df$Sampletype_pooled, levels = c("LC", "AK","SCC"))
-genus_data.df$Sampletype_compromised_refined <- factor(genus_data.df$Sampletype_compromised_refined, levels = c("C","LC", "AK","SCC"))
-genus_data.df$Patient_group <- factor(genus_data.df$Patient_group, levels = c("Control", "AK","SCC"))
-genus_data.df$Number_of_meds <- factor(genus_data.df$Number_of_meds, levels = c("1", "2","3"))
-genus_data.df$Fitzpatrick_skin_type <- factor(genus_data.df$Fitzpatrick_skin_type, levels = c("1", "2","3","4"))
-# genus_data.df$Project_Sampletype_pooled <- with(genus_data.df, paste0(Project, "_", Sampletype_pooled))
-# genus_data.df$Project_Sampletype_pooled <- factor(genus_data.df$Project_Sampletype_pooled , levels = sort(unique(genus_data.df$Project_Sampletype_pooled)))
-
-genus_data.df$Sampletype_final <- factor(genus_data.df$Sampletype_final, levels = c("C", "LC", "AK", "SCC"))
-genus_data.df$Project_Sampletype_final <- with(genus_data.df, paste0(Project, "_", Sampletype_final))
-genus_data.df$Project_Sampletype_final <- factor(genus_data.df$Project_Sampletype_final , levels = sort(unique(genus_data.df$Project_Sampletype_final)))
-
+genus_data.df$Lesion_type_refined <- factor(genus_data.df$Lesion_type_refined, levels = c("C", "C_P", "AK","SCC_PL","SCC"))
+# genus_data.df$Sampletype_final <- factor(genus_data.df$Sampletype_final, levels = c("C", "LC", "AK", "SCC"))
+# genus_data.df$Project_Sampletype_final <- with(genus_data.df, paste0(Project, "_", Sampletype_final))
+# genus_data.df$Project_Sampletype_final <- factor(genus_data.df$Project_Sampletype_final , levels = sort(unique(genus_data.df$Project_Sampletype_final)))
 
 
 
 # --------------------------------------------------------------------------------------------
 # FUNCTIONS
-
-### Calculate the (min, max, mean, median, stdev, #samples) abundances of each taxa at each taxa level
-generate_taxa_summary <- function(mydata, taxa_column, group_by_columns){
-  # select_columns <- c(taxa_column, group_by_columns, "Sample", "Read_count", "Read_count_rarefied", "Relative_abundance", "Relative_abundance_rarefied")
-  select_columns <- c(taxa_column, group_by_columns, "Sample", "Patient", "Read_count", "Read_count_rarefied", "Relative_abundance", "Relative_abundance_rarefied")
-  total_samples <- length(unique(mydata$Sample))
-  total_patients <- length(unique(mydata$Patient))
-  taxa_group_summary <- 
-    mydata %>%
-    # dplyr::filter(retained = "yes") %>% # keep only those samples that were retained
-    dplyr::select_(.dots = select_columns) %>%
-    dplyr::group_by_(.dots = c(taxa_column, group_by_columns)) %>%
-    dplyr::mutate(N_samples = n_distinct(Sample), N_patients = n_distinct(Patient)) %>% # number of unique samples/index
-    dplyr::group_by_(.dots = c(group_by_columns)) %>%
-    dplyr::mutate(N_total_samples_in_group = n_distinct(Sample),
-                  N_total_patients_in_group = n_distinct(Patient))  %>%
-    dplyr::group_by_(.dots = c(group_by_columns, taxa_column)) %>%
-    dplyr::select(-Sample, -Patient) %>%
-    dplyr::summarise(N_samples = max(N_samples),
-                     N_total_samples_in_group = max(N_total_samples_in_group),
-                     N_patients = max(N_patients),
-                     N_total_patients_in_group = max(N_total_patients_in_group),
-                     Percent_group_samples = round((max(N_samples) / max(N_total_samples_in_group))*100, 2),
-                     Percent_total_samples = round((max(N_samples) / total_samples)*100, 2),
-                     Percent_group_patients = round((max(N_patients) / max(N_total_patients_in_group))*100, 2),
-                     Percent_total_patients = round((max(N_patients) / total_patients)*100, 2),
-                     Mean_read_count = round(mean(Read_count), 2),
-                     Median_read_count = median(Read_count),
-                     Min_read_count = min(Read_count),
-                     Max_read_count = max(Read_count),
-                     Summed_read_count = sum(Read_count),
-                     
-                     Mean_read_count_rarefied = round(mean(Read_count_rarefied),2),
-                     Median_read_count_rarefied = median(Read_count_rarefied),
-                     Min_read_count_rarefied = min(Read_count_rarefied),
-                     Max_read_count_rarefied = max(Read_count_rarefied),
-                     Summed_read_count_rarefied = sum(Read_count_rarefied),
-                     
-                     Mean_relative_abundance = round(mean(Relative_abundance), 5),
-                     Median_relative_abundance = round(median(Relative_abundance), 5),
-                     Min_relative_abundance = round(min(Relative_abundance),5),
-                     Max_relative_abundance = round(max(Relative_abundance),5),
-                     Summed_relative_abundance = round(sum(Relative_abundance),5),
-                     
-                     Mean_relative_abundance_rarefied = round(mean(Relative_abundance_rarefied), 5),
-                     Median_relative_abundance_rarefied = round(median(Relative_abundance_rarefied), 5),
-                     Min_relative_abundance_rarefied = round(min(Relative_abundance_rarefied), 5),
-                     Max_relative_abundance_rarefied = round(max(Relative_abundance_rarefied), 5),
-                     Summed_relative_abundance_rarefied = round(sum(Relative_abundance_rarefied),5)
-    ) %>%
-    as.data.frame()
-  return(taxa_group_summary)
-}
-
-filter_summary_to_top_n <- function(taxa_summary, grouping_variables, abundance_column, my_top_n = 10){
-  # Get the top N taxa as described in a provided taxa summary table.
-  out <- 
-    taxa_summary %>%
-    dplyr::group_by_(.dots = c(grouping_variables)) %>%
-    dplyr::arrange(dplyr::desc(get(abundance_column))) %>%
-    dplyr::top_n(my_top_n, get(abundance_column)) %>% 
-    # dplyr::arrange_(.dots = c(grouping_variables),abundance_column) %>%
-    dplyr::arrange_(.dots = c(grouping_variables)) %>%
-    as.data.frame()
-  return(out)
-}
-
 
 # Boxplot for relative abundances. If data has not been filtered to a single taxa entry,
 # the plot will be a mix and should have factet_wrap(~TAXA) applied. Or just pre-filter.

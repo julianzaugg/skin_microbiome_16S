@@ -123,6 +123,8 @@ dir.create(file.path("./Result_figures", "abundance_analysis_plots"), showWarnin
 dir.create(file.path("./Result_figures/abundance_analysis_plots/boxplots"), showWarnings = FALSE, recursive = T)
 dir.create(file.path("./Result_figures/abundance_analysis_plots/boxplots/Cohort_lesion_type_refined"), showWarnings = FALSE, recursive = T)
 dir.create(file.path("./Result_figures/abundance_analysis_plots/boxplots/Cohort"), showWarnings = FALSE, recursive = T)
+dir.create(file.path("./Result_figures/abundance_analysis_plots/pie_charts"), showWarnings = FALSE, recursive = T)
+
 
 dir.create(file.path("./Result_figures", "DESeq_plots"), showWarnings = FALSE)
 dir.create(file.path("./Result_figures/DESeq_plots/boxplots"), showWarnings = FALSE, recursive = T)
@@ -143,8 +145,8 @@ dir.create(file.path("./Result_tables", "abundance_analysis_tables"), showWarnin
 dir.create(file.path("./Result_tables", "count_tables"), showWarnings = FALSE)
 
 dir.create(file.path("./Result_tables", "DESeq_results"), showWarnings = FALSE)
-dir.create(file.path("./Result_tables/DESeq_results/by_patient"), showWarnings = FALSE, recursive = T)
-dir.create(file.path("./Result_tables/DESeq_results/by_lesion_cohort"), showWarnings = FALSE, recursive = T)
+# dir.create(file.path("./Result_tables/DESeq_results/by_patient"), showWarnings = FALSE, recursive = T)
+# dir.create(file.path("./Result_tables/DESeq_results/by_lesion_cohort"), showWarnings = FALSE, recursive = T)
 
 dir.create(file.path("./Result_tables", "diversity_analysis"), showWarnings = FALSE)
 dir.create(file.path("./Result_tables/diversity_analysis/both_cohorts/", "otu"), showWarnings = FALSE,recursive = T)
@@ -1256,7 +1258,7 @@ if (max(unassigned_otu_unfiltered_rel.df$Relative_abundance) != 0){
 # -------------------------------------------------------------------------------------------------------------------------------------
 # -------------------------------------------------------------------------------------------------------------------------------------
 # -------------------------------------------------------------------------------------------------------------------------------------
-#         Rarefying
+#         Rarefying (capping maximum reads)
 
 # Note - For samples with a read count lower then the sample=# parameter, 
 # the rrarefy function in vegan will return the this sample with its existing read count.
@@ -1703,7 +1705,7 @@ write.table(otu_class_rel.df, file = "Result_tables/relative_abundance_tables/Cl
 write.table(otu_phylum.df, file = "Result_tables/count_tables/Phylum_counts.csv", sep = ",", quote = F, col.names = T, row.names = F)
 write.table(otu_phylum_rel.df, file = "Result_tables/relative_abundance_tables/Phylum_relative_abundances.csv", sep = ",", quote = F, col.names = T, row.names = F)
 
-# Rarefied
+# Rarefied (capped)
 write.table(otu_species_rare.df, file = "Result_tables/count_tables/Specie_counts_rarefied.csv", sep = ",", quote = F, col.names = T, row.names = F)
 write.table(otu_species_rel_rare.df, file = "Result_tables/relative_abundance_tables/Specie_relative_abundances_rarefied.csv", sep = ",", quote = F, col.names = T, row.names = F)
 

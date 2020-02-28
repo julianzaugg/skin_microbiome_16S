@@ -1,4 +1,4 @@
-
+# FIXME - re-write as old 
 
 library(ggplot2)
 library(reshape2)
@@ -148,12 +148,12 @@ make_pie_graph <- function(mydata, taxonomy_column, mytitle = NULL,  mysubtitle 
   taxa_summary.df[! taxa_summary.df[,taxonomy_column] %in% top_taxa,][,taxonomy_column] <- "Other"
   
   # Need a single entry for the Other group
-  taxa_summary.df <- taxa_summary.df %>% group_by(Family_Genus) %>% summarise(normalised_mean_abundance = sum(normalised_mean_abundance)) %>% as.data.frame()
+  taxa_summary.df <- taxa_summary.df %>% group_by(Family_Genus) %>% summarise(Normalised_mean_abundance = sum(Normalised_mean_abundance)) %>% as.data.frame()
   
   # Create pie label
   # taxa_data_processed_summary.df$pie_label <- lapply(taxa_data_processed_summary.df$Normalised_mean_abundance, function(x) ifelse(x >= 0.01, paste0(round(x*100), "%"), "<1%"))
   taxa_summary.df$pie_label <- lapply(taxa_summary.df$Normalised_mean_abundance, function(x) ifelse(x >= 0.05, paste0(round(x*100), "%"), ""))
-  # Order by normalised_mean_abundance
+  # Order by Normalised_mean_abundance
   taxa_summary.df <- taxa_summary.df[rev(order(taxa_summary.df$Normalised_mean_abundance)),]
   # Create the taxa label
   # FIXME - double check working correctly for all but genus
@@ -177,7 +177,7 @@ make_pie_graph <- function(mydata, taxonomy_column, mytitle = NULL,  mysubtitle 
   taxa_summary.df <- 
     taxa_summary.df %>%
     arrange(dplyr::desc(get(taxonomy_column))) %>%
-    mutate(lab.ypos = cumsum(normalised_mean_abundance) - .5*normalised_mean_abundance)
+    mutate(lab.ypos = cumsum(Normalised_mean_abundance) - .5*Normalised_mean_abundance)
   
   # Assign colours for taxa. Assumes Other is first (it should be based on the factoring performed above)
   if (is.null(my_colour_list)){
@@ -192,7 +192,7 @@ make_pie_graph <- function(mydata, taxonomy_column, mytitle = NULL,  mysubtitle 
   }
   
   
-  pie_chart <- ggplot(taxa_summary.df,aes(x ="", y= normalised_mean_abundance, fill = taxa_label)) + 
+  pie_chart <- ggplot(taxa_summary.df,aes(x ="", y= Normalised_mean_abundance, fill = taxa_label)) + 
     geom_bar(width = 1, stat = "identity", color = "black",size = .2) +
     coord_polar("y", start=0) +
     scale_fill_manual(values = taxa_colours.l, name = "Taxonomy") +
@@ -289,7 +289,7 @@ for (cohort in c("immunocompromised", "immunocompetent", "immunocompromised_fore
     my_subtitle <- paste0("# samples = ", n_samples, "\n# patients = ", n_patients)
     # Pie chart based on only the top #
     myplot <- make_pie_graph(data_subset, "Family_Genus", mytitle = my_title, mysubtitle = my_subtitle, n_taxa =9, my_colour_list = both_cohorts_genus_palette) 
-    outname <- paste0(cohort, "_", lesion, "_sampletype_final_top_genera_pie_chart.pdf") 
+    outname <- paste0(cohort, "_", lesion, "_lesion_type_refined_top_genera_pie_chart.pdf") 
     ggsave(myplot, filename = paste0("Result_figures/abundance_analysis_plots/pie_charts/",outname), height = 15, width =25, units = "cm")
   }
 }
@@ -303,7 +303,7 @@ for (lesion in unique(immunocompetent_genus_data_all.df$Lesion_type_refined)){
   my_subtitle <- paste0("# samples = ", n_samples, "\n# patients = ", n_patients)
   # Pie chart based on only the top #
   myplot <- make_pie_graph(data_subset, "Family_Genus", mytitle = my_title, mysubtitle = my_subtitle, n_taxa =9, my_colour_list = both_cohorts_genus_palette) 
-  outname <- paste0("immunocompetent_all_", lesion, "_sampletype_final_top_genera_pie_chart.pdf") 
+  outname <- paste0("immunocompetent_all_", lesion, "_lesion_type_refined_top_genera_pie_chart.pdf") 
   ggsave(myplot, filename = paste0("Result_figures/abundance_analysis_plots/pie_charts/",outname), height = 15, width =25, units = "cm")
 }
 
@@ -537,7 +537,7 @@ genus_data_processed_summary.df$Normalised_mean_abundance <- genus_data_processe
 # Create pie label
 genus_data_processed_summary.df$pie_label <- lapply(genus_data_processed_summary.df$Normalised_mean_abundance, function(x) ifelse(x >= 0.01, paste0(round(x*100), "%"), "<1%"))
 
-# Order by normalised_mean_abundance
+# Order by Normalised_mean_abundance
 genus_data_processed_summary.df <- genus_data_processed_summary.df[rev(order(genus_data_processed_summary.df$Normalised_mean_abundance)),]
 
 # Create the taxa label
@@ -553,7 +553,7 @@ genus_data_processed_summary.df$taxa_label <- factor(genus_data_processed_summar
 genus_data_processed_summary.df <- 
   genus_data_processed_summary.df %>%
   arrange(desc(taxonomy_genus)) %>%
-  mutate(lab.ypos = cumsum(normalised_mean_abundance) - .5*normalised_mean_abundance)
+  mutate(lab.ypos = cumsum(Normalised_mean_abundance) - .5*Normalised_mean_abundance)
 
 # Fix the ordering so that Other is first level
 # genus_data_processed_summary.df$taxonomy_genus <- relevel(factor(genus_data_processed_summary.df$taxonomy_genus), "Other")
@@ -561,7 +561,7 @@ genus_data_processed_summary.df <-
 # Assign colours for taxa
 taxa_colours.l <- setNames(c("grey", my_colour_palette_12_soft), genus_data_processed_summary.df$taxa_label)
 
-pie_chart <- ggplot(genus_data_processed_summary.df,aes(x ="", y= normalised_mean_abundance, fill = taxa_label)) + 
+pie_chart <- ggplot(genus_data_processed_summary.df,aes(x ="", y= Normalised_mean_abundance, fill = taxa_label)) + 
   geom_bar(width = 1, stat = "identity", color = "white",size = .2) +
   coord_polar("y", start=0) +
   scale_fill_manual(values = taxa_colours.l, name = "Genus") +
@@ -606,7 +606,7 @@ genus_data_processed_immunocompetent_summary.df$Normalised_mean_abundance <- gen
 genus_data_processed_immunocompromised_summary.df$pie_label <- lapply(genus_data_processed_immunocompromised_summary.df$Normalised_mean_abundance, function(x) ifelse(x >= 0.01, paste0(round(x*100), "%"), "<1%"))
 genus_data_processed_immunocompetent_summary.df$pie_label <- lapply(genus_data_processed_immunocompetent_summary.df$Normalised_mean_abundance, function(x) ifelse(x >= 0.01, paste0(round(x*100), "%"), "<1%"))
 
-# Order by normalised_mean_abundance
+# Order by Normalised_mean_abundance
 genus_data_processed_immunocompromised_summary.df <- genus_data_processed_immunocompromised_summary.df[rev(order(genus_data_processed_immunocompromised_summary.df$Normalised_mean_abundance)),]
 genus_data_processed_immunocompetent_summary.df <- genus_data_processed_immunocompetent_summary.df[rev(order(genus_data_processed_immunocompetent_summary.df$Normalised_mean_abundance)),]
 
@@ -624,12 +624,12 @@ genus_data_processed_immunocompetent_summary.df$taxa_label <- factor(genus_data_
 genus_data_processed_immunocompromised_summary.df <-
   genus_data_processed_immunocompromised_summary.df %>%
   arrange(desc(taxonomy_genus)) %>%
-  mutate(lab.ypos = cumsum(normalised_mean_abundance) - .5*normalised_mean_abundance)
+  mutate(lab.ypos = cumsum(Normalised_mean_abundance) - .5*Normalised_mean_abundance)
 
 genus_data_processed_immunocompetent_summary.df <-
   genus_data_processed_immunocompetent_summary.df %>%
   arrange(desc(taxonomy_genus)) %>%
-  mutate(lab.ypos = cumsum(normalised_mean_abundance) - .5*normalised_mean_abundance)
+  mutate(lab.ypos = cumsum(Normalised_mean_abundance) - .5*Normalised_mean_abundance)
 
 
 # Assign colours for taxa
@@ -638,7 +638,7 @@ genus_data_processed_immunocompetent_summary.df <-
 taxa_colours.l <- setNames(c("grey", my_colour_palette_12_soft),unique(c(as.character(genus_data_processed_immunocompromised_summary.df$taxa_label), as.character(genus_data_processed_immunocompetent_summary.df$taxa_label))))
 
 
-pie_chart_immunocompromised <- ggplot(genus_data_processed_immunocompromised_summary.df,aes(x ="", y= normalised_mean_abundance, fill = taxa_label)) + 
+pie_chart_immunocompromised <- ggplot(genus_data_processed_immunocompromised_summary.df,aes(x ="", y= Normalised_mean_abundance, fill = taxa_label)) + 
   geom_bar(width = 1, stat = "identity", color = "white",size = .2) +
   coord_polar("y", start=0) +
   scale_fill_manual(values = taxa_colours.l, name = "Genus") +
@@ -656,7 +656,7 @@ pie_chart_immunocompromised
 ggsave(pie_chart_immunocompromised, filename = "Result_figures/abundance_analysis_plots/pie_chart_top_genera_immunocompromised.pdf", height = 10, width =30, units = "cm")
        
        
-pie_chart_immunocompetent <- ggplot(genus_data_processed_immunocompetent_summary.df,aes(x ="", y= normalised_mean_abundance, fill = taxa_label)) + 
+pie_chart_immunocompetent <- ggplot(genus_data_processed_immunocompetent_summary.df,aes(x ="", y= Normalised_mean_abundance, fill = taxa_label)) + 
        geom_bar(width = 1, stat = "identity", color = "white",size = .2) +
        coord_polar("y", start=0) +
        scale_fill_manual(values = taxa_colours.l, name = "Genus") +
