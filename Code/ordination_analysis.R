@@ -92,7 +92,7 @@ rownames(metadata.df) <- metadata.df$Index
 # Factorise discrete columns
 metadata.df$Patient <- factor(metadata.df$Patient)
 metadata.df$Lesion_type <- factor(metadata.df$Lesion_type)
-metadata.df$Lesion_type_refined <- factor(metadata.df$Lesion_type_refined)
+metadata.df$Lesion_type_refined <- factor(metadata.df$Lesion_type_refined, levels = c("C", "C_P", "AK", "SCC_PL", "SCC"))
 metadata.df$Cohort <- factor(metadata.df$Cohort)
 metadata.df$Gender <- factor(metadata.df$Gender)
 
@@ -224,7 +224,7 @@ immunocompromised_otu_pca <- rda(t(otu_clr.m[,immunocompromised_samples]))
 immunocompromised_genus_pca <- rda(t(genus_clr.m[,immunocompromised_samples]))
 
 temp <- calculate_PC_abundance_correlations(genus_pca, mydata.df = genus_data.df,taxa_column = "taxonomy_genus",variables = discrete_variables)
-
+# temp[order(temp$PC1_contribution_percentage,decreasing = T),]
 # ------------------------------------------------------------------------------------
 # All samples, both cohorts
 
@@ -346,13 +346,13 @@ generate_pca(immunocompetent_genus_pca, mymetadata = subset(metadata.df, Cohort 
              legend_title = "Patient",
              legend_cex = .5,
              plot_title = "immunocompetent cohort, all lesion types",
-             limits = c(-6,3,-4,5),
+             limits = c(-6,3,-4,6),
              plot_spiders = F,
-             plot_ellipses = F,
+             plot_ellipses = T,
              plot_hulls = F,
              use_shapes = T,
              ellipse_border_width = .5,
-             include_legend = T,
+             include_legend = F,
              label_ellipse = F, ellipse_label_size = .3,
              colour_palette = patient_colour_palette_45,
              variable_to_plot = "Patient",
@@ -363,6 +363,32 @@ generate_pca(immunocompetent_genus_pca, mymetadata = subset(metadata.df, Cohort 
              label_arrows = T, arrow_label_size = .5, arrow_label_colour = "black", arrow_label_font_type = 1,
              specie_labeller_function = genus_relabeller_function,arrow_label_offset = 0,
              filename = paste0("Result_figures/ordination_plots/genus/immunocompetent_patient.pdf"))
+
+
+generate_pca(immunocompetent_otu_pca, mymetadata = subset(metadata.df, Cohort == "immunocompetent"),
+             plot_height = 5, plot_width = 5,
+             legend_x = -6, legend_y = 5,
+             point_size = .7, point_line_thickness = 0.3,point_alpha =.9,
+             legend_title = "Patient",
+             legend_cex = .5,
+             plot_title = "immunocompetent cohort, all lesion types",
+             limits = c(-7,7,-2,8),
+             plot_spiders = F,
+             plot_ellipses = T,
+             plot_hulls = F,
+             use_shapes = T,
+             ellipse_border_width = .5,
+             include_legend = F,
+             label_ellipse = F, ellipse_label_size = .3,
+             colour_palette = patient_colour_palette_45,
+             variable_to_plot = "Patient",
+             legend_cols = 2,
+             variable_colours_available = T,
+             num_top_species = 3,
+             plot_arrows = F,arrow_alpha = .7, arrow_colour = "grey20",arrow_scalar = 2,arrow_thickness = .7,
+             label_arrows = T, arrow_label_size = .5, arrow_label_colour = "black", arrow_label_font_type = 1,
+             specie_labeller_function = genus_relabeller_function,arrow_label_offset = 0,
+             filename = paste0("Result_figures/ordination_plots/otu/immunocompetent_patient.pdf"))
 
 generate_pca(immunocompetent_otu_pca, mymetadata = subset(metadata.df, Cohort == "immunocompetent"),
              plot_height = 5, plot_width = 5,
@@ -453,13 +479,13 @@ generate_pca(immunocompromised_genus_pca, mymetadata = metadata.df[immunocomprom
              legend_title = "Patient",
              legend_cex = .5,
              plot_title = "immunocompromised cohort, all lesion types",
-             limits = c(-5,5,-5,8),
+             limits = c(-4,5,-5,8),
              plot_spiders = F,
-             plot_ellipses = F,
+             plot_ellipses = T,
              plot_hulls = F,
              use_shapes = T,
              ellipse_border_width = .5,
-             include_legend = T,
+             include_legend = F,
              label_ellipse = F, ellipse_label_size = .3,
              colour_palette = patient_colour_palette_45,
              variable_to_plot = "Patient",
@@ -470,6 +496,31 @@ generate_pca(immunocompromised_genus_pca, mymetadata = metadata.df[immunocomprom
              label_arrows = T, arrow_label_size = .5, arrow_label_colour = "black", arrow_label_font_type = 1,
              specie_labeller_function = genus_relabeller_function,arrow_label_offset = 0,
              filename = paste0("Result_figures/ordination_plots/genus/immunocompromised_patient.pdf"))
+
+generate_pca(immunocompromised_otu_pca, mymetadata = metadata.df[immunocompromised_samples,],
+             plot_height = 5, plot_width = 5,
+             legend_x = -5, legend_y = 8,
+             point_size = .7, point_line_thickness = 0.3,point_alpha =.9,
+             legend_title = "Patient",
+             legend_cex = .5,
+             plot_title = "immunocompromised cohort, all lesion types",
+             limits = c(-4,7,-8,8),
+             plot_spiders = F,
+             plot_ellipses = T,
+             plot_hulls = F,
+             use_shapes = T,
+             ellipse_border_width = .5,
+             include_legend = F,
+             label_ellipse = F, ellipse_label_size = .3,
+             colour_palette = patient_colour_palette_45,
+             variable_to_plot = "Patient",
+             legend_cols = 2,
+             variable_colours_available = T,
+             num_top_species = 3,
+             plot_arrows = F,arrow_alpha = .7, arrow_colour = "grey20",arrow_scalar = 3,arrow_thickness = .7,
+             label_arrows = T, arrow_label_size = .2, arrow_label_colour = "black", arrow_label_font_type = 1,
+             specie_labeller_function = otu_relabeller_function,arrow_label_offset = 0,
+             filename = paste0("Result_figures/ordination_plots/otu/immunocompromised_patient.pdf"))
 
 
 # Gender
@@ -600,6 +651,172 @@ for (cohort in unique(metadata.df$Cohort)){
 }
 
 
+# ------------------------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------------------------
+# Publication figures
+
+# par(mfrow = c(2,2),
+#     oma = c(2,2,0,0),
+#     mar = c(1,4,0,1))
+make_publication_plot <- function(){
+  source("Code/helper_functions.R")
+  graphics.off()
+  svg(filename = "Paper_drafts/figures_results_for_publication/lesion_type_patient_genus_PCA_for_publication.svg",
+      width = 8,height = 8)
+  # pdf(file = "Paper_drafts/figures_results_for_publication/lesion_type_patient_genus_PCA_for_publication.pdf",
+      # width = 8,height = 8)
+  # par(mfrow = c(2,2))
+  # par(mfrow = c(2,2),
+  #     mar = c(1,10,5,1))
+  par(mfrow = c(2,2),
+      oma = c(1,4,0,0))
+  # plot.new()
+  par(mar = c(1,4,3,1))
+  # par(bg = rgb(61, 55, 72, maxColorValue = 255))
+  generate_pca(immunocompromised_genus_pca, mymetadata = metadata.df[immunocompromised_samples,],
+               plot_height = 5, plot_width = 5,
+               legend_x = -5, legend_y = 8,
+               point_size = .7, point_line_thickness = 0.3,point_alpha =.9,
+               legend_title = "Lesion type",
+               legend_cex = .5,
+               plot_title = "",
+               limits = c(-5,5,-5,8),
+               plot_spiders = F,
+               plot_ellipses = F,
+               plot_hulls = F,
+               use_shapes = T,
+               show_x_label = F,
+               show_y_label = T,
+               plot_x_ticks = T,
+               plot_y_ticks = T,
+               plot_x_tick_labels = F,
+               plot_y_tick_labels = T,
+               ellipse_border_width = .5,
+               include_legend = T,
+               label_ellipse = F, ellipse_label_size = .3,
+               colour_palette = patient_colour_palette_45,
+               variable_to_plot = "Lesion_type_refined", legend_cols = 1,
+               variable_colours_available = T,
+               num_top_species = 3,
+               plot_arrows = F,arrow_alpha = .7, arrow_colour = "grey20",arrow_scalar = 2,arrow_thickness = .7,
+               label_arrows = T, arrow_label_size = .5, arrow_label_colour = "black", arrow_label_font_type = 1,
+               specie_labeller_function = genus_relabeller_function,arrow_label_offset = 0)
+  title(outer=F,adj=.5,main="Immunosuppressed",cex.main=4,col.main="black",font.main=2,line=1, cex.main =1.5, family = "serif")
+  # title(outer=F,ylab = "By lesion type",font.lab=2, line = 5,cex.lab = 2, family = "serif")
+  title(outer=T,adj=.77,ylab = "By lesion type",font.lab=2, line = 2,cex.lab = 1.5, family = "serif")
+
+  par(mar = c(1,4,3,1))
+  generate_pca(immunocompetent_genus_pca, mymetadata = subset(metadata.df, Cohort == "immunocompetent"),
+               plot_height = 5, plot_width = 5,
+               legend_x = -6, legend_y = 5,
+               point_size = .7, point_line_thickness = 0.3,point_alpha =.9,
+               legend_title = "Lesion type",
+               legend_cex = .5,
+               plot_title = "",
+               limits = c(-6,3,-4,5),
+               plot_spiders = F,
+               plot_ellipses = F,
+               plot_hulls = F,
+               use_shapes = T,
+               show_x_label = F,
+               show_y_label = T,
+               plot_x_ticks = T,
+               plot_y_ticks = T,
+               plot_x_tick_labels = F,
+               plot_y_tick_labels = T,
+               ellipse_border_width = .5,
+               include_legend = T,
+               label_ellipse = F, ellipse_label_size = .3,
+               colour_palette = patient_colour_palette_45,
+               variable_to_plot = "Lesion_type_refined", legend_cols = 1,
+               variable_colours_available = T,
+               num_top_species = 3,
+               plot_arrows = F,arrow_alpha = .7, arrow_colour = "grey20",arrow_scalar = 2,arrow_thickness = .7,
+               label_arrows = T, arrow_label_size = .5, arrow_label_colour = "black", arrow_label_font_type = 1,
+               specie_labeller_function = genus_relabeller_function,arrow_label_offset = 0)
+  title(outer=F,adj=.5,main="Immunocompetent",cex.main=4,col.main="black",font.main=2,line=1, cex.main =1.5, family = "serif")
+  
+  par(mar = c(4,4,0,1))
+  generate_pca(immunocompromised_genus_pca, mymetadata = metadata.df[immunocompromised_samples,],
+               plot_height = 5, plot_width = 5,
+               legend_x = -5, legend_y = 8,
+               point_size = .7, point_line_thickness = 0.3,point_alpha =.9,
+               legend_title = "Patient",
+               legend_cex = .5,
+               plot_title = "",
+               limits = c(-4,5,-5,8),
+               plot_spiders = F,
+               plot_ellipses = T,
+               plot_hulls = F,
+               use_shapes = T,
+               show_x_label = T,
+               show_y_label = T,
+               plot_x_ticks = T,
+               plot_y_ticks = T,
+               plot_x_tick_labels = T,
+               plot_y_tick_labels = T,
+               ellipse_border_width = .5,
+               include_legend = F,
+               label_ellipse = F, ellipse_label_size = .3,
+               colour_palette = patient_colour_palette_45,
+               variable_to_plot = "Patient",
+               legend_cols = 2,
+               variable_colours_available = T,
+               num_top_species = 3,
+               plot_arrows = F,arrow_alpha = .7, arrow_colour = "grey20",arrow_scalar = 2,arrow_thickness = .7,
+               label_arrows = T, arrow_label_size = .5, arrow_label_colour = "black", arrow_label_font_type = 1,
+               specie_labeller_function = genus_relabeller_function,arrow_label_offset = 0)
+  # title(outer=F,ylab = "By patient",font.lab=2, line = 5,cex.lab = 2, family = "serif")
+  title(outer=T,adj = 0.26, ylab = "By patient",font.lab=2, line = 2,cex.lab = 1.5, family = "serif")
+  
+  par(mar = c(4,4,0,1))
+  generate_pca(immunocompetent_genus_pca, mymetadata = subset(metadata.df, Cohort == "immunocompetent"),
+               plot_height = 5, plot_width = 5,
+               legend_x = -6, legend_y = 5,
+               point_size = .7, point_line_thickness = 0.3,point_alpha =.9,
+               legend_title = "Patient",
+               legend_cex = .5,
+               plot_title = "",
+               limits = c(-6,3,-4,6),
+               plot_spiders = F,
+               plot_ellipses = T,
+               plot_hulls = F,
+               use_shapes = T,
+               show_x_label = T,
+               show_y_label = T,
+               plot_x_ticks = T,
+               plot_y_ticks = T,
+               plot_x_tick_labels = T,
+               plot_y_tick_labels = T,
+               ellipse_border_width = .5,
+               include_legend = F,
+               label_ellipse = F, ellipse_label_size = .3,
+               colour_palette = patient_colour_palette_45,
+               variable_to_plot = "Patient",
+               legend_cols = 2,
+               variable_colours_available = T,
+               num_top_species = 3,
+               plot_arrows = F,arrow_alpha = .7, arrow_colour = "grey20",arrow_scalar = 2,arrow_thickness = .7,
+               label_arrows = T, arrow_label_size = .5, arrow_label_colour = "black", arrow_label_font_type = 1,
+               specie_labeller_function = genus_relabeller_function,arrow_label_offset = 0)
+  # title(ylab = "test",outer = T)
+  
+  # title(main = "",outer = T,ylab = "Test")
+  dev.off()
+}
+make_publication_plot()
+# 
+# include <- T
+# plot(0,
+#      type='n',
+#      # x = 0, y=0,
+#      xlim = c(0,1),
+#      ylim = c(0,1),
+#      xaxt = ifelse(include, "s","n"), xlab = "test")
+# axis(labels = T, side = 3)
+
+# ------------------------------------------------------------------------------------------------
 # ------------------------------------------------------------------------------------------------
 # ------------------------------------------------------------------------------------------------
 # PERMANOVA tests whether distance differ between groups.

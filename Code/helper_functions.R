@@ -172,7 +172,9 @@ generate_pca <- function(pca_object, mymetadata, variable_to_plot, colour_palett
                          plot_arrows = F, arrow_colour = "black", arrow_alpha = 1,
                          label_arrows=T,arrow_label_size = .5, num_top_species = 5, arrow_scalar = 1,
                          arrow_label_colour = "black", arrow_thickness = .2,arrow_label_font_type = 1,
-                         specie_labeller_function = NULL, arrow_label_offset = 0){
+                         specie_labeller_function = NULL, arrow_label_offset = 0,
+                         show_x_label = T,show_y_label = T,plot_x_ticks = T, plot_y_ticks = T,
+                         plot_x_tick_labels = T, plot_y_tick_labels = T){
   pca.scores <- try(scores(pca_object, choices=c(1,2,3)))
   if(inherits(pca.scores, "try-error")) {
     return()
@@ -200,9 +202,14 @@ generate_pca <- function(pca_object, mymetadata, variable_to_plot, colour_palett
     y_max <- round(lapply(max(pca_site_scores[,2]), function(x) ifelse(x > 0, x + 1, x - 1))[[1]])
     
   }
-  
-  my_xlab = paste("PC1 (", round(pca_percentages[1],1), "%)", sep = "")
-  my_ylab = paste("PC2 (", round(pca_percentages[2],1), "%)", sep = "")
+  my_xlab <- ""
+  my_ylab <- ""
+  if (show_x_label){
+    my_xlab = paste("PC1 (", round(pca_percentages[1],1), "%)", sep = "")  
+  }
+  if (show_y_label){
+    my_ylab = paste("PC2 (", round(pca_percentages[2],1), "%)", sep = "")
+  }
   metadata_ordered.df <- internal_metadata[order(rownames(internal_metadata)),]
   metadata_ordered.df <- metadata_ordered.df[order(metadata_ordered.df[[variable_to_plot]]),]
   
@@ -229,10 +236,22 @@ generate_pca <- function(pca_object, mymetadata, variable_to_plot, colour_palett
        xlim = c(x_min,x_max),
        ylim = c(y_min,y_max),
        xlab = my_xlab,
-       ylab = my_ylab)
+       ylab = my_ylab,
+       xaxt = "n",
+       yaxt = "n",
+       # frame.plot = F,
+       frame.plot = T,
+       )
+       # xaxt = ifelse(plot_x_ticks, "s","n"),
+       # yaxt = ifelse(plot_y_ticks, "s","n"))
   
   # Make grid
-  grid(NULL,NULL, lty = 2, col = "grey80")
+  grid(NULL,NULL, lty = 2, lwd = 1, col = "grey80")
+  
+  # Add axes 
+  axis(side = 1, labels = ifelse(plot_x_tick_labels, T, F), tck = -0.01,tick = ifelse(plot_x_ticks,T,F),)
+  axis(side = 2, labels = ifelse(plot_y_tick_labels, T, F), tck = -0.01, tick = ifelse(plot_x_ticks,T,F))
+  # box(which = "plot", lty = "solid")
   
   # Assign (unique) colours and shapes for each grouping variable
   variable_values <- levels(metadata_ordered.df[[variable_to_plot]])
@@ -499,8 +518,8 @@ generate_pca <- function(pca_object, mymetadata, variable_to_plot, colour_palett
   
   if (!is.null(plot_title)){
     title(main = plot_title, cex.main = title_cex)
-  }
-  
+  } 
+
   if (include_legend){
     legend(
       # title = bold(variable_to_plot),
