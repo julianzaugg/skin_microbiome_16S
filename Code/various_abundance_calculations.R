@@ -7,9 +7,7 @@ library(reshape2)
 library(ggplot2)
 
 # install.packages("VennDiagram")
-library(VennDiagram)
-
-
+# library(VennDiagram)
 
 common_theme <- theme(
   panel.border = element_blank(), 
@@ -71,22 +69,17 @@ metadata.df$Cohort <- factor(metadata.df$Cohort)
 
 # Load filtered/processed abundance data with metadata
 # otu_data.df <- read.csv("Result_tables/other/OTU_counts_abundances_and_metadata.csv")
-genus_data.df <- read.csv("Result_tables/other/genus_counts_abundances_and_metadata.csv")
+genus_data.df <- read.csv("Result_tables/combined_counts_abundances_and_metadata_tables/Genus_counts_abundances_and_metadata.csv")
 # family_data.df <- read.csv("Result_tables/other/family_counts_abundances_and_metadata.csv")
 # order_data.df <- read.csv("Result_tables/other/order_counts_abundances_and_metadata.csv")
 # class_data.df <- read.csv("Result_tables/other/class_counts_abundances_and_metadata.csv")
 # phylum_data.df <- read.csv("Result_tables/other/phylum_counts_abundances_and_metadata.csv")
 
-# First, filter out non-snapshot samples from immunocompetent
+# First, filter out non-snapshot samples from immunocompetent (this may have been done in main processing script)
 genus_data.df <- subset(genus_data.df, Cohort == "immunocompromised" | Snapshot_sample_5 == "yes")
-
 
 # Set levels
 genus_data.df$Lesion_type_refined <- factor(genus_data.df$Lesion_type_refined, levels = c("C", "C_P", "AK","SCC_PL","SCC"))
-# genus_data.df$Sampletype_final <- factor(genus_data.df$Sampletype_final, levels = c("C", "LC", "AK", "SCC"))
-# genus_data.df$Project_Sampletype_final <- with(genus_data.df, paste0(Project, "_", Sampletype_final))
-# genus_data.df$Project_Sampletype_final <- factor(genus_data.df$Project_Sampletype_final , levels = sort(unique(genus_data.df$Project_Sampletype_final)))
-
 
 
 # --------------------------------------------------------------------------------------------
@@ -139,7 +132,7 @@ generate_abundance_boxplot <- function(mydata, variable, metric, variable_colour
 # mydata = data table
 # taxa_column, e.g. taxonomy_genus or Genus
 # variable, e.g. Sampletype_pooled
-# metric, e.g. Relative_abundance_rarefied
+# metric, e.g. Relative_abundance
 generate_multiple_abundance_boxplot <-  function(mydata, taxa_column, variable, metric, variable_colours_available = T, add_points = F){
   internal_data.df <- mydata[!is.na(mydata[variable]),]
   variable_values <- factor(as.character(unique(internal_data.df[[variable]])))
@@ -199,73 +192,78 @@ generate_multiple_abundance_boxplot <-  function(mydata, taxa_column, variable, 
   myplot
 }
 
-# Calculate the significance between abundances for taxa
-calculate_abundance_significance <- function(mydata, variable, taxonomy_column, metric){
+# Calculate the significance values for taxa between groups
+calculate_taxa_significances <- function(mydata, variable_column, value_column, taxonomy_column){
   internal_data.df <- mydata
-  results.df <- data.frame("Taxonomy" = character(),
+  results.df <- data.frame("Variable" = character(),
                            "Group_1" = character(),
                            "Group_2" = character(),
-                           "MannW_pvalue" = character(),
-                           "KrusW_pvalue" = character())
-  # "Shannon_MannW_pvalue" = character(),
-  group_combinations <- combn(as.character(unique(internal_data.df[,variable])), 2)
+                           "MannW_pvalue" = character()
+                           # "KrusW_pvalue" = character()
+                           )
+  group_combinations <- combn(as.character(unique(internal_data.df[,variable_column])), 2)
   for (taxa in unique(internal_data.df[,taxonomy_column])){ # For each taxa in the taxonomy column
     for (i in 1:ncol(group_combinations)) { # For each group combination
       group_1 <- group_combinations[1,i]
       group_2 <- group_combinations[2,i]
-      group_1_meta <- subset(internal_data.df, get(variable) == group_1 & get(taxonomy_column) == taxa)
-      group_2_meta <- subset(internal_data.df, get(variable) == group_2 & get(taxonomy_column) == taxa)
+      group_1_meta <- subset(internal_data.df, get(variable_column) == group_1 & get(taxonomy_column) == taxa)
+      group_2_meta <- subset(internal_data.df, get(variable_column) == group_2 & get(taxonomy_column) == taxa)
       if (any(c(nrow(group_1_meta) < 2, nrow(group_2_meta) < 2))){
         next
       }
       # Mann-Whitney test
-      wilcox_test <- wilcox.test(group_1_meta[,metric], group_2_meta[,metric], exact = F)
+      print(group_1_meta)
+      wilcox_test <- wilcox.test(group_1_meta[,value_column], group_2_meta[,value_column], exact = F)
     
       # Kruskal-Wallis
-      kruskal_test <- kruskal.test(get(metric)~get(variable), data = subset(mydata, get(variable) %in% c(group_1, group_2)))
+      # kruskal_test <- kruskal.test(get(metric)~get(variable_column), data = subset(mydata, get(variable_column) %in% c(group_1, group_2)))
 
       results.df <- rbind(results.df, data.frame("Taxonomy" = taxa,
                                                  "Group_1" = group_1, 
                                                  "Group_2" = group_2, 
-                                                 "MannW_pvalue" = round(wilcox_test$p.value,6),
-                                                 "KrusW_pvalue" = round(kruskal_test$p.value,6)
+                                                 "MannW_pvalue" = round(wilcox_test$p.value,6)
+                                                 # "KrusW_pvalue" = round(kruskal_test$p.value,6)
       ))
     }
   }
   
   results.df$MannW_padj <- round(p.adjust(results.df$MannW_pvalue,method = "BH"),6)
-  results.df$KrusW_padj <- round(p.adjust(results.df$KrusW_pvalue,method = "BH"),6)
+  # results.df$KrusW_padj <- round(p.adjust(results.df$KrusW_pvalue,method = "BH"),6)
   results.df
 }
 
 # ---------------------------------------------------------------------------------------------
 # ---------------------------------------------------------------------------------------------
 # ---------------------------------------------------------------------------------------------
-# Project
-project_genus_summary.df <- generate_taxa_summary(genus_data.df,
+# Cohort
+cohort_genus_summary.df <- generate_taxa_summary(genus_data.df,
                                                   taxa_column = "taxonomy_genus", 
-                                                  group_by_columns = c("Project"))
+                                                  group_by_columns = c("Cohort"))
 
-project_genus_summary_top.df <- filter_summary_to_top_n(taxa_summary = project_genus_summary.df, 
-                                                        grouping_variables = c("Project"), 
-                                                        abundance_column = "Mean_relative_abundance_rarefied", 
+cohort_genus_summary_top.df <- filter_summary_to_top_n(taxa_summary = cohort_genus_summary.df, 
+                                                        grouping_variables = c("Cohort"), 
+                                                        abundance_column = "Mean_relative_abundance", 
                                                         my_top_n = 10)
 
-genus_summary_subset.df <- subset(project_genus_summary.df, Mean_relative_abundance_rarefied > 0.005)
+genus_summary_subset.df <- subset(cohort_genus_summary.df, Mean_relative_abundance > 0.005)
 
+cohort_genus_summary_top_significances.df <- calculate_taxa_significances(mydata = subset(genus_data.df, taxonomy_genus %in% cohort_genus_summary_top.df$taxonomy_genus),
+                                                                          variable_column = "Cohort",
+                                                                          value_column = "Relative_abundance",
+                                                                          taxonomy_column = "taxonomy_genus")
 
-project_genus_summary_top_significances.df <- calculate_abundance_significance(mydata = subset(genus_data.df, taxonomy_genus %in% project_genus_summary_top.df$taxonomy_genus), 
-                                         variable = "Project", taxonomy_column = "taxonomy_genus",metric = "Relative_abundance_rarefied")
-project_genus_summary_all_significances.df <- calculate_abundance_significance(mydata = subset(genus_data.df, taxonomy_genus %in% genus_summary_subset.df$taxonomy_genus), 
-                                                                               variable = "Project", taxonomy_column = "taxonomy_genus",metric = "Relative_abundance_rarefied")
+cohort_genus_summary_top_significances.df <- calculate_taxa_significances(mydata = subset(genus_data.df, taxonomy_genus %in% cohort_genus_summary_top.df$taxonomy_genus), 
+                                                                              variable = "Cohort", taxonomy_column = "taxonomy_genus",metric = "Relative_abundance")
+cohort_genus_summary_all_significances.df <- calculate_abundance_significance(mydata = subset(genus_data.df, taxonomy_genus %in% genus_summary_subset.df$taxonomy_genus), 
+                                                                               variable = "Cohort", taxonomy_column = "taxonomy_genus",metric = "Relative_abundance")
 
-write.csv(project_genus_summary_all_significances.df,"Result_tables/abundance_analysis_tables/project__genus_wilcox.csv", row.names = F)
+write.csv(cohort_genus_summary_all_significances.df,"Result_tables/abundance_analysis_tables/cohort__genus_wilcox.csv", row.names = F)
 
 # Make group boxplot for top taxa
 temp <- genus_data.df
-temp <- temp[temp$taxonomy_genus %in% project_genus_summary_top.df$taxonomy_genus,]
+temp <- temp[temp$taxonomy_genus %in% cohort_genus_summary_top.df$taxonomy_genus,]
 temp$Family_Genus <- with(temp, paste0(Family, ";", Genus))
-myplot <- generate_multiple_abundance_boxplot(temp, "Family_Genus", "Project","Relative_abundance_rarefied", add_points = F) + 
+myplot <- generate_multiple_abundance_boxplot(temp, "Family_Genus", "Project","Relative_abundance", add_points = F) + 
   geom_point(position = position_jitterdodge(), size = .3,stroke = 0.1, shape = 21,aes(fill = Project)) +
   # scale_y_continuous(limits = c(-1,1)) +
   # facet_wrap(~Project) + 
@@ -275,16 +273,16 @@ myplot <- generate_multiple_abundance_boxplot(temp, "Family_Genus", "Project","R
         axis.text.x = element_text(size =6),
         axis.title = element_text(size =6))
 ggsave(plot = myplot,
-       filename = paste0("Result_figures/abundance_analysis_plots/boxplots/Project_top_taxa.pdf"),
+       filename = paste0("Result_figures/abundance_analysis_plots/boxplots/cohort_top_taxa.pdf"),
        height = 10,
        width = 16,
        units = "cm")
 
 # Make individual boxplots for the top taxa
-for (genus in project_genus_summary_top.df$taxonomy_genus){
+for (genus in cohort_genus_summary_top.df$taxonomy_genus){
   data_subset <- subset(genus_data.df, taxonomy_genus == genus)
   base_name <- gsub(".*(f__.*)", "\\1",genus)
-  myplot <- generate_abundance_boxplot(data_subset, variable = "Project", metric = "Relative_abundance_rarefied") +
+  myplot <- generate_abundance_boxplot(data_subset, variable = "Project", metric = "Relative_abundance") +
     ylab("Relative abundance") +
     scale_y_continuous(breaks = seq(0,1,.1), limits = c(0,1)) +
     ggtitle(base_name)
@@ -297,66 +295,66 @@ for (genus in project_genus_summary_top.df$taxonomy_genus){
 }
 
 # ------------------------------------------  
-# Project_Sampletype_final (just for significance calculations)
-# project_sampletype_final_genus_summary.df <- generate_taxa_summary(genus_data.df,
+# cohort_Sampletype_final (just for significance calculations)
+# cohort_sampletype_final_genus_summary.df <- generate_taxa_summary(genus_data.df,
 #                                                                     taxa_column = "taxonomy_genus", 
-#                                                                     group_by_columns = c("Project_Sampletype_final"))
-# project_sampletype_final_genus_summary_top.df <- filter_summary_to_top_n(taxa_summary =  project_sampletype_final_genus_summary.df, 
-#                                                                           grouping_variables = c("Project_Sampletype_final"), 
-#                                                                           abundance_column = "Mean_relative_abundance_rarefied", 
+#                                                                     group_by_columns = c("cohort_Sampletype_final"))
+# cohort_sampletype_final_genus_summary_top.df <- filter_summary_to_top_n(taxa_summary =  cohort_sampletype_final_genus_summary.df, 
+#                                                                           grouping_variables = c("cohort_Sampletype_final"), 
+#                                                                           abundance_column = "Mean_relative_abundance", 
 #                                                                           my_top_n = 9)
-# project_sampletype_final_genus_top_significances.df <- calculate_abundance_significance(mydata = subset(genus_data.df, taxonomy_genus %in% project_sampletype_pooled_genus_summary_top.df$taxonomy_genus), 
-#                                                                                          variable = "Project_Sampletype_final", taxonomy_column = "taxonomy_genus",metric = "Relative_abundance_rarefied")
+# cohort_sampletype_final_genus_top_significances.df <- calculate_abundance_significance(mydata = subset(genus_data.df, taxonomy_genus %in% cohort_sampletype_pooled_genus_summary_top.df$taxonomy_genus), 
+#                                                                                          variable = "cohort_Sampletype_final", taxonomy_column = "taxonomy_genus",metric = "Relative_abundance")
 # 
-# project_sampletype_final_genus_top_significances.df <- separate(project_sampletype_final_genus_top_significances.df,col = "Group_1", into = c("Group_1_Project", "Group_1_Sampletype_final"),sep = "_")
-# project_sampletype_final_genus_top_significances.df <- separate(project_sampletype_final_genus_top_significances.df,col = "Group_2", into = c("Group_2_Project", "Group_2_Sampletype_final"),sep = "_")
-# project_sampletype_final_genus_top_significances.df <- project_sampletype_final_genus_top_significances.df[c("Taxonomy", "Group_1_Project", "Group_2_Project", 
+# cohort_sampletype_final_genus_top_significances.df <- separate(cohort_sampletype_final_genus_top_significances.df,col = "Group_1", into = c("Group_1_Project", "Group_1_Sampletype_final"),sep = "_")
+# cohort_sampletype_final_genus_top_significances.df <- separate(cohort_sampletype_final_genus_top_significances.df,col = "Group_2", into = c("Group_2_Project", "Group_2_Sampletype_final"),sep = "_")
+# cohort_sampletype_final_genus_top_significances.df <- cohort_sampletype_final_genus_top_significances.df[c("Taxonomy", "Group_1_Project", "Group_2_Project", 
 #                                                        "Group_1_Sampletype_final", "Group_2_Sampletype_final",
 #                                                        "MannW_pvalue", "MannW_padj", "KrusW_pvalue", "KrusW_padj")]
-# project_sampletype_final_genus_top_significances.df$Same_project <- project_sampletype_final_genus_top_significances.df$Group_1_Project == project_sampletype_final_genus_top_significances.df$Group_2_Project
-# project_sampletype_final_genus_top_significances.df$Same_sampletype <- project_sampletype_final_genus_top_significances.df$Group_1_Sampletype_final == project_sampletype_final_genus_top_significances.df$Group_2_Sampletype_final
+# cohort_sampletype_final_genus_top_significances.df$Same_project <- cohort_sampletype_final_genus_top_significances.df$Group_1_Project == cohort_sampletype_final_genus_top_significances.df$Group_2_Project
+# cohort_sampletype_final_genus_top_significances.df$Same_sampletype <- cohort_sampletype_final_genus_top_significances.df$Group_1_Sampletype_final == cohort_sampletype_final_genus_top_significances.df$Group_2_Sampletype_final
 # 
-# write.csv(project_sampletype_final_genus_top_significances.df,"Result_tables/abundance_analysis_tables/Project_sampletype_final__genus_wilcox.csv", row.names = F)
+# write.csv(cohort_sampletype_final_genus_top_significances.df,"Result_tables/abundance_analysis_tables/cohort_sampletype_final__genus_wilcox.csv", row.names = F)
 
 # ------------------------------------------
 # Sampletype_final vs Sampletype_final for each project
 
-project_sampletype_final_genus_summary.df <- generate_taxa_summary(genus_data.df,
+cohort_sampletype_final_genus_summary.df <- generate_taxa_summary(genus_data.df,
                                                                     taxa_column = "taxonomy_genus", 
                                                                     group_by_columns = c("Project", "Sampletype_final"))
-project_sampletype_final_genus_summary_top.df <- filter_summary_to_top_n(taxa_summary =  project_sampletype_final_genus_summary.df, 
+cohort_sampletype_final_genus_summary_top.df <- filter_summary_to_top_n(taxa_summary =  cohort_sampletype_final_genus_summary.df, 
                                                                           grouping_variables = c("Project", "Sampletype_final"), 
-                                                                          abundance_column = "Mean_relative_abundance_rarefied", 
+                                                                          abundance_column = "Mean_relative_abundance", 
                                                                           my_top_n = 9)
 
-genus_summary_subset.df <- subset(project_sampletype_final_genus_summary.df, Mean_relative_abundance_rarefied > 0.005)
+genus_summary_subset.df <- subset(cohort_sampletype_final_genus_summary.df, Mean_relative_abundance > 0.005)
 
 # immunocompetent
-project_sampletype_final_genus_top_significances.df <- calculate_abundance_significance(mydata = subset(genus_data.df, Project == "immunocompetent" & taxonomy_genus %in% project_sampletype_final_genus_summary_top.df$taxonomy_genus), 
-                                                                                        variable = "Sampletype_final", taxonomy_column = "taxonomy_genus",metric = "Relative_abundance_rarefied")
+cohort_sampletype_final_genus_top_significances.df <- calculate_abundance_significance(mydata = subset(genus_data.df, Project == "immunocompetent" & taxonomy_genus %in% cohort_sampletype_final_genus_summary_top.df$taxonomy_genus), 
+                                                                                        variable = "Sampletype_final", taxonomy_column = "taxonomy_genus",metric = "Relative_abundance")
 
-project_sampletype_final_genus_all_significances.df <- calculate_abundance_significance(mydata = subset(genus_data.df, Project == "immunocompetent" & taxonomy_genus %in% genus_summary_subset.df$taxonomy_genus), 
-                                                                                        variable = "Sampletype_final", taxonomy_column = "taxonomy_genus",metric = "Relative_abundance_rarefied")
+cohort_sampletype_final_genus_all_significances.df <- calculate_abundance_significance(mydata = subset(genus_data.df, Project == "immunocompetent" & taxonomy_genus %in% genus_summary_subset.df$taxonomy_genus), 
+                                                                                        variable = "Sampletype_final", taxonomy_column = "taxonomy_genus",metric = "Relative_abundance")
 
-# kruskal.test(Relative_abundance_rarefied~Sampletype_final, data = subset(genus_data.df, Project == "immunocompromised" & taxonomy_genus %in% genus_summary_subset.df$taxonomy_genus))
+# kruskal.test(Relative_abundance~Sampletype_final, data = subset(genus_data.df, Project == "immunocompromised" & taxonomy_genus %in% genus_summary_subset.df$taxonomy_genus))
 
-project_sampletype_final_genus_all_significances.df$Project <- "immunocompetent"
-write.csv(project_sampletype_final_genus_all_significances.df,"Result_tables/abundance_analysis_tables/immunocompetent_sampletype_final__genus_wilcox.csv", row.names = F)
+cohort_sampletype_final_genus_all_significances.df$Project <- "immunocompetent"
+write.csv(cohort_sampletype_final_genus_all_significances.df,"Result_tables/abundance_analysis_tables/immunocompetent_sampletype_final__genus_wilcox.csv", row.names = F)
 
 # immunocompromised
-project_sampletype_final_genus_top_significances.df <- calculate_abundance_significance(mydata = subset(genus_data.df, Project == "immunocompromised" & taxonomy_genus %in% project_sampletype_final_genus_summary_top.df$taxonomy_genus), 
-                                                                                        variable = "Sampletype_final", taxonomy_column = "taxonomy_genus",metric = "Relative_abundance_rarefied")
-project_sampletype_final_genus_all_significances.df <- calculate_abundance_significance(mydata = subset(genus_data.df, Project == "immunocompromised" & taxonomy_genus %in% genus_summary_subset.df$taxonomy_genus), 
-                                                                                        variable = "Sampletype_final", taxonomy_column = "taxonomy_genus",metric = "Relative_abundance_rarefied")
+cohort_sampletype_final_genus_top_significances.df <- calculate_abundance_significance(mydata = subset(genus_data.df, Project == "immunocompromised" & taxonomy_genus %in% cohort_sampletype_final_genus_summary_top.df$taxonomy_genus), 
+                                                                                        variable = "Sampletype_final", taxonomy_column = "taxonomy_genus",metric = "Relative_abundance")
+cohort_sampletype_final_genus_all_significances.df <- calculate_abundance_significance(mydata = subset(genus_data.df, Project == "immunocompromised" & taxonomy_genus %in% genus_summary_subset.df$taxonomy_genus), 
+                                                                                        variable = "Sampletype_final", taxonomy_column = "taxonomy_genus",metric = "Relative_abundance")
 
-project_sampletype_final_genus_all_significances.df$Project <- "immunocompromised"
-write.csv(project_sampletype_final_genus_all_significances.df,"Result_tables/abundance_analysis_tables/immunocompromised_sampletype_final__genus_wilcox.csv", row.names = F)
+cohort_sampletype_final_genus_all_significances.df$Project <- "immunocompromised"
+write.csv(cohort_sampletype_final_genus_all_significances.df,"Result_tables/abundance_analysis_tables/immunocompromised_sampletype_final__genus_wilcox.csv", row.names = F)
 
 # Make group boxplot for top taxa
 temp <- genus_data.df
-temp <- temp[temp$taxonomy_genus %in% project_sampletype_final_genus_summary_top.df$taxonomy_genus,]
+temp <- temp[temp$taxonomy_genus %in% cohort_sampletype_final_genus_summary_top.df$taxonomy_genus,]
 temp$Family_Genus <- with(temp, paste0(Family, ";", Genus))
-myplot <- generate_multiple_abundance_boxplot(temp, "Family_Genus", "Sampletype_final","Relative_abundance_rarefied", add_points = F) + 
+myplot <- generate_multiple_abundance_boxplot(temp, "Family_Genus", "Sampletype_final","Relative_abundance", add_points = F) + 
   geom_point(position = position_jitterdodge(), size = .3,stroke = 0.1, shape = 21,aes(fill = Sampletype_final)) +
   # scale_y_continuous(limits = c(-1,1)) +
   facet_wrap(~Project) +
@@ -366,18 +364,18 @@ myplot <- generate_multiple_abundance_boxplot(temp, "Family_Genus", "Sampletype_
         axis.text.x = element_text(size =6),
         axis.title = element_text(size =6))
 ggsave(plot = myplot,
-       filename = paste0("Result_figures/abundance_analysis_plots/boxplots/Project_sampletype_final_top_taxa.pdf"),
+       filename = paste0("Result_figures/abundance_analysis_plots/boxplots/cohort_sampletype_final_top_taxa.pdf"),
        height = 15,
        width = 16,
        units = "cm")
 
 
 # Make individual boxplots for the top taxa
-for (project in unique(project_genus_summary_top.df$Project)){
-  for (genus in project_genus_summary_top.df$taxonomy_genus){
+for (project in unique(cohort_genus_summary_top.df$Project)){
+  for (genus in cohort_genus_summary_top.df$taxonomy_genus){
     data_subset <- subset(genus_data.df, taxonomy_genus == genus & Project == project)
     base_name <- gsub(".*(f__.*)", "\\1",genus)
-    myplot <- generate_abundance_boxplot(data_subset, variable = "Sampletype_final", metric = "Relative_abundance_rarefied") +
+    myplot <- generate_abundance_boxplot(data_subset, variable = "Sampletype_final", metric = "Relative_abundance") +
       ylab("Relative abundance") +
       scale_y_continuous(breaks = seq(0,1,.1), limits = c(0,1)) +
       labs(title = project,
@@ -390,7 +388,7 @@ for (project in unique(project_genus_summary_top.df$Project)){
     # ggtitle(paste0(project, "\n", base_name))
     
     ggsave(plot = myplot,
-           filename = paste0("Result_figures/abundance_analysis_plots/boxplots/Project_sampletype_final/", project, "_genus__",base_name, ".pdf"),
+           filename = paste0("Result_figures/abundance_analysis_plots/boxplots/cohort_sampletype_final/", project, "_genus__",base_name, ".pdf"),
            height = 8,
            width = 8,
            units = "cm")
@@ -399,30 +397,30 @@ for (project in unique(project_genus_summary_top.df$Project)){
 
 # ------------------------------------------
 # Sampletype_pooled vs Sampletype_pooled for each Project
-# project_sampletype_pooled_genus_summary.df <- generate_taxa_summary(genus_data.df,
+# cohort_sampletype_pooled_genus_summary.df <- generate_taxa_summary(genus_data.df,
 #                                                                     taxa_column = "taxonomy_genus", 
 #                                                                     group_by_columns = c("Project", "Sampletype_pooled"))
-# project_sampletype_pooled_genus_summary_top.df <- filter_summary_to_top_n(taxa_summary =  project_sampletype_pooled_genus_summary.df, 
+# cohort_sampletype_pooled_genus_summary_top.df <- filter_summary_to_top_n(taxa_summary =  cohort_sampletype_pooled_genus_summary.df, 
 #                                                                           grouping_variables = c("Project", "Sampletype_pooled"), 
-#                                                                           abundance_column = "Mean_relative_abundance_rarefied", 
+#                                                                           abundance_column = "Mean_relative_abundance", 
 #                                                                           my_top_n = 9)
 # 
 # # immunocompetent
-# project_sampletype_pooled_genus_top_significances.df <- calculate_abundance_significance(mydata = subset(genus_data.df, Project == "immunocompetent" & taxonomy_genus %in% project_sampletype_pooled_genus_summary_top.df$taxonomy_genus), 
-#                                                                                variable = "Sampletype_pooled", taxonomy_column = "taxonomy_genus",metric = "Relative_abundance_rarefied")
-# project_sampletype_pooled_genus_top_significances.df$Project <- "immunocompetent"
-# write.csv(project_sampletype_pooled_genus_top_significances.df,"Result_tables/abundance_analysis_tables/immunocompetent_sampletype_pooled__genus_wilcox.csv", row.names = F)
+# cohort_sampletype_pooled_genus_top_significances.df <- calculate_abundance_significance(mydata = subset(genus_data.df, Project == "immunocompetent" & taxonomy_genus %in% cohort_sampletype_pooled_genus_summary_top.df$taxonomy_genus), 
+#                                                                                variable = "Sampletype_pooled", taxonomy_column = "taxonomy_genus",metric = "Relative_abundance")
+# cohort_sampletype_pooled_genus_top_significances.df$Project <- "immunocompetent"
+# write.csv(cohort_sampletype_pooled_genus_top_significances.df,"Result_tables/abundance_analysis_tables/immunocompetent_sampletype_pooled__genus_wilcox.csv", row.names = F)
 # # immunocompromised
-# project_sampletype_pooled_genus_top_significances.df <- calculate_abundance_significance(mydata = subset(genus_data.df, Project == "immunocompromised" & taxonomy_genus %in% project_sampletype_pooled_genus_summary_top.df$taxonomy_genus), 
-#                                                                                          variable = "Sampletype_pooled", taxonomy_column = "taxonomy_genus",metric = "Relative_abundance_rarefied")
-# project_sampletype_pooled_genus_top_significances.df$Project <- "immunocompromised"
-# write.csv(project_sampletype_pooled_genus_top_significances.df,"Result_tables/abundance_analysis_tables/immunocompromised_sampletype_pooled__genus_wilcox.csv", row.names = F)
+# cohort_sampletype_pooled_genus_top_significances.df <- calculate_abundance_significance(mydata = subset(genus_data.df, Project == "immunocompromised" & taxonomy_genus %in% cohort_sampletype_pooled_genus_summary_top.df$taxonomy_genus), 
+#                                                                                          variable = "Sampletype_pooled", taxonomy_column = "taxonomy_genus",metric = "Relative_abundance")
+# cohort_sampletype_pooled_genus_top_significances.df$Project <- "immunocompromised"
+# write.csv(cohort_sampletype_pooled_genus_top_significances.df,"Result_tables/abundance_analysis_tables/immunocompromised_sampletype_pooled__genus_wilcox.csv", row.names = F)
 # 
 # # Make group boxplot for top taxa
 # temp <- genus_data.df
-# temp <- temp[temp$taxonomy_genus %in% project_sampletype_pooled_genus_summary_top.df$taxonomy_genus,]
+# temp <- temp[temp$taxonomy_genus %in% cohort_sampletype_pooled_genus_summary_top.df$taxonomy_genus,]
 # temp$Family_Genus <- with(temp, paste0(Family, ";", Genus))
-# myplot <- generate_multiple_abundance_boxplot(temp, "Family_Genus", "Sampletype_pooled","Relative_abundance_rarefied", add_points = F) + 
+# myplot <- generate_multiple_abundance_boxplot(temp, "Family_Genus", "Sampletype_pooled","Relative_abundance", add_points = F) + 
 #   geom_point(position = position_jitterdodge(), size = .3,stroke = 0.1, shape = 21,aes(fill = Sampletype_pooled)) +
 #   # scale_y_continuous(limits = c(-1,1)) +
 #   facet_wrap(~Project) +
@@ -432,18 +430,18 @@ for (project in unique(project_genus_summary_top.df$Project)){
 #         axis.text.x = element_text(size =6),
 #         axis.title = element_text(size =6))
 # ggsave(plot = myplot,
-#        filename = paste0("Result_figures/abundance_analysis_plots/boxplots/Project_sampletype_pooled_top_taxa.pdf"),
+#        filename = paste0("Result_figures/abundance_analysis_plots/boxplots/cohort_sampletype_pooled_top_taxa.pdf"),
 #        height = 15,
 #        width = 16,
 #        units = "cm")
 # 
 # 
 # # Make individual boxplots for the top taxa
-# for (project in unique(project_genus_summary_top.df$Project)){
-#   for (genus in project_genus_summary_top.df$taxonomy_genus){
+# for (project in unique(cohort_genus_summary_top.df$Project)){
+#   for (genus in cohort_genus_summary_top.df$taxonomy_genus){
 #     data_subset <- subset(genus_data.df, taxonomy_genus == genus & Project == project)
 #     base_name <- gsub(".*(f__.*)", "\\1",genus)
-#     myplot <- generate_abundance_boxplot(data_subset, variable = "Sampletype_pooled", metric = "Relative_abundance_rarefied") +
+#     myplot <- generate_abundance_boxplot(data_subset, variable = "Sampletype_pooled", metric = "Relative_abundance") +
 #       ylab("Relative abundance") +
 #       scale_y_continuous(breaks = seq(0,1,.1), limits = c(0,1)) +
 #       labs(title = project,
@@ -456,7 +454,7 @@ for (project in unique(project_genus_summary_top.df$Project)){
 #       # ggtitle(paste0(project, "\n", base_name))
 #     
 #     ggsave(plot = myplot,
-#            filename = paste0("Result_figures/abundance_analysis_plots/boxplots/Project_sampletype_pooled/", project, "_genus__",base_name, ".pdf"),
+#            filename = paste0("Result_figures/abundance_analysis_plots/boxplots/cohort_sampletype_pooled/", project, "_genus__",base_name, ".pdf"),
 #            height = 8,
 #            width = 8,
 #            units = "cm")
@@ -483,31 +481,31 @@ for (project in unique(project_genus_summary_top.df$Project)){
 # 
 # 
 # 
-# project_Sampletype_compromised_refined_both_projects_genus_summary.df <- generate_taxa_summary(modified_genus_data.df,
+# cohort_Sampletype_compromised_refined_both_projects_genus_summary.df <- generate_taxa_summary(modified_genus_data.df,
 #                                                                     taxa_column = "taxonomy_genus", 
 #                                                                     group_by_columns = c("Project", "Sampletype_compromised_refined_both_projects"))
-# project_Sampletype_compromised_refined_both_projects_genus_summary_top.df <- filter_summary_to_top_n(taxa_summary =  project_Sampletype_compromised_refined_both_projects_genus_summary.df, 
+# cohort_Sampletype_compromised_refined_both_projects_genus_summary_top.df <- filter_summary_to_top_n(taxa_summary =  cohort_Sampletype_compromised_refined_both_projects_genus_summary.df, 
 #                                                                           grouping_variables = c("Project", "Sampletype_compromised_refined_both_projects"), 
-#                                                                           abundance_column = "Mean_relative_abundance_rarefied", 
+#                                                                           abundance_column = "Mean_relative_abundance", 
 #                                                                           my_top_n = 9)
 # 
 # # immunocompetent
-# project_Sampletype_compromised_refined_both_projects_genus_top_significances.df <- calculate_abundance_significance(mydata = subset(modified_genus_data.df, Project == "immunocompetent" & taxonomy_genus %in% project_Sampletype_compromised_refined_both_projects_genus_summary_top.df$taxonomy_genus), 
-#                                                                                          variable = "Sampletype_compromised_refined_both_projects", taxonomy_column = "taxonomy_genus",metric = "Relative_abundance_rarefied")
-# project_Sampletype_compromised_refined_both_projects_genus_top_significances.df$Project <- "immunocompetent"
-# write.csv(project_Sampletype_compromised_refined_both_projects_genus_top_significances.df,"Result_tables/abundance_analysis_tables/immunocompetent_sampletype_compromised_refined_both_projects__genus_wilcox.csv", row.names = F)
+# cohort_Sampletype_compromised_refined_both_projects_genus_top_significances.df <- calculate_abundance_significance(mydata = subset(modified_genus_data.df, Project == "immunocompetent" & taxonomy_genus %in% cohort_Sampletype_compromised_refined_both_projects_genus_summary_top.df$taxonomy_genus), 
+#                                                                                          variable = "Sampletype_compromised_refined_both_projects", taxonomy_column = "taxonomy_genus",metric = "Relative_abundance")
+# cohort_Sampletype_compromised_refined_both_projects_genus_top_significances.df$Project <- "immunocompetent"
+# write.csv(cohort_Sampletype_compromised_refined_both_projects_genus_top_significances.df,"Result_tables/abundance_analysis_tables/immunocompetent_sampletype_compromised_refined_both_projects__genus_wilcox.csv", row.names = F)
 # 
 # # immunocompromised
-# project_Sampletype_compromised_refined_both_projects_genus_top_significances.df <- calculate_abundance_significance(mydata = subset(modified_genus_data.df, Project == "immunocompromised" & taxonomy_genus %in% project_Sampletype_compromised_refined_both_projects_genus_summary_top.df$taxonomy_genus), 
-#                                                                                          variable = "Sampletype_compromised_refined_both_projects", taxonomy_column = "taxonomy_genus",metric = "Relative_abundance_rarefied")
-# project_Sampletype_compromised_refined_both_projects_genus_top_significances.df$Project <- "immunocompromised"
-# write.csv(project_Sampletype_compromised_refined_both_projects_genus_top_significances.df,"Result_tables/abundance_analysis_tables/immunocompromised_sampletype_compromised_refined_both_projects__genus_wilcox.csv", row.names = F)
+# cohort_Sampletype_compromised_refined_both_projects_genus_top_significances.df <- calculate_abundance_significance(mydata = subset(modified_genus_data.df, Project == "immunocompromised" & taxonomy_genus %in% cohort_Sampletype_compromised_refined_both_projects_genus_summary_top.df$taxonomy_genus), 
+#                                                                                          variable = "Sampletype_compromised_refined_both_projects", taxonomy_column = "taxonomy_genus",metric = "Relative_abundance")
+# cohort_Sampletype_compromised_refined_both_projects_genus_top_significances.df$Project <- "immunocompromised"
+# write.csv(cohort_Sampletype_compromised_refined_both_projects_genus_top_significances.df,"Result_tables/abundance_analysis_tables/immunocompromised_sampletype_compromised_refined_both_projects__genus_wilcox.csv", row.names = F)
 # 
 # # Make group boxplot for top taxa
 # # temp <- modified_genus_data.df
-# # temp <- temp[temp$taxonomy_genus %in% project_Sampletype_compromised_refined_both_projects_genus_summary_top.df$taxonomy_genus,]
+# # temp <- temp[temp$taxonomy_genus %in% cohort_Sampletype_compromised_refined_both_projects_genus_summary_top.df$taxonomy_genus,]
 # # temp$Family_Genus <- with(temp, paste0(Family, ";", Genus))
-# # myplot <- generate_multiple_abundance_boxplot(temp, "Family_Genus", "Sampletype_compromised_refined_both_projects","Relative_abundance_rarefied", add_points = F, variable_colours_available = T) + 
+# # myplot <- generate_multiple_abundance_boxplot(temp, "Family_Genus", "Sampletype_compromised_refined_both_projects","Relative_abundance", add_points = F, variable_colours_available = T) + 
 # #   geom_point(position = position_jitterdodge(), size = .3,stroke = 0.1, shape = 21,aes(fill = Sampletype_compromised_refined_both_projects)) +
 # #   # scale_y_continuous(limits = c(-1,1)) +
 # #   facet_wrap(~Project) +
@@ -517,7 +515,7 @@ for (project in unique(project_genus_summary_top.df$Project)){
 # #         axis.text.x = element_text(size =6),
 # #         axis.title = element_text(size =6))
 # # ggsave(plot = myplot,
-# #        filename = paste0("Result_figures/abundance_analysis_plots/boxplots/Project_Sampletype_compromised_refined_both_projects_top_taxa.pdf"),
+# #        filename = paste0("Result_figures/abundance_analysis_plots/boxplots/cohort_Sampletype_compromised_refined_both_projects_top_taxa.pdf"),
 # #        height = 25,
 # #        width = 20,
 # #        units = "cm")
@@ -525,10 +523,10 @@ for (project in unique(project_genus_summary_top.df$Project)){
 # 
 # # Make individual boxplots for the top taxa
 # for (project in c("immunocompromised")){
-#   for (genus in project_genus_summary_top.df$taxonomy_genus){
+#   for (genus in cohort_genus_summary_top.df$taxonomy_genus){
 #     data_subset <- subset(modified_genus_data.df, taxonomy_genus == genus & Project == project)
 #     base_name <- gsub(".*(f__.*)", "\\1",genus)
-#     myplot <- generate_abundance_boxplot(data_subset, variable = "Sampletype_compromised_refined", metric = "Relative_abundance_rarefied") +
+#     myplot <- generate_abundance_boxplot(data_subset, variable = "Sampletype_compromised_refined", metric = "Relative_abundance") +
 #       ylab("Relative abundance") +
 #       scale_y_continuous(breaks = seq(0,1,.1), limits = c(0,1)) +
 #       labs(title = project,
@@ -541,7 +539,7 @@ for (project in unique(project_genus_summary_top.df$Project)){
 #     # ggtitle(paste0(project, "\n", base_name))
 #     
 #     ggsave(plot = myplot,
-#            filename = paste0("Result_figures/abundance_analysis_plots/boxplots/Project_sampletype_compromised_refined/", project, "_genus__",base_name, ".pdf"),
+#            filename = paste0("Result_figures/abundance_analysis_plots/boxplots/cohort_sampletype_compromised_refined/", project, "_genus__",base_name, ".pdf"),
 #            height = 8,
 #            width = 8,
 #            units = "cm")
@@ -557,13 +555,13 @@ for (project in unique(project_genus_summary_top.df$Project)){
 #                                                                           group_by_columns = c("Patient_group"))
 # immunocompromised_patient_group_genus_summary_top.df <- filter_summary_to_top_n(taxa_summary =  immunocompromised_patient_group_genus_summary.df, 
 #                                                                           grouping_variables = c("Patient_group"), 
-#                                                                           abundance_column = "Mean_relative_abundance_rarefied", 
+#                                                                           abundance_column = "Mean_relative_abundance", 
 #                                                                           my_top_n = 9)
 # 
 # # immunocompromised
 # immunocompromised_patient_group_genus_top_significances.df <- calculate_abundance_significance(mydata = subset(genus_data.df, Project == "immunocompromised" & 
 #                                                                                                                  taxonomy_genus %in% immunocompromised_patient_group_genus_summary_top.df$taxonomy_genus), 
-#                                                                                          variable = "Patient_group", taxonomy_column = "taxonomy_genus",metric = "Relative_abundance_rarefied")
+#                                                                                          variable = "Patient_group", taxonomy_column = "taxonomy_genus",metric = "Relative_abundance")
 # immunocompromised_patient_group_genus_top_significances.df$Project <- "immunocompromised"
 # write.csv(immunocompromised_patient_group_genus_top_significances.df,"Result_tables/abundance_analysis_tables/immunocompromised_patient_group__genus_wilcox.csv", row.names = F)
 # 
@@ -572,7 +570,7 @@ for (project in unique(project_genus_summary_top.df$Project)){
 # temp <- subset(genus_data.df, Project == "immunocompromised")
 # temp <- temp[temp$taxonomy_genus %in% immunocompromised_patient_group_genus_summary_top.df$taxonomy_genus,]
 # temp$Family_Genus <- with(temp, paste0(Family, ";", Genus))
-# myplot <- generate_multiple_abundance_boxplot(temp, "Family_Genus", "Patient_group","Relative_abundance_rarefied", add_points = F) + 
+# myplot <- generate_multiple_abundance_boxplot(temp, "Family_Genus", "Patient_group","Relative_abundance", add_points = F) + 
 #   geom_point(position = position_jitterdodge(), size = .3,stroke = 0.1, shape = 21,aes(fill = Patient_group)) +
 #   ylab("Relative abundance") + 
 #   xlab("Taxa") +
@@ -590,7 +588,7 @@ for (project in unique(project_genus_summary_top.df$Project)){
 # for (genus in immunocompromised_patient_group_genus_summary_top.df$taxonomy_genus){
 #   data_subset <- subset(genus_data.df, Project == "immunocompromised" & taxonomy_genus == genus)
 #   base_name <- gsub(".*(f__.*)", "\\1",genus)
-#   myplot <- generate_abundance_boxplot(data_subset, variable = "Patient_group", metric = "Relative_abundance_rarefied") +
+#   myplot <- generate_abundance_boxplot(data_subset, variable = "Patient_group", metric = "Relative_abundance") +
 #     ylab("Relative abundance") +
 #     scale_y_continuous(breaks = seq(0,1,.1), limits = c(0,1)) +
 #     labs(title = paste0("Patient group"),
@@ -613,12 +611,12 @@ for (project in unique(project_genus_summary_top.df$Project)){
 #                                                                           group_by_columns = c("Number_of_meds"))
 # immunocompromised_number_of_meds_genus_summary_top.df <- filter_summary_to_top_n(taxa_summary =  immunocompromised_number_of_meds_genus_summary.df, 
 #                                                                                 grouping_variables = c("Number_of_meds"), 
-#                                                                                 abundance_column = "Mean_relative_abundance_rarefied", 
+#                                                                                 abundance_column = "Mean_relative_abundance", 
 #                                                                                 my_top_n = 9)
 # 
 # # Calculate abundance significance
 # immunocompromised_number_of_meds_genus_top_significances.df <- calculate_abundance_significance(mydata = subset(genus_data.df, Project == "immunocompromised" & taxonomy_genus %in% immunocompromised_number_of_meds_genus_summary_top.df$taxonomy_genus), 
-#                                                                                                variable = "Number_of_meds", taxonomy_column = "taxonomy_genus",metric = "Relative_abundance_rarefied")
+#                                                                                                variable = "Number_of_meds", taxonomy_column = "taxonomy_genus",metric = "Relative_abundance")
 # immunocompromised_number_of_meds_genus_top_significances.df$Project <- "immunocompromised"
 # write.csv(immunocompromised_number_of_meds_genus_top_significances.df,"Result_tables/abundance_analysis_tables/immunocompromised_Number_of_meds__genus_wilcox.csv", row.names = F)
 # 
@@ -627,7 +625,7 @@ for (project in unique(project_genus_summary_top.df$Project)){
 # temp <- subset(genus_data.df, Project == "immunocompromised")
 # temp <- temp[temp$taxonomy_genus %in% immunocompromised_number_of_meds_genus_summary_top.df$taxonomy_genus,]
 # temp$Family_Genus <- with(temp, paste0(Family, ";", Genus))
-# myplot <- generate_multiple_abundance_boxplot(temp, "Family_Genus", "Number_of_meds","Relative_abundance_rarefied", add_points = F) + 
+# myplot <- generate_multiple_abundance_boxplot(temp, "Family_Genus", "Number_of_meds","Relative_abundance", add_points = F) + 
 #   geom_point(position = position_jitterdodge(), size = .3,stroke = 0.1, shape = 21,aes(fill = Number_of_meds)) +
 #   ylab("Relative abundance") + 
 #   xlab("Taxa") +
@@ -645,7 +643,7 @@ for (project in unique(project_genus_summary_top.df$Project)){
 # for (genus in immunocompromised_number_of_meds_genus_summary_top.df$taxonomy_genus){
 #   data_subset <- subset(genus_data.df, Project == "immunocompromised" & taxonomy_genus == genus)
 #   base_name <- gsub(".*(f__.*)", "\\1",genus)
-#   myplot <- generate_abundance_boxplot(data_subset, variable = "Number_of_meds", metric = "Relative_abundance_rarefied") +
+#   myplot <- generate_abundance_boxplot(data_subset, variable = "Number_of_meds", metric = "Relative_abundance") +
 #     ylab("Relative abundance") +
 #     scale_y_continuous(breaks = seq(0,1,.1), limits = c(0,1)) +
 #     labs(title = paste0("Number of meds"),
@@ -669,11 +667,11 @@ for (project in unique(project_genus_summary_top.df$Project)){
 #                                                                            group_by_columns = c("Fitzpatrick_skin_type"))
 # immunocompromised_skin_type_genus_summary_top.df <- filter_summary_to_top_n(taxa_summary =  immunocompromised_skin_type_genus_summary.df, 
 #                                                                                  grouping_variables = c("Fitzpatrick_skin_type"), 
-#                                                                                  abundance_column = "Mean_relative_abundance_rarefied", 
+#                                                                                  abundance_column = "Mean_relative_abundance", 
 #                                                                                  my_top_n = 9)
 # # Calculate abundance significance
 # immunocompromised_skin_type_genus_top_significances.df <- calculate_abundance_significance(mydata = subset(genus_data.df, Project == "immunocompromised" & taxonomy_genus %in% immunocompromised_skin_type_genus_summary_top.df$taxonomy_genus), 
-#                                                                                                 variable = "Fitzpatrick_skin_type", taxonomy_column = "taxonomy_genus",metric = "Relative_abundance_rarefied")
+#                                                                                                 variable = "Fitzpatrick_skin_type", taxonomy_column = "taxonomy_genus",metric = "Relative_abundance")
 # immunocompromised_skin_type_genus_top_significances.df$Project <- "immunocompromised"
 # write.csv(immunocompromised_skin_type_genus_top_significances.df,"Result_tables/abundance_analysis_tables/immunocompromised_Fitzpatrick_skin_type__genus_wilcox.csv", row.names = F)
 # 
@@ -681,7 +679,7 @@ for (project in unique(project_genus_summary_top.df$Project)){
 # temp <- subset(genus_data.df, Project == "immunocompromised")
 # temp <- temp[temp$taxonomy_genus %in% immunocompromised_skin_type_genus_summary_top.df$taxonomy_genus,]
 # temp$Family_Genus <- with(temp, paste0(Family, ";", Genus))
-# myplot <- generate_multiple_abundance_boxplot(temp, "Family_Genus", "Fitzpatrick_skin_type","Relative_abundance_rarefied", add_points = F) + 
+# myplot <- generate_multiple_abundance_boxplot(temp, "Family_Genus", "Fitzpatrick_skin_type","Relative_abundance", add_points = F) + 
 #   geom_point(position = position_jitterdodge(dodge.width = .75), size = .3,stroke = 0.1, shape = 21,aes(fill = Fitzpatrick_skin_type)) +
 #   ylab("Relative abundance") + 
 #   xlab("Taxa") +
@@ -699,7 +697,7 @@ for (project in unique(project_genus_summary_top.df$Project)){
 # for (genus in immunocompromised_number_of_meds_genus_summary_top.df$taxonomy_genus){
 #   data_subset <- subset(genus_data.df, Project == "immunocompromised" & taxonomy_genus == genus)
 #   base_name <- gsub(".*(f__.*)", "\\1",genus)
-#   myplot <- generate_abundance_boxplot(data_subset, variable = "Fitzpatrick_skin_type", metric = "Relative_abundance_rarefied") +
+#   myplot <- generate_abundance_boxplot(data_subset, variable = "Fitzpatrick_skin_type", metric = "Relative_abundance") +
 #     ylab("Relative abundance") +
 #     scale_y_continuous(breaks = seq(0,1,.1), limits = c(0,1)) +
 #     labs(title = paste0("Fitzpatrick skin type"),
@@ -740,7 +738,7 @@ for (project in unique(project_genus_summary_top.df$Project)){
 
 genus_cohort_sample_type_top_10 <- filter_summary_to_top_n(taxa_summary = genus_cohort_sampletype_summary,
                                                                                   grouping_variables = c("Project", "Sampletype_pooled"), 
-                                                                                  abundance_column = "Mean_relative_abundance_rarefied",
+                                                                                  abundance_column = "Mean_relative_abundance",
                                                                                     my_top_n = 10)
 
 write.csv(genus_cohort_sample_type_top_10,file = "Result_tables/abundance_analysis_tables/genus_cohort_sampletype_taxa_summary_top_10_mean_relative_abundance.csv", row.names = F, quote = F)
@@ -750,7 +748,7 @@ write.csv(genus_cohort_sample_type_top_10,file = "Result_tables/abundance_analys
 # Function to generate a more simplified summary for any group(s) (ignore taxa).
 # No need to calculate number/percent samples in group.
 generate_summary <- function(mydata, group_by_columns = c("Sample_Type")){
-  select_columns <- c(group_by_columns, "Sample", "Read_count", "Read_count_rarefied", "Relative_abundance", "Relative_abundance_rarefied")
+  select_columns <- c(group_by_columns, "Sample", "Read_count", "Read_count_rarefied", "Relative_abundance", "Relative_abundance")
   total_samples <- length(unique(mydata$Sample))
   group_summary <- 
     mydata %>%
@@ -779,11 +777,11 @@ generate_summary <- function(mydata, group_by_columns = c("Sample_Type")){
                      Max_relative_abundance = round(max(Relative_abundance),5),
                      Summed_relative_abundance = round(sum(Relative_abundance),5),
                      
-                     Mean_relative_abundance_rarefied = round(mean(Relative_abundance_rarefied), 5),
-                     Median_relative_abundance_rarefied = round(median(Relative_abundance_rarefied), 5),
-                     Min_relative_abundance_rarefied = round(min(Relative_abundance_rarefied), 5),
-                     Max_relative_abundance_rarefied = round(max(Relative_abundance_rarefied), 5),
-                     Summed_relative_abundance_rarefied = round(sum(Relative_abundance_rarefied),5)
+                     Mean_relative_abundance = round(mean(Relative_abundance), 5),
+                     Median_relative_abundance = round(median(Relative_abundance), 5),
+                     Min_relative_abundance = round(min(Relative_abundance), 5),
+                     Max_relative_abundance = round(max(Relative_abundance), 5),
+                     Summed_relative_abundance = round(sum(Relative_abundance),5)
     ) %>%
     as.data.frame()
   return(group_summary)
@@ -824,7 +822,7 @@ summed_read_count_bar_graph
 ggsave(plot = summed_read_count_bar_graph, filename ="Result_figures/abundance_analysis_plots/cohort_sampletype_summed_read_count_bar_graph.pdf", width = 10, height = 5)
 
 
-mean_relative_abundaunce_bar_graph <- ggplot(cohort_sampletype_summary.df, aes(x = Sampletype_pooled, y = Mean_relative_abundance_rarefied)) +
+mean_relative_abundaunce_bar_graph <- ggplot(cohort_sampletype_summary.df, aes(x = Sampletype_pooled, y = Mean_relative_abundance)) +
   geom_bar(position = "dodge", stat= "identity", aes(fill = Sampletype_pooled), color = "black",size =.2) +
   geom_text(aes(label = paste0("n = ",N_samples)),vjust = -0.6,size = 3) +
   # geom_text(aes(label = count, x = type, y = count), position = position_dodge(width = 0.8), vjust = -0.6

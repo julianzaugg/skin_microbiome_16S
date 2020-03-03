@@ -180,7 +180,6 @@ write.csv(both_cohorts_genus_rare_alpha.df,
 )
 
 # Create Cohort specific datasets
-both_cohorts_genus_rare_alpha.df
 immunocompetent_otu_rare_alpha.df <- subset(both_cohorts_otu_rare_alpha.df, Cohort == "immunocompetent")
 immunocompromised_otu_rare_alpha.df <- subset(both_cohorts_otu_rare_alpha.df, Cohort == "immunocompromised")
 immunocompetent_genus_rare_alpha.df <- subset(both_cohorts_genus_rare_alpha.df, Cohort == "immunocompetent")
@@ -845,77 +844,305 @@ for (myvar in c("Lesion_type_refined", "Length_of_immunosuppression_group_1", "L
 # -----------------------------------------------------------------------------------------------------------------
 # Publication figures
 
-# combine the diversity metric with the grouping and the signficance value
-immunocompromised_downsampled_genus_rare_alpha.df
-subset(immunocompromised_downsampled_genus_alpha_diversity_significances.df, Shannon_MannW_padj <= 0.05)
-temp <- unique(immunocompromised_downsampled_genus_rare_alpha.df[,c("Lesion_type_refined", "Lesion_type_refined_colour")])
-variable_colours <- setNames(as.character(unique(temp$Lesion_type_refined_colour)), as.character(unique(temp$Lesion_type_refined)))
+# immunocompromised, all
+source("Code/helper_functions.R")
+immunocompromised_otu_shannon_boxplot <- generate_significance_boxplots(mydata.df = immunocompromised_otu_rare_alpha.df,
+                                                                        variable_column = "Lesion_type_refined",
+                                                                        value_column = "Shannon",
+                                                                        variable_colours_available = T,
+                                                                        significances.df = immunocompromised_otu_alpha_diversity_significances.df,
+                                                                        p_value_column = "Shannon_MannW_padj",
+                                                                        sig_threshold = 0.05,
+                                                                        fill_palette = NULL,
+                                                                        sig_line_scaling_percentage = .07,
+                                                                        sig_vjust = 0.4,
+                                                                        sig_tip_length = 0.01,
+                                                                        sig_linetype = 1,
+                                                                        sig_colour = "grey40") +
+  xlab("Lesion type") + scale_y_continuous(limits = c(0,8), breaks = seq(0,8, .5))
+immunocompromised_otu_shannon_boxplot
+ggsave(filename = "Result_figures/abundance_analysis_plots/boxplots/immunocompromised_otu_shannon_boxplot.pdf",
+       plot = immunocompromised_otu_shannon_boxplot,width = 10, height = 12,device = "pdf",units = "cm")
 
-library(ggpubr)
-library(ggsignif)
-sig_subset <- subset(immunocompromised_downsampled_genus_alpha_diversity_significances.df, Variable == "Lesion_type_refined") %>% select(Variable, Group_1, Group_2,Shannon_MannW_padj)
-sig_subset <- subset(sig_subset, Shannon_MannW_padj <= 0.05)
-sig_subset$P_value_label <- as.character(lapply(sig_subset$Shannon_MannW_padj, function(x) ifelse(x <= 0.001, "***", ifelse(x <= 0.01, "**", ifelse(x <= 0.05, "*", ""))))  )
-# TODO - y value should be the max shannon for either group plus a small amount
-# TODO - explore combining colours for lines, alternatively just alternate
+immunocompromised_otu_chao1_boxplot <- generate_significance_boxplots(mydata.df = immunocompromised_otu_rare_alpha.df,
+                                                                      variable_column = "Lesion_type_refined",
+                                                                      value_column = "Chao1",
+                                                                      variable_colours_available = T,
+                                                                      significances.df = immunocompromised_otu_alpha_diversity_significances.df,
+                                                                      p_value_column = "Chao1_MannW_padj",
+                                                                      sig_threshold = 0.05,
+                                                                      fill_palette = NULL,
+                                                                      sig_line_scaling_percentage = .07,
+                                                                      sig_vjust = 0.4,
+                                                                      sig_tip_length = 0.01,
+                                                                      sig_linetype = 1,
+                                                                      sig_colour = "grey40") +
+  xlab("Lesion type") + scale_y_continuous(limits = c(0,750), breaks = seq(0,750, 50))
+immunocompromised_otu_chao1_boxplot
+ggsave(filename = "Result_figures/abundance_analysis_plots/boxplots/immunocompromised_otu_chao1_boxplot.pdf",
+       plot = immunocompromised_otu_chao1_boxplot,width = 10, height = 12,device = "pdf",units = "cm")
 
-ggplot(immunocompromised_downsampled_genus_rare_alpha.df, aes(x = Lesion_type_refined, fill = Lesion_type_refined, y = Shannon)) +
-  geom_boxplot(outlier.shape = NA, aes(fill = Lesion_type_refined)) +
-  geom_jitter(size=0.5, width = 0.10, height=0) +
-  guides(fill=FALSE) +
-  scale_fill_manual(values = variable_colours, name = "Lesion_type_refined") +
-  ggsignif::geom_signif(data = sig_subset,manual = T,inherit.aes = F, aes(xmin = Group_1, xmax = Group_2,annotations = P_value_label),y = 5) +
-  common_theme +
-  theme(panel.border = element_blank(), 
-        panel.grid.major = element_blank(),
-        panel.grid.minor = element_blank(),
-        axis.line = element_line(colour = "black", size = 0.5),
-        panel.background = element_blank(),
-        strip.background = element_rect(fill = "white", colour = "white", size = 1),
-        strip.text = element_text(size = 6),
-        legend.key=element_blank(),
-        legend.direction="vertical",
-        legend.background = element_rect(colour ="white", size = .3),
-        legend.text.align = 0,
-        legend.title = element_text(size=10, face="bold"),
-        legend.title.align = 0.5,
-        legend.margin = margin(c(2,2,2,2)),
-        legend.key.height=unit(.4,"cm"),
-        legend.text = element_text(size = 8),
-        axis.text = element_text(size = 8, colour = "black"),
-        axis.text.x = element_text(angle = 0, vjust = .5),
-        axis.title = element_text(size = 10,face = "bold"),
-        complete = F,
-        plot.title = element_text(size = 6,hjust = 0.5))
-  
-  
+immunocompromised_genus_shannon_boxplot <- generate_significance_boxplots(mydata.df = immunocompromised_genus_rare_alpha.df,
+                                                                          variable_column = "Lesion_type_refined",
+                                                                          value_column = "Shannon",
+                                                                          variable_colours_available = T,
+                                                                          significances.df = immunocompromised_genus_alpha_diversity_significances.df,
+                                                                          p_value_column = "Shannon_MannW_padj",
+                                                                          sig_threshold = 0.05,
+                                                                          fill_palette = NULL,
+                                                                          sig_line_scaling_percentage = .07,
+                                                                          sig_vjust = 0.4,
+                                                                          sig_tip_length = 0.01,
+                                                                          sig_linetype = 1,
+                                                                          sig_colour = "grey40") +
+  xlab("Lesion type") + scale_y_continuous(limits = c(0,7), breaks = seq(0,7, .5))
 
-  variable_values <- factor(as.character(unique(internal_data.df[[variable]])))
-if (variable_colours_available == T){
-  color_col_name <- paste0(variable, "_colour")
-  variable_colours <- setNames(as.character(unique(internal_data.df[[color_col_name]])), as.character(unique(internal_data.df[[variable]])))
-} else{
-  if (is.null(fill_palette)){
-    internal_colour_palette <- my_colour_palette_206_distinct
-  } else{
-    internal_colour_palette <- fill_palette
-  }
-  variable_colours <- setNames(internal_colour_palette[1:length(variable_values)], variable_values)  
-}
-myplot <- ggplot(internal_data.df, aes(x = get(variable), y = get(metric))) +
-  geom_boxplot(outlier.shape = NA, aes(fill = get(variable))) +
-  scale_fill_manual(values = variable_colours, name = variable) +
-  # scale_x_discrete(labels = gsub("_", " ", internal_data.df[,variable])) +
-  geom_jitter(size=0.5, width = 0.10, height=0) +
-  guides(fill=FALSE) +
-  # scale_y_continuous(limits = c(0,4.5), breaks = seq(0,4.5,.5)) +
-  xlab(gsub("_", " ", variable)) +
-  ylab(metric)  +
-  common_theme +
-  theme(panel.border = element_blank())
+ggsave(filename = "Result_figures/abundance_analysis_plots/boxplots/immunocompromised_genus_shannon_boxplot.pdf",
+       plot = immunocompromised_genus_shannon_boxplot,width = 10, height = 12,device = "pdf",units = "cm")
+
+immunocompromised_genus_chao1_boxplot <- generate_significance_boxplots(mydata.df = immunocompromised_genus_rare_alpha.df,
+                                                                          variable_column = "Lesion_type_refined",
+                                                                          value_column = "Chao1",
+                                                                          variable_colours_available = T,
+                                                                          significances.df = immunocompromised_genus_alpha_diversity_significances.df,
+                                                                          p_value_column = "Chao1_MannW_padj",
+                                                                          sig_threshold = 0.05,
+                                                                          fill_palette = NULL,
+                                                                          sig_line_scaling_percentage = .07,
+                                                                          sig_vjust = 0.4,
+                                                                          sig_tip_length = 0.01,
+                                                                          sig_linetype = 1,
+                                                                          sig_colour = "grey40") +
+  xlab("Lesion type") + scale_y_continuous(limits = c(0,360), breaks = seq(0,350, 50))
+immunocompromised_genus_chao1_boxplot
+ggsave(filename = "Result_figures/abundance_analysis_plots/boxplots/immunocompromised_genus_chao1_boxplot.pdf",
+       plot = immunocompromised_genus_chao1_boxplot,width = 10, height = 12,device = "pdf",units = "cm")
+
+# ------------------------------------------------------
+# ------------------------------------------------------
+# immunocompetent, all
+immunocompetent_otu_shannon_boxplot <- generate_significance_boxplots(mydata.df = immunocompetent_otu_rare_alpha.df,
+                                                                      variable_column = "Lesion_type_refined",
+                                                                      value_column = "Shannon",
+                                                                      variable_colours_available = T,
+                                                                      significances.df = immunocompetent_otu_alpha_diversity_significances.df,
+                                                                      p_value_column = "Shannon_MannW_padj",
+                                                                      sig_threshold = 0.05,
+                                                                      fill_palette = NULL,
+                                                                      sig_line_scaling_percentage = .07,
+                                                                      sig_vjust = 0.4,
+                                                                      sig_tip_length = 0.01,
+                                                                      sig_linetype = 1,
+                                                                      sig_colour = "grey40") +
+  xlab("Lesion type") + scale_y_continuous(limits = c(0,8), breaks = seq(0,8, .5))
+immunocompetent_otu_shannon_boxplot
+ggsave(filename = "Result_figures/abundance_analysis_plots/boxplots/immunocompetent_otu_shannon_boxplot.pdf",
+       plot = immunocompetent_otu_shannon_boxplot,width = 10, height = 12,device = "pdf",units = "cm")
+
+immunocompetent_otu_chao1_boxplot <- generate_significance_boxplots(mydata.df = immunocompetent_otu_rare_alpha.df,
+                                                                    variable_column = "Lesion_type_refined",
+                                                                    value_column = "Chao1",
+                                                                    variable_colours_available = T,
+                                                                    significances.df = immunocompetent_otu_alpha_diversity_significances.df,
+                                                                    p_value_column = "Chao1_MannW_padj",
+                                                                    sig_threshold = 0.05,
+                                                                    fill_palette = NULL,
+                                                                    sig_line_scaling_percentage = .07,
+                                                                    sig_vjust = 0.4,
+                                                                    sig_tip_length = 0.01,
+                                                                    sig_linetype = 1,
+                                                                    sig_colour = "grey40") +
+  xlab("Lesion type") + scale_y_continuous(limits = c(0,750), breaks = seq(0,750, 50))
+immunocompetent_otu_chao1_boxplot
+ggsave(filename = "Result_figures/abundance_analysis_plots/boxplots/immunocompetent_otu_chao1_boxplot.pdf",
+       plot = immunocompetent_otu_chao1_boxplot,width = 10, height = 12,device = "pdf",units = "cm")
+
+immunocompetent_genus_shannon_boxplot <- generate_significance_boxplots(mydata.df = immunocompetent_genus_rare_alpha.df,
+                                                                        variable_column = "Lesion_type_refined",
+                                                                        value_column = "Shannon",
+                                                                        variable_colours_available = T,
+                                                                        significances.df = immunocompetent_genus_alpha_diversity_significances.df,
+                                                                        p_value_column = "Shannon_MannW_padj",
+                                                                        sig_threshold = 0.05,
+                                                                        fill_palette = NULL,
+                                                                        sig_line_scaling_percentage = .07,
+                                                                        sig_vjust = 0.4,
+                                                                        sig_tip_length = 0.01,
+                                                                        sig_linetype = 1,
+                                                                        sig_colour = "grey40") +
+  xlab("Lesion type") + scale_y_continuous(limits = c(0,7), breaks = seq(0,7, .5))
+
+ggsave(filename = "Result_figures/abundance_analysis_plots/boxplots/immunocompetent_genus_shannon_boxplot.pdf",
+       plot = immunocompetent_genus_shannon_boxplot,width = 10, height = 12,device = "pdf",units = "cm")
+
+immunocompetent_genus_chao1_boxplot <- generate_significance_boxplots(mydata.df = immunocompetent_genus_rare_alpha.df,
+                                                                      variable_column = "Lesion_type_refined",
+                                                                      value_column = "Chao1",
+                                                                      variable_colours_available = T,
+                                                                      significances.df = immunocompetent_genus_alpha_diversity_significances.df,
+                                                                      p_value_column = "Chao1_MannW_padj",
+                                                                      sig_threshold = 0.05,
+                                                                      fill_palette = NULL,
+                                                                      sig_line_scaling_percentage = .07,
+                                                                      sig_vjust = 0.4,
+                                                                      sig_tip_length = 0.01,
+                                                                      sig_linetype = 1,
+                                                                      sig_colour = "grey40") +
+  xlab("Lesion type") + scale_y_continuous(limits = c(0,360), breaks = seq(0,350, 50))
+immunocompetent_genus_chao1_boxplot
+ggsave(filename = "Result_figures/abundance_analysis_plots/boxplots/immunocompetent_genus_chao1_boxplot.pdf",
+       plot = immunocompetent_genus_chao1_boxplot,width = 10, height = 12,device = "pdf",units = "cm")
+
+# ------------------------------------------------------
+# ------------------------------------------------------
+# immunocompromised, downsampled
+immunocompromised_downsampled_otu_shannon_boxplot <- generate_significance_boxplots(mydata.df = immunocompromised_downsampled_otu_rare_alpha.df,
+                                                                                    variable_column = "Lesion_type_refined",
+                                                                                    value_column = "Shannon",
+                                                                                    variable_colours_available = T,
+                                                                                    significances.df = immunocompromised_downsampled_otu_alpha_diversity_significances.df,
+                                                                                    p_value_column = "Shannon_MannW_padj",
+                                                                                    sig_threshold = 0.05,
+                                                                                    fill_palette = NULL,
+                                                                                    sig_line_scaling_percentage = .07,
+                                                                                    sig_vjust = 0.4,
+                                                                                    sig_tip_length = 0.01,
+                                                                                    sig_linetype = 1,
+                                                                                    sig_colour = "grey40") +
+  xlab("Lesion type") + scale_y_continuous(limits = c(0,7), breaks = seq(0,8, .5))
+immunocompromised_downsampled_otu_shannon_boxplot
+ggsave(filename = "Result_figures/abundance_analysis_plots/boxplots/immunocompromised_downsampled_otu_shannon_boxplot.pdf",
+       plot = immunocompromised_downsampled_otu_shannon_boxplot,width = 10, height = 12,device = "pdf",units = "cm")
+
+immunocompromised_downsampled_otu_chao1_boxplot <- generate_significance_boxplots(mydata.df = immunocompromised_downsampled_otu_rare_alpha.df,
+                                                                                  variable_column = "Lesion_type_refined",
+                                                                                  value_column = "Chao1",
+                                                                                  variable_colours_available = T,
+                                                                                  significances.df = immunocompromised_downsampled_otu_alpha_diversity_significances.df,
+                                                                                  p_value_column = "Chao1_MannW_padj",
+                                                                                  sig_threshold = 0.05,
+                                                                                  fill_palette = NULL,
+                                                                                  sig_line_scaling_percentage = .07,
+                                                                                  sig_vjust = 0.4,
+                                                                                  sig_tip_length = 0.01,
+                                                                                  sig_linetype = 1,
+                                                                                  sig_colour = "grey40") +
+  xlab("Lesion type") + scale_y_continuous(limits = c(0,600), breaks = seq(0,750, 50))
+immunocompromised_downsampled_otu_chao1_boxplot
+ggsave(filename = "Result_figures/abundance_analysis_plots/boxplots/immunocompromised_downsampled_otu_chao1_boxplot.pdf",
+       plot = immunocompromised_downsampled_otu_chao1_boxplot,width = 10, height = 12,device = "pdf",units = "cm")
+
+immunocompromised_downsampled_genus_shannon_boxplot <- generate_significance_boxplots(mydata.df = immunocompromised_downsampled_genus_rare_alpha.df,
+                                                                                      variable_column = "Lesion_type_refined",
+                                                                                      value_column = "Shannon",
+                                                                                      variable_colours_available = T,
+                                                                                      significances.df = immunocompromised_downsampled_genus_alpha_diversity_significances.df,
+                                                                                      p_value_column = "Shannon_MannW_padj",
+                                                                                      sig_threshold = 0.05,
+                                                                                      fill_palette = NULL,
+                                                                                      sig_line_scaling_percentage = .07,
+                                                                                      sig_vjust = 0.4,
+                                                                                      sig_tip_length = 0.01,
+                                                                                      sig_linetype = 1,
+                                                                                      sig_colour = "grey40") +
+  xlab("Lesion type") + scale_y_continuous(limits = c(0,6), breaks = seq(0,7, .5))
+immunocompromised_downsampled_genus_shannon_boxplot
+ggsave(filename = "Result_figures/abundance_analysis_plots/boxplots/immunocompromised_downsampled_genus_shannon_boxplot.pdf",
+       plot = immunocompromised_downsampled_genus_shannon_boxplot,width = 10, height = 12,device = "pdf",units = "cm")
+
+immunocompromised_downsampled_genus_chao1_boxplot <- generate_significance_boxplots(mydata.df = immunocompromised_downsampled_genus_rare_alpha.df,
+                                                                                    variable_column = "Lesion_type_refined",
+                                                                                    value_column = "Chao1",
+                                                                                    variable_colours_available = T,
+                                                                                    significances.df = immunocompromised_downsampled_genus_alpha_diversity_significances.df,
+                                                                                    p_value_column = "Chao1_MannW_padj",
+                                                                                    sig_threshold = 0.05,
+                                                                                    fill_palette = NULL,
+                                                                                    sig_line_scaling_percentage = .07,
+                                                                                    sig_vjust = 0.4,
+                                                                                    sig_tip_length = 0.01,
+                                                                                    sig_linetype = 1,
+                                                                                    sig_colour = "grey40") +
+  xlab("Lesion type") + scale_y_continuous(limits = c(0,360), breaks = seq(0,350, 50))
+immunocompromised_downsampled_genus_chao1_boxplot
+ggsave(filename = "Result_figures/abundance_analysis_plots/boxplots/immunocompromised_downsampled_genus_chao1_boxplot.pdf",
+       plot = immunocompromised_downsampled_genus_chao1_boxplot,width = 10, height = 12,device = "pdf",units = "cm")
 
 
+# ------------------------------------------------------
+# ------------------------------------------------------
+# immunocompetent, downsampled
+immunocompetent_downsampled_otu_shannon_boxplot <- generate_significance_boxplots(mydata.df = immunocompetent_downsampled_otu_rare_alpha.df,
+                                                                                  variable_column = "Lesion_type_refined",
+                                                                                  value_column = "Shannon",
+                                                                                  variable_colours_available = T,
+                                                                                  significances.df = immunocompetent_downsampled_otu_alpha_diversity_significances.df,
+                                                                                  p_value_column = "Shannon_MannW_padj",
+                                                                                  sig_threshold = 0.05,
+                                                                                  fill_palette = NULL,
+                                                                                  sig_line_scaling_percentage = .07,
+                                                                                  sig_vjust = 0.4,
+                                                                                  sig_tip_length = 0.01,
+                                                                                  sig_linetype = 1,
+                                                                                  sig_colour = "grey40") +
+  xlab("Lesion type") + scale_y_continuous(limits = c(0,7), breaks = seq(0,8, .5))
+immunocompetent_downsampled_otu_shannon_boxplot
+ggsave(filename = "Result_figures/abundance_analysis_plots/boxplots/immunocompetent_downsampled_otu_shannon_boxplot.pdf",
+       plot = immunocompetent_downsampled_otu_shannon_boxplot,width = 10, height = 12,device = "pdf",units = "cm")
 
+immunocompetent_downsampled_otu_chao1_boxplot <- generate_significance_boxplots(mydata.df = immunocompetent_downsampled_otu_rare_alpha.df,
+                                                                                variable_column = "Lesion_type_refined",
+                                                                                value_column = "Chao1",
+                                                                                variable_colours_available = T,
+                                                                                significances.df = immunocompetent_downsampled_otu_alpha_diversity_significances.df,
+                                                                                p_value_column = "Chao1_MannW_padj",
+                                                                                sig_threshold = 0.05,
+                                                                                fill_palette = NULL,
+                                                                                sig_line_scaling_percentage = .07,
+                                                                                sig_vjust = 0.4,
+                                                                                sig_tip_length = 0.01,
+                                                                                sig_linetype = 1,
+                                                                                sig_colour = "grey40") +
+  xlab("Lesion type") + scale_y_continuous(limits = c(0,600), breaks = seq(0,750, 50))
+immunocompetent_downsampled_otu_chao1_boxplot
+ggsave(filename = "Result_figures/abundance_analysis_plots/boxplots/immunocompetent_downsampled_otu_chao1_boxplot.pdf",
+       plot = immunocompetent_downsampled_otu_chao1_boxplot,width = 10, height = 12,device = "pdf",units = "cm")
+
+immunocompetent_downsampled_genus_shannon_boxplot <- generate_significance_boxplots(mydata.df = immunocompetent_downsampled_genus_rare_alpha.df,
+                                                                                    variable_column = "Lesion_type_refined",
+                                                                                    value_column = "Shannon",
+                                                                                    variable_colours_available = T,
+                                                                                    significances.df = immunocompetent_downsampled_genus_alpha_diversity_significances.df,
+                                                                                    p_value_column = "Shannon_MannW_padj",
+                                                                                    sig_threshold = 0.05,
+                                                                                    fill_palette = NULL,
+                                                                                    sig_line_scaling_percentage = .07,
+                                                                                    sig_vjust = 0.4,
+                                                                                    sig_tip_length = 0.01,
+                                                                                    sig_linetype = 1,
+                                                                                    sig_colour = "grey40") +
+  xlab("Lesion type") + scale_y_continuous(limits = c(0,6), breaks = seq(0,7, .5))
+immunocompetent_downsampled_genus_shannon_boxplot
+ggsave(filename = "Result_figures/abundance_analysis_plots/boxplots/immunocompetent_downsampled_genus_shannon_boxplot.pdf",
+       plot = immunocompetent_downsampled_genus_shannon_boxplot,width = 10, height = 12,device = "pdf",units = "cm")
+
+immunocompetent_downsampled_genus_chao1_boxplot <- generate_significance_boxplots(mydata.df = immunocompetent_downsampled_genus_rare_alpha.df,
+                                                                                  variable_column = "Lesion_type_refined",
+                                                                                  value_column = "Chao1",
+                                                                                  variable_colours_available = T,
+                                                                                  significances.df = immunocompetent_downsampled_genus_alpha_diversity_significances.df,
+                                                                                  p_value_column = "Chao1_MannW_padj",
+                                                                                  sig_threshold = 0.05,
+                                                                                  fill_palette = NULL,
+                                                                                  sig_line_scaling_percentage = .07,
+                                                                                  sig_vjust = 0.4,
+                                                                                  sig_tip_length = 0.01,
+                                                                                  sig_linetype = 1,
+                                                                                  sig_colour = "grey40") +
+  xlab("Lesion type") + scale_y_continuous(limits = c(0,360), breaks = seq(0,350, 50))
+immunocompetent_downsampled_genus_chao1_boxplot
+ggsave(filename = "Result_figures/abundance_analysis_plots/boxplots/immunocompetent_downsampled_genus_chao1_boxplot.pdf",
+       plot = immunocompetent_downsampled_genus_chao1_boxplot,width = 10, height = 12,device = "pdf",units = "cm")
 
 
 # ------------------------------------------------------------------------

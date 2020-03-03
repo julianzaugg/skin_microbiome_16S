@@ -1596,3 +1596,125 @@ plot_corrplot <- function(correlation_matrix, p_value_matrix = NULL,
 # ------------------------------------------------------------------------------------------------
 # ------------------------------------------------------------------------------------------------
 # ------------------------------------------------------------------------------------------------
+
+library(ggsignif)
+generate_significance_boxplots <- function(mydata.df, # Main dataframe
+                                           variable_column, # Variable to group by
+                                           value_column, # Values to use in boxplots
+                                           variable_colours_available = F, # requires a column named "variable_column_colour"
+                                           significances.df, # Dataframe containing significance values for each group comparison
+                                           p_value_column, # Column in significances.df containing p-values
+                                           fill_palette = NULL, # Custom fill palette.
+                                           sig_threshold = 0.05, # p-values less than this will be displayed
+                                           sig_line_scaling_percentage = 0.08, # percent of max y value for spacing significance lines
+                                           sig_vjust = 0.03, # amount to vertically adjust the significance annotations
+                                           sig_tip_length = 0.01, # length of tips on significance lines
+                                           sig_linetype = 1, # linetype of significance lines
+                                           sig_colour = "grey20" # colour of significance lines
+){
+  # Requires ggplot and ggsignif packages
+  
+  # mydata.df must have the following columns: "variable_column" , "value_column" and (optionally) "variable_column_colour"
+  # significances.df must have the following columns : "Variable", "Group_1", "Group_2"
+  # p_value_column must be defined by the user and also be in the dataframe
+  variable_values <- levels(mydata.df[[variable_column]])
+  if (variable_colours_available == T){
+    color_col_name <- paste0(variable_column, "_colour")
+    variable_colours <- setNames(as.character(unique(mydata.df[[color_col_name]])), as.character(unique(mydata.df[[variable_column]])))
+  } else{
+    if (is.null(fill_palette)){
+      # my_colour_palette_30_distinct
+      internal_colour_palette <- c("#009348","#f579fe","#4fe16e","#b40085","#4d7e00","#4742b4",
+                                   "#f0c031","#016dd9","#d45200","#7499ff","#ef4d2d","#01c9c8",
+                                   "#f8394b","#88d7a6","#d20063","#c8cc5d","#882986","#fdb95d",
+                                   "#404f8f","#917300","#f3aefc","#5c5800","#ff75c3","#00674a",
+                                   "#ba001c","#979760","#8b354c","#ff875f","#943105","#cf9478")
+    } else{
+      internal_colour_palette <- fill_palette
+    }
+    variable_colours <- setNames(internal_colour_palette[1:length(variable_values)], variable_values)  
+  }
+  
+  # Subset significances to the entries for variable of interest variable
+  sig_subset.df <- subset(significances.df, Variable == variable_column) %>% select(Variable, Group_1, Group_2,p_value_column)
+  
+  # Filter to siginificant values
+  sig_subset.df <- sig_subset.df[which(sig_subset.df[,p_value_column] < sig_threshold),]
+  
+  # Generate plot
+  myplot <- ggplot(mydata.df, aes(x = get(variable_column), fill = get(variable_column), y = get(value_column))) +
+    geom_boxplot(outlier.shape = NA) +
+    geom_jitter(size=0.5, width = 0.10, height=0) +
+    guides(fill=FALSE) +
+    # scale_y_continuous(breaks = seq(0, max(sig_subset.df$y_position)+.1, 1)) +
+    scale_fill_manual(values = variable_colours, name = variable_column) +
+    xlab(variable_column) +
+    ylab(value_column) +
+    theme(panel.border = element_blank(),
+          panel.grid.major = element_blank(),
+          panel.grid.minor = element_blank(),
+          axis.line = element_line(colour = "black", size = 0.5),
+          panel.background = element_blank(),
+          strip.background = element_rect(fill = "white", colour = "white", size = 1),
+          strip.text = element_text(size = 6),
+          legend.key=element_blank(),
+          legend.direction="vertical",
+          legend.background = element_rect(colour ="white", size = .3),
+          legend.text.align = 0,
+          legend.title = element_text(size=10, face="bold"),
+          legend.title.align = 0.5,
+          legend.margin = margin(c(2,2,2,2)),
+          legend.key.height=unit(.4,"cm"),
+          legend.text = element_text(size = 8),
+          axis.text = element_text(size = 8, colour = "black"),
+          axis.text.x = element_text(angle = 0, vjust = .5),
+          axis.title = element_text(size = 10,face = "bold"),
+          complete = F,
+          plot.title = element_text(size = 6,hjust = 0.5))
+  
+  # Return the plot without siginificances if there are no significant comparisons
+  if (dim(sig_subset.df)[1] == 0){
+    print("No sigificant comparisons")
+    return(myplot)
+  }
+  
+  # Create p-value label
+  sig_subset.df$P_value_label <- as.character(lapply(sig_subset.df[,p_value_column], function(x) ifelse(x <= 0.001, "***", 
+                                                                                                        ifelse(x <= 0.01, "**", 
+                                                                                                               ifelse(x <= 0.05, "*", "ns")))))
+  # Determine the maximum diversity value for the pair of groups being compared
+  for (row in 1:nrow(sig_subset.df)){
+    group_1 <- as.character(sig_subset.df[row,"Group_1"])
+    group_2 <- as.character(sig_subset.df[row,"Group_2"])
+    y_max <- max(mydata.df[which(mydata.df[,variable_column] == group_1),][,value_column],
+                 mydata.df[which(mydata.df[,variable_column] == group_2),][,value_column])
+    sig_subset.df[row,"y_max"] <- y_max
+    sig_subset.df[row,"level_index_group_1"] <- which(levels(mydata.df[,variable_column]) == group_1)
+    sig_subset.df[row,"level_index_group_2"] <- which(levels(mydata.df[,variable_column]) == group_2)
+    sig_subset.df[row,"level_distance"] <- abs(sig_subset.df[row,"level_index_group_2"] - sig_subset.df[row,"level_index_group_1"])
+  }
+  
+  # Define the y position of the significance lines to ensure no overlaps.
+  # This is based on the maximum value multiplied by a small scaling value
+  # that gradually increases.
+  
+  # sig_subset.df <- sig_subset.df[order(sig_subset.df$y_max),]
+  # sig_subset.df <- sig_subset.df[order(sig_subset.df$level_index_group_1),]
+  # sig_subset.df <- sig_subset.df[order(sig_subset.df$level_index_group_2),]
+  sig_subset.df <- sig_subset.df[order(sig_subset.df$level_distance),]
+  scale <- 1.05 # starting scale
+  for (row in 1:nrow(sig_subset.df)){
+    sig_subset.df[row, "y_position"] <- max(sig_subset.df[, "y_max"]) * scale
+    scale <- scale + sig_line_scaling_percentage # increase scale value
+  }
+  
+  myplot <- myplot + ggsignif::geom_signif(data = sig_subset.df,
+                                           manual = T,
+                                           inherit.aes = F,
+                                           aes(xmin = Group_1, xmax = Group_2, annotations = P_value_label, y_position = y_position),
+                                           linetype = sig_linetype,
+                                           color = sig_colour,
+                                           size = .5,
+                                           tip_length = sig_tip_length, vjust = sig_vjust)
+  myplot
+}

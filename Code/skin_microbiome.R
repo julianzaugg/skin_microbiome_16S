@@ -121,8 +121,8 @@ dir.create(file.path("./Result_other", "sequences"), showWarnings = FALSE,recurs
 
 dir.create(file.path("./Result_figures", "abundance_analysis_plots"), showWarnings = FALSE)
 dir.create(file.path("./Result_figures/abundance_analysis_plots/boxplots"), showWarnings = FALSE, recursive = T)
-dir.create(file.path("./Result_figures/abundance_analysis_plots/boxplots/Cohort_lesion_type_refined"), showWarnings = FALSE, recursive = T)
-dir.create(file.path("./Result_figures/abundance_analysis_plots/boxplots/Cohort"), showWarnings = FALSE, recursive = T)
+# dir.create(file.path("./Result_figures/abundance_analysis_plots/boxplots/Cohort_lesion_type_refined"), showWarnings = FALSE, recursive = T)
+# dir.create(file.path("./Result_figures/abundance_analysis_plots/boxplots/Cohort"), showWarnings = FALSE, recursive = T)
 dir.create(file.path("./Result_figures/abundance_analysis_plots/pie_charts"), showWarnings = FALSE, recursive = T)
 
 
@@ -603,6 +603,7 @@ project_otu_table.df <- project_otu_table.df[,c(sample_ids[sample_ids %in% rowna
 dim(project_otu_table.df)
 dim(metadata.df)
 # summary(metadata.df$Lesion_type)
+# which(metadata.df$Cohort == "immunocompromised" | metadata.df$Snapshot_sample_5 == "yes" | metadata.df$Lesion_type == "negative")
 # ------------------------------------------------------------------------------------------------
 # ------------------------------------------------------------------------------------------------
 # Assign unique colours for each discrete state for variables
