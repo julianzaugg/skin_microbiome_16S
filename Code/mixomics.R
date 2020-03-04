@@ -56,8 +56,8 @@ head(melt(sort(colSums(otu_rare.m))))
 # metadata.df <- metadata.df[metadata.df$Sampletype %in% c("C","AK_PL","IEC_PL","SCC_PL","AK","IEC","SCC", "NLC"),]
 metadata.df <- metadata.df[metadata.df$Sampletype %in% c("C","AK_PL","IEC_PL","SCC_PL","AK","IEC","SCC", "LC"),]
 
-# Filter to immunocompromised or snapshot samples
-metadata.df <- subset(metadata.df, Project == "immunocompromised" | Snapshot_sample == "yes")
+# Filter to immunosuppressed or snapshot samples
+metadata.df <- subset(metadata.df, Project == "immunosuppressed" | Snapshot_sample == "yes")
 
 # Only keep columns (samples) in the metadata
 otu_rare.m <- otu_rare.m[,colnames(otu_rare.m) %in% as.character(metadata.df$Index)]
@@ -247,26 +247,26 @@ run_mixomics <- function(my_otu_matrix, my_metadata, outcome_variable, prefix = 
 }
 
 
-# Compare variables in immunocompromised cohort
-immunocompromised_metadata.df <- metadata.df[metadata.df$Project == "immunocompromised",]
-immunocompromised_otu_rare.m <- otu_rare.m[,rownames(immunocompromised_metadata.df)]
+# Compare variables in immunosuppressed cohort
+immunosuppressed_metadata.df <- metadata.df[metadata.df$Project == "immunosuppressed",]
+immunosuppressed_otu_rare.m <- otu_rare.m[,rownames(immunosuppressed_metadata.df)]
 
 immunocompetent_metadata.df <- metadata.df[metadata.df$Project == "immunocompetent",]
 immunocompetent_otu_rare.m <- otu_rare.m[,rownames(immunocompetent_metadata.df)]
 
 # Like DESeq, filter out features that do not have at # reads in at least one sample
-dim(immunocompromised_otu_rare.m)
-immunocompromised_otu_rare.m <- filter_matrix_rows(immunocompromised_otu_rare.m,15)
+dim(immunosuppressed_otu_rare.m)
+immunosuppressed_otu_rare.m <- filter_matrix_rows(immunosuppressed_otu_rare.m,15)
 immunocompetent_otu_rare.m <- filter_matrix_rows(immunocompetent_otu_rare.m,15)
 
 # Could use sum instead
-# immunocompromised_otu_rare.m <- immunocompromised_otu_rare.m[which(apply(X = immunocompromised_otu_rare.m, MARGIN = 1, FUN = sum) >= 30),]
-dim(immunocompromised_otu_rare.m)
+# immunosuppressed_otu_rare.m <- immunosuppressed_otu_rare.m[which(apply(X = immunosuppressed_otu_rare.m, MARGIN = 1, FUN = sum) >= 30),]
+dim(immunosuppressed_otu_rare.m)
 
 # Sampletype_final
-run_mixomics(my_otu_matrix = immunocompromised_otu_rare.m, 
-             my_metadata = immunocompromised_metadata.df, 
-             prefix = "immunocompromised_",
+run_mixomics(my_otu_matrix = immunosuppressed_otu_rare.m, 
+             my_metadata = immunosuppressed_metadata.df, 
+             prefix = "immunosuppressed_",
              use_shapes = T,
              outcome_variable = "Sampletype_final",
              my_levels = c("C", "LC","AK","SCC"))
@@ -279,17 +279,17 @@ run_mixomics(my_otu_matrix = immunocompetent_otu_rare.m,
              my_levels = c("LC","AK","SCC"))
 
 # # Patient_group
-# run_mixomics(my_otu_matrix = immunocompromised_otu_rare.m, 
-#              my_metadata = immunocompromised_metadata.df, 
-#              prefix = "immunocompromised_",
+# run_mixomics(my_otu_matrix = immunosuppressed_otu_rare.m, 
+#              my_metadata = immunosuppressed_metadata.df, 
+#              prefix = "immunosuppressed_",
 #              use_shapes = T,
 #              outcome_variable = "Patient_group",
 #              my_levels = c("Control","AK","SCC"))
 # 
 # # Number_of_meds
-# run_mixomics(my_otu_matrix = immunocompromised_otu_rare.m, 
-#              my_metadata = immunocompromised_metadata.df, 
-#              prefix = "immunocompromised_",
+# run_mixomics(my_otu_matrix = immunosuppressed_otu_rare.m, 
+#              my_metadata = immunosuppressed_metadata.df, 
+#              prefix = "immunosuppressed_",
 #              use_shapes = T,
 #              outcome_variable = "Number_of_meds",
 #              my_levels = c("1","2","3"))
@@ -302,21 +302,21 @@ run_mixomics(my_otu_matrix = otu_rare_filtered.m,
              prefix = "both_cohorts_",
              use_shapes = T,
              outcome_variable = "Project",
-             my_levels = c("immunocompetent","immunocompromised"))
+             my_levels = c("immunocompetent","immunosuppressed"))
 
 
 
-immunocompromised_otu_rare.m <- immunocompromised_otu_rare.m + 0.1
+immunosuppressed_otu_rare.m <- immunosuppressed_otu_rare.m + 0.1
 
 # Number of features to test/keep
 list.keepX = c(c(5:10), seq(15, 50, 5), seq(60, 100, 10))
 
 
 # First we are going to test Sampletype_pooled
-outcome <- factor(immunocompromised_metadata.df$Sampletype_pooled)
+outcome <- factor(immunosuppressed_metadata.df$Sampletype_pooled)
 
 
-tune.splsda.mydata <- tune.splsda(X=t(immunocompromised_otu_rare.m), Y = outcome, 
+tune.splsda.mydata <- tune.splsda(X=t(immunosuppressed_otu_rare.m), Y = outcome, 
                                  validation = 'Mfold', dist = 'max.dist', 
                                  measure = "BER", logratio = "CLR",
                                  progressBar = TRUE, test.keepX = list.keepX,
@@ -336,7 +336,7 @@ select.keepX <- tune.splsda.mydata$choice.keepX[1:ncomp] # optimal number of var
 
 #settings from tuning (check ncomp)
 # Final model. Use settings from tuning (ncomp and select.keepX)
-splsda.mydata <- splsda(X=t(immunocompromised_otu_rare.m), Y = outcome, logratio = "CLR", keepX = select.keepX, scale = TRUE, ncomp = ncomp)
+splsda.mydata <- splsda(X=t(immunosuppressed_otu_rare.m), Y = outcome, logratio = "CLR", keepX = select.keepX, scale = TRUE, ncomp = ncomp)
 
 #here is a plot with sample ids
 plotIndiv(splsda.mydata, comp = c(1,2), 
@@ -371,7 +371,7 @@ freqtable1 # this is for component 1
 
 #generate loadings plot of selected OTUs
 splsda.loadings <- plotLoadings(splsda.mydata, comp = 1, 
-             group = immunocompromised_metadata.df$Sampletype_pooled, 
+             group = immunosuppressed_metadata.df$Sampletype_pooled, 
              title = 'Loadings on comp 1', 
              contrib = 'max', 
              method = 'mean',
@@ -386,7 +386,7 @@ splsda.loadings <- plotLoadings(splsda.mydata, comp = 1,
 palette(c("orange", "blue","red"))
 type.col <- palette()[as.numeric(outcome)]
 
-cim(splsda.mydata, comp=1, title ="Component 1", row.names = immunocompromised_metadata.df$Sampletype_pooled, transpose = TRUE, row.sideColors = type.col)
+cim(splsda.mydata, comp=1, title ="Component 1", row.names = immunosuppressed_metadata.df$Sampletype_pooled, transpose = TRUE, row.sideColors = type.col)
 
 
 
@@ -395,7 +395,7 @@ cim(splsda.mydata, comp=1, title ="Component 1", row.names = immunocompromised_m
 # 
 # test_patient_meta.df <- metadata.df[metadata.df$Patient == "MST012",]
 # 
-# # test_patient_meta.df <- metadata.df[metadata.df$Project == "immunocompromised",]
+# # test_patient_meta.df <- metadata.df[metadata.df$Project == "immunosuppressed",]
 # test_patient_otu_rare.m <- otu_rare.m[,rownames(test_patient_meta.df)]
 # dim(test_patient_otu_rare.m)
 # test_patient_otu_rare.m <- test_patient_otu_rare.m[which(apply(X = test_patient_otu_rare.m, MARGIN = 1, FUN = sum) >= 50),]
@@ -448,7 +448,7 @@ cim(splsda.mydata, comp=1, title ="Component 1", row.names = immunocompromised_m
 # 
 # # for each patient (or group)
 # # Get rarified counts for associated samples
-# # filter out features with low counts (David filtered OTUs that compromised less than 200 reads across all samples for a patient)
+# # filter out features with low counts (David filtered OTUs that suppressed less than 200 reads across all samples for a patient)
 # # transpose and maybe add small pseudo count (0.1)
 # #
 # 

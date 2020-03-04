@@ -47,7 +47,7 @@ qc_results.df %>%
   as.data.frame()
 
 #10 samples, 9 patients CORRECT
-# sort(subset(qc_results.df, Project == "immunocompromised" & Sampletype_final == "SCC")$Patient)
+# sort(subset(qc_results.df, Project == "immunosuppressed" & Sampletype_final == "SCC")$Patient)
 
 
 # How many reads were lost from rarefaction and filtering
@@ -105,7 +105,7 @@ domain_proportions.df$Sample <- factor(domain_proportions.df$Sample, levels = sa
 # Set up consistent colours
 domain_colours <- setNames(c(rev(my_colour_pallete_12_soft[1:5]), "grey60"),c("Archaea","Bacteria","Fungal","Mammalia", "Unassigned", "Other")) 
 
-myplot <- ggplot(subset(domain_proportions.df, Project == "immunocompromised"), aes(x = Sample, y = Abundance, fill = Domain)) + 
+myplot <- ggplot(subset(domain_proportions.df, Project == "immunosuppressed"), aes(x = Sample, y = Abundance, fill = Domain)) + 
   # geom_bar(stat ="identity", aes(colour = Sample_retained)) + 
   geom_bar(stat ="identity") + 
   # annotate(geom = "point", x = seq(1,length(unique(domain_proportions.df$Sample))), y = -0.03, size=1,stroke= 0) +
@@ -120,7 +120,7 @@ myplot <- ggplot(subset(domain_proportions.df, Project == "immunocompromised"), 
 
 # annotate(geom='point', x = seq(1,length(unique(patient_data$Sample)), 1), y = -0.03, size=1,stroke= 0, shape = all_sample_shapes, color ="black", fill = all_sample_colours)
   
-ggsave(filename = "Result_figures/exploratory_analysis/immunocompromised_domain_proportions__original.pdf", 
+ggsave(filename = "Result_figures/exploratory_analysis/immunosuppressed_domain_proportions__original.pdf", 
        plot = myplot,
        width = 30,
        height = 10,
@@ -162,7 +162,7 @@ domain_read_counts.df <- melt(domain_read_counts.df,id.vars = c("Sample", "Sampl
 domain_read_counts.df$Domain <- factor(domain_read_counts.df$Domain, levels = c("Archaea","Bacteria","Fungal","Mammalia", "Unassigned", "Other"))
 domain_read_counts.df$Sample <- factor(domain_read_counts.df$Sample, levels = sample_order)
 
-myplot <- ggplot(subset(domain_read_counts.df, Project == "immunocompromised"), aes(x = Sample, y = Read_count, fill = Domain)) + 
+myplot <- ggplot(subset(domain_read_counts.df, Project == "immunosuppressed"), aes(x = Sample, y = Read_count, fill = Domain)) + 
   geom_bar(stat ="identity") + 
   xlab("Sample") +
   ylab("Read count") +
@@ -172,7 +172,7 @@ myplot <- ggplot(subset(domain_read_counts.df, Project == "immunocompromised"), 
   theme(axis.text.x = element_text(angle = 90, size = 4, vjust = 0.5),
         axis.line = element_line(size = .3),
         axis.ticks = element_line(size = .3)) 
-ggsave(filename = "Result_figures/exploratory_analysis/immunocompromised_domain_read_counts__original.pdf", 
+ggsave(filename = "Result_figures/exploratory_analysis/immunosuppressed_domain_read_counts__original.pdf", 
        plot = myplot,
        width = 30,
        height = 10,
@@ -209,7 +209,7 @@ domain_proportions.df <- melt(domain_proportions.df,id.vars = c("Sample", "Sampl
 domain_proportions.df$Domain <- factor(domain_proportions.df$Domain, levels = c("Bacteria","Fungal"))
 domain_proportions.df$Sample <- factor(domain_proportions.df$Sample, levels = sample_order)
 
-myplot <- ggplot(subset(domain_proportions.df, Project == "immunocompromised"), aes(x = Sample, y = Abundance, fill = Domain)) + 
+myplot <- ggplot(subset(domain_proportions.df, Project == "immunosuppressed"), aes(x = Sample, y = Abundance, fill = Domain)) + 
   geom_bar(stat ="identity") + 
   xlab("Sample") +
   ylab("Abundance") +
@@ -220,7 +220,7 @@ myplot <- ggplot(subset(domain_proportions.df, Project == "immunocompromised"), 
         axis.line = element_line(size = .3),
         axis.ticks = element_line(size = .3)) 
 
-ggsave(filename = "Result_figures/exploratory_analysis/immunocompromised_domain_proportions__filtered_rarefied.pdf", 
+ggsave(filename = "Result_figures/exploratory_analysis/immunosuppressed_domain_proportions__filtered_rarefied.pdf", 
        plot = myplot,
        width = 30,
        height = 10,
@@ -255,7 +255,7 @@ domain_read_counts.df <- melt(domain_read_counts.df,id.vars = c("Sample", "Sampl
 domain_read_counts.df$Domain <- factor(domain_read_counts.df$Domain, levels = c("Archaea","Bacteria","Fungal"))
 domain_read_counts.df$Sample <- factor(domain_read_counts.df$Sample, levels = sample_order)
 
-myplot <- ggplot(subset(domain_read_counts.df, Project == "immunocompromised"), aes(x = Sample, y = Read_count, fill = Domain)) + 
+myplot <- ggplot(subset(domain_read_counts.df, Project == "immunosuppressed"), aes(x = Sample, y = Read_count, fill = Domain)) + 
   geom_bar(stat ="identity") + 
   xlab("Sample") +
   ylab("Read count") +
@@ -265,7 +265,7 @@ myplot <- ggplot(subset(domain_read_counts.df, Project == "immunocompromised"), 
   theme(axis.text.x = element_text(angle = 90, size = 4, vjust = 0.5),
         axis.line = element_line(size = .3),
         axis.ticks = element_line(size = .3)) 
-ggsave(filename = "Result_figures/exploratory_analysis/immunocompromised_domain_read_counts__filtered_rarefied.pdf", 
+ggsave(filename = "Result_figures/exploratory_analysis/immunosuppressed_domain_read_counts__filtered_rarefied.pdf", 
        plot = myplot,
        width = 30,
        height = 10,

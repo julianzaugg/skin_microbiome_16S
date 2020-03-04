@@ -143,7 +143,7 @@ forearm_swab_ids <- c("1383","1385","1470","1561","1599","1647","1649")
 forearm_indices <- c("R1383_J1425", "SA6550_J1427", "R1368_J1477", "R1460_J1425", "R1498_J1425", "SB4909_J1426", "SB4911_J1426")
 # R1498_J1425  R1460_J1425  R1368_J1477  SA6550_J1427 SB4909_J1426
 # SB4911_J1426  R1498_J1425 R1383_J1425
-# subset(subset(metadata.df, Project != "immunocompromised")[,c("Sampletype", "Sampletype_final")], Sampletype == "C")
+# subset(subset(metadata.df, Project != "immunosuppressed")[,c("Sampletype", "Sampletype_final")], Sampletype == "C")
 
 # Load filtered/processed abundance data with metadata
 genus_data.df <- read.csv("Result_tables/other/genus_counts_abundances_and_metadata.csv")
@@ -172,7 +172,7 @@ genus_data.df <- genus_data.df[genus_data.df$Sample %in% rownames(metadata.df),]
 # ------------------------------
 # Set levels
 # genus_data.df$Sampletype_pooled <- factor(genus_data.df$Sampletype_pooled, levels = c("LC", "AK","SCC"))
-# genus_data.df$Sampletype_compromised_refined <- factor(genus_data.df$Sampletype_compromised_refined, levels = c("C","LC", "AK","SCC"))
+# genus_data.df$Sampletype_suppressed_refined <- factor(genus_data.df$Sampletype_suppressed_refined, levels = c("C","LC", "AK","SCC"))
 # genus_data.df$Sampletype_final <- factor(genus_data.df$Sampletype_final, levels = c("C","LC", "AK","SCC"))
 genus_data.df$Sampletype_final <- factor(genus_data.df$Sampletype_final, levels = c("SCC","AK","LC", "C"))
 # genus_data.df$Sampletype_final_refined <- factor(genus_data.df$Sampletype_final_refined, levels = c("C", "C_P", "AK", "SCC_PL", "SCC"))
@@ -187,25 +187,25 @@ genus_data.df$taxonomy_label <- with(genus_data.df, paste0(Domain,";", Class,";"
 # gsub("^.*([a-z]__.*?);Unassigned.*","\\1", temp)
 # genus_data.df$taxonomy_label <- gsub(".*(f__.*)", "\\1",genus_data.df$Family_Genus)
 
-# Only snapshot and immunocompromised samples
-# genus_data.df <- subset(genus_data.df, Project == "immunocompromised" | Snapshot_sample_1 == "yes")
-# genus_data.df <- subset(genus_data.df, Project == "immunocompromised" | Snapshot_sample_2 == "yes")
-# genus_data.df <- subset(genus_data.df, Project == "immunocompromised" | Snapshot_sample_3 == "yes")
-# genus_data.df <- subset(genus_data.df, Project == "immunocompromised" | Snapshot_sample_4 == "yes")
-genus_data.df <- subset(genus_data.df, Project == "immunocompromised" | Snapshot_sample_5 == "yes")
-# genus_data.df <- subset(genus_data.df, Project == "immunocompromised" | Snapshot_sample_6 == "yes")
-# genus_data.df <- subset(genus_data.df, Project == "immunocompromised" | Snapshot_sample_7 == "yes")
-# genus_data.df <- subset(genus_data.df, Project == "immunocompromised" | Snapshot_sample_8 == "yes")
+# Only snapshot and immunosuppressed samples
+# genus_data.df <- subset(genus_data.df, Project == "immunosuppressed" | Snapshot_sample_1 == "yes")
+# genus_data.df <- subset(genus_data.df, Project == "immunosuppressed" | Snapshot_sample_2 == "yes")
+# genus_data.df <- subset(genus_data.df, Project == "immunosuppressed" | Snapshot_sample_3 == "yes")
+# genus_data.df <- subset(genus_data.df, Project == "immunosuppressed" | Snapshot_sample_4 == "yes")
+genus_data.df <- subset(genus_data.df, Project == "immunosuppressed" | Snapshot_sample_5 == "yes")
+# genus_data.df <- subset(genus_data.df, Project == "immunosuppressed" | Snapshot_sample_6 == "yes")
+# genus_data.df <- subset(genus_data.df, Project == "immunosuppressed" | Snapshot_sample_7 == "yes")
+# genus_data.df <- subset(genus_data.df, Project == "immunosuppressed" | Snapshot_sample_8 == "yes")
 
-immunocompromised_genus_data.df <- subset(genus_data.df, Project == "immunocompromised")
-immunocompromised_forearm_genus_data.df <- subset(genus_data.df, Project == "immunocompromised" & Sample %in% forearm_indices)
+immunosuppressed_genus_data.df <- subset(genus_data.df, Project == "immunosuppressed")
+immunosuppressed_forearm_genus_data.df <- subset(genus_data.df, Project == "immunosuppressed" & Sample %in% forearm_indices)
 # immunocompetent_genus_data.df <- subset(genus_data.df, Project == "immunocompetent" & Snapshot_sample_1 == "yes")
 immunocompetent_genus_data.df <- subset(genus_data.df, Project == "immunocompetent")
 # write.csv(immunocompetent_genus_data.df, file = "Result_tables/temp.csv", quote = F, row.names = F)
 
-immunocompromised_genus_data.df$Sampletype_final_refined <- factor(immunocompromised_genus_data.df$Sampletype_final_refined, levels = rev(c("C","C_P", "AK", "SCC_PL", "SCC")))
+immunosuppressed_genus_data.df$Sampletype_final_refined <- factor(immunosuppressed_genus_data.df$Sampletype_final_refined, levels = rev(c("C","C_P", "AK", "SCC_PL", "SCC")))
 immunocompetent_genus_data.df$Sampletype_final_refined <- factor(immunocompetent_genus_data.df$Sampletype_final_refined, levels = rev(c("C_P", "AK", "SCC_PL", "SCC")))
-immunocompromised_forearm_genus_data.df$Sampletype_final_refined <- factor(immunocompromised_forearm_genus_data.df$Sampletype_final_refined, levels = rev(c("C","C_P", "AK", "SCC_PL", "SCC")))
+immunosuppressed_forearm_genus_data.df$Sampletype_final_refined <- factor(immunosuppressed_forearm_genus_data.df$Sampletype_final_refined, levels = rev(c("C","C_P", "AK", "SCC_PL", "SCC")))
 
 # ----------------------------------------------------------------------------------------
 # Snapshot analysis
@@ -311,26 +311,26 @@ immunocompromised_forearm_genus_data.df$Sampletype_final_refined <- factor(immun
 # ------------------------------------------------
 
 # Remove samples that do not have a bacterial load CFU value
-immunocompromised_genus_data.df <- immunocompromised_genus_data.df[!is.na(immunocompromised_genus_data.df$Bacterial_load_CFU),]
+immunosuppressed_genus_data.df <- immunosuppressed_genus_data.df[!is.na(immunosuppressed_genus_data.df$Bacterial_load_CFU),]
 # immunocompetent_genus_data.df <- immunocompetent_genus_data.df[!is.na(immunocompetent_genus_data.df$Bacterial_load_CFU),]
 
 # Remove factorisation as we will re-assign later
-# immunocompromised_genus_data.df$taxonomy_label <- as.character(immunocompromised_genus_data.df$taxonomy_label)
+# immunosuppressed_genus_data.df$taxonomy_label <- as.character(immunosuppressed_genus_data.df$taxonomy_label)
 
 # Generate full genus summary for each lesion type
-immunocompromised_genus_summary.df <- generate_taxa_summary(immunocompromised_genus_data.df,
+immunosuppressed_genus_summary.df <- generate_taxa_summary(immunosuppressed_genus_data.df,
                                                             taxa_column = "taxonomy_label", 
                                                             group_by_columns = c("Sampletype_final_refined"))
 immunocompetent_genus_summary.df <- generate_taxa_summary(immunocompetent_genus_data.df,
                                                           taxa_column = "taxonomy_label", 
                                                           group_by_columns = c("Sampletype_final_refined"))
 
-immunocompromised_forearm_genus_summary.df <- generate_taxa_summary(immunocompromised_forearm_genus_data.df,
+immunosuppressed_forearm_genus_summary.df <- generate_taxa_summary(immunosuppressed_forearm_genus_data.df,
                                                                      taxa_column = "taxonomy_label", 
                                                                      group_by_columns = c("Sampletype_final_refined"))
 
 # Identify the top genus for each lesion type
-immunocompromised_top_genus_summary.df <- filter_summary_to_top_n(taxa_summary = immunocompromised_genus_summary.df, 
+immunosuppressed_top_genus_summary.df <- filter_summary_to_top_n(taxa_summary = immunosuppressed_genus_summary.df, 
                                                                   grouping_variables = c("Sampletype_final_refined"),
                                                                   abundance_column = "Mean_relative_abundance_rarefied",
                                                                   my_top_n = 9)
@@ -340,15 +340,15 @@ immunocompetent_top_genus_summary.df <- filter_summary_to_top_n(taxa_summary = i
                                                                 abundance_column = "Mean_relative_abundance_rarefied",
                                                                 my_top_n = 9)
 
-immunocompromised_top_forearm_genus_summary.df <- filter_summary_to_top_n(taxa_summary = immunocompromised_forearm_genus_summary.df, 
+immunosuppressed_top_forearm_genus_summary.df <- filter_summary_to_top_n(taxa_summary = immunosuppressed_forearm_genus_summary.df, 
                                                                      grouping_variables = c("Sampletype_final_refined"),
                                                                      abundance_column = "Mean_relative_abundance_rarefied",
                                                                      my_top_n = 9)
 
 # Create a unique list of the top taxa across all the cohorts / groups
-both_cohorts_lesions_top_genus <- unique(c(immunocompromised_top_genus_summary.df$taxonomy_label, 
+both_cohorts_lesions_top_genus <- unique(c(immunosuppressed_top_genus_summary.df$taxonomy_label, 
                                            immunocompetent_top_genus_summary.df$taxonomy_label,
-                                           immunocompromised_top_forearm_genus_summary.df$taxonomy_label))
+                                           immunosuppressed_top_forearm_genus_summary.df$taxonomy_label))
 
 
 # Create palette based on unique set
@@ -357,88 +357,88 @@ both_cohorts_genus_palette["Other"] <- "grey"
 
 
 # Take the full table and re-label any taxa not in the top to "Other"
-# immunocompromised_genus_data.df[!immunocompromised_genus_data.df$taxonomy_label %in% immunocompromised_genus_data.df$taxonomy_label,]$taxonomy_label <- "Other"
+# immunosuppressed_genus_data.df[!immunosuppressed_genus_data.df$taxonomy_label %in% immunosuppressed_genus_data.df$taxonomy_label,]$taxonomy_label <- "Other"
 # immunocompetent_genus_data.df[!immunocompetent_genus_data.df$taxonomy_label %in% immunocompetent_genus_data.df$taxonomy_label,]$taxonomy_label <- "Other"
-# immunocompromised_forearm_genus_data.df[!immunocompromised_forearm_genus_data.df$taxonomy_label %in% immunocompromised_forearm_genus_data.df$taxonomy_label,]$taxonomy_label <- "Other"
+# immunosuppressed_forearm_genus_data.df[!immunosuppressed_forearm_genus_data.df$taxonomy_label %in% immunosuppressed_forearm_genus_data.df$taxonomy_label,]$taxonomy_label <- "Other"
 
 # Take the full table and re-label any taxa not in the top to "Other"
-immunocompromised_genus_summary.df[!immunocompromised_genus_summary.df$taxonomy_label %in% immunocompromised_top_genus_summary.df$taxonomy_label,]$taxonomy_label <- "Other"
+immunosuppressed_genus_summary.df[!immunosuppressed_genus_summary.df$taxonomy_label %in% immunosuppressed_top_genus_summary.df$taxonomy_label,]$taxonomy_label <- "Other"
 immunocompetent_genus_summary.df[!immunocompetent_genus_summary.df$taxonomy_label %in% immunocompetent_top_genus_summary.df$taxonomy_label,]$taxonomy_label <- "Other"
-immunocompromised_forearm_genus_summary.df[!immunocompromised_forearm_genus_summary.df$taxonomy_label %in% immunocompromised_top_forearm_genus_summary.df$taxonomy_label,]$taxonomy_label <- "Other"
+immunosuppressed_forearm_genus_summary.df[!immunosuppressed_forearm_genus_summary.df$taxonomy_label %in% immunosuppressed_top_forearm_genus_summary.df$taxonomy_label,]$taxonomy_label <- "Other"
 
 # The Other are now a mix of taxa each with different mean etc. values. We need to go back to the original data, re-label just the other taxa and
 # generate a summary table again. The values from this 
-# immunocompromised_genus_data.df
+# immunosuppressed_genus_data.df
 
 # Normalise the Mean_relative_abundance_rarefied values within each lesion
-immunocompromised_genus_summary.df <- immunocompromised_genus_summary.df %>% group_by(Sampletype_final_refined) %>% mutate(Normalised_mean_relative_abundance = Mean_relative_abundance_rarefied/sum(Mean_relative_abundance_rarefied)) %>% as.data.frame()
+immunosuppressed_genus_summary.df <- immunosuppressed_genus_summary.df %>% group_by(Sampletype_final_refined) %>% mutate(Normalised_mean_relative_abundance = Mean_relative_abundance_rarefied/sum(Mean_relative_abundance_rarefied)) %>% as.data.frame()
 immunocompetent_genus_summary.df <- immunocompetent_genus_summary.df %>% group_by(Sampletype_final_refined) %>% mutate(Normalised_mean_relative_abundance = Mean_relative_abundance_rarefied/sum(Mean_relative_abundance_rarefied)) %>% as.data.frame()
-immunocompromised_forearm_genus_summary.df<- immunocompromised_forearm_genus_summary.df %>% group_by(Sampletype_final_refined) %>% mutate(Normalised_mean_relative_abundance = Mean_relative_abundance_rarefied/sum(Mean_relative_abundance_rarefied)) %>% as.data.frame()
+immunosuppressed_forearm_genus_summary.df<- immunosuppressed_forearm_genus_summary.df %>% group_by(Sampletype_final_refined) %>% mutate(Normalised_mean_relative_abundance = Mean_relative_abundance_rarefied/sum(Mean_relative_abundance_rarefied)) %>% as.data.frame()
 
-# immunocompromised_genus_summary.df %>% group_by(Sampletype_final_refined,taxonomy_label) %>% dplyr::summarise(Mean_relative_abundance_rarefied = sum(Mean_relative_abundance_rarefied)) %>% filter(grepl("g__Staph", taxonomy_label))
-# immunocompromised_genus_summary.df %>% group_by(Sampletype_final_refined,taxonomy_label) %>% dplyr::summarise(Summed_relative_abundance_rarefied = sum(Summed_relative_abundance_rarefied)) %>% filter(grepl("g__Staph", taxonomy_label))
+# immunosuppressed_genus_summary.df %>% group_by(Sampletype_final_refined,taxonomy_label) %>% dplyr::summarise(Mean_relative_abundance_rarefied = sum(Mean_relative_abundance_rarefied)) %>% filter(grepl("g__Staph", taxonomy_label))
+# immunosuppressed_genus_summary.df %>% group_by(Sampletype_final_refined,taxonomy_label) %>% dplyr::summarise(Summed_relative_abundance_rarefied = sum(Summed_relative_abundance_rarefied)) %>% filter(grepl("g__Staph", taxonomy_label))
 
 # Need a single entry for the Other group
-immunocompromised_genus_summary.df <-
-  immunocompromised_genus_summary.df %>% 
+immunosuppressed_genus_summary.df <-
+  immunosuppressed_genus_summary.df %>% 
   group_by(Sampletype_final_refined, taxonomy_label) %>% 
   dplyr::summarise(Mean_relative_abundance_rarefied = mean(Mean_relative_abundance_rarefied), Normalised_mean_relative_abundance = sum(Normalised_mean_relative_abundance)) %>% 
   as.data.frame()
 immunocompetent_genus_summary.df <- immunocompetent_genus_summary.df %>% group_by(Sampletype_final_refined, taxonomy_label) %>% dplyr::summarise(Mean_relative_abundance_rarefied = mean(Mean_relative_abundance_rarefied), Normalised_mean_relative_abundance = sum(Normalised_mean_relative_abundance)) %>% as.data.frame()
-immunocompromised_forearm_genus_summary.df <- immunocompromised_forearm_genus_summary.df %>% group_by(Sampletype_final_refined, taxonomy_label) %>% dplyr::summarise(Mean_relative_abundance_rarefied = max(Mean_relative_abundance_rarefied), Normalised_mean_relative_abundance = sum(Normalised_mean_relative_abundance)) %>% as.data.frame()
+immunosuppressed_forearm_genus_summary.df <- immunosuppressed_forearm_genus_summary.df %>% group_by(Sampletype_final_refined, taxonomy_label) %>% dplyr::summarise(Mean_relative_abundance_rarefied = max(Mean_relative_abundance_rarefied), Normalised_mean_relative_abundance = sum(Normalised_mean_relative_abundance)) %>% as.data.frame()
 
-immunocompromised_genus_summary.df[immunocompromised_genus_summary.df$taxonomy_label == "Other","Mean_relative_abundance_rarefied"] <- NA
+immunosuppressed_genus_summary.df[immunosuppressed_genus_summary.df$taxonomy_label == "Other","Mean_relative_abundance_rarefied"] <- NA
 immunocompetent_genus_summary.df[immunocompetent_genus_summary.df$taxonomy_label == "Other","Mean_relative_abundance_rarefied"] <- NA
-immunocompromised_forearm_genus_summary.df[immunocompromised_forearm_genus_summary.df$taxonomy_label == "Other","Mean_relative_abundance_rarefied"] <- NA
+immunosuppressed_forearm_genus_summary.df[immunosuppressed_forearm_genus_summary.df$taxonomy_label == "Other","Mean_relative_abundance_rarefied"] <- NA
 
 # Calculate the mean bacterial loads for each lesion type
-immunocompromised_sf_mean_bacterial_loads.df <- immunocompromised_genus_data.df %>% group_by(Sampletype_final_refined) %>% dplyr::summarise(Mean_bacterial_load = mean(Bacterial_load_CFU, na.rm = T)) %>% as.data.frame()
+immunosuppressed_sf_mean_bacterial_loads.df <- immunosuppressed_genus_data.df %>% group_by(Sampletype_final_refined) %>% dplyr::summarise(Mean_bacterial_load = mean(Bacterial_load_CFU, na.rm = T)) %>% as.data.frame()
 
-rownames(immunocompromised_sf_mean_bacterial_loads.df) <- immunocompromised_sf_mean_bacterial_loads.df$Sampletype_final_refined
+rownames(immunosuppressed_sf_mean_bacterial_loads.df) <- immunosuppressed_sf_mean_bacterial_loads.df$Sampletype_final_refined
 # immunocompetent_sf_mean_bacterial_loads.df <- immunocompetent_genus_data.df %>% group_by(Sampletype_final_refined) %>% dplyr::summarise(Mean_bacterial_load = mean(Bacterial_load_CFU)) %>% as.data.frame()
 # rownames(immunocompetent_sf_mean_bacterial_loads.df) <- immunocompetent_sf_mean_bacterial_loads.df$Sampletype_final_refined
-immunocompromised_forearm_sf_mean_bacterial_loads.df <- immunocompromised_forearm_genus_data.df %>% group_by(Sampletype_final_refined) %>% dplyr::summarise(Mean_bacterial_load = mean(Bacterial_load_CFU)) %>% as.data.frame()
-rownames(immunocompromised_forearm_sf_mean_bacterial_loads.df) <- immunocompromised_forearm_sf_mean_bacterial_loads.df$Sampletype_final_refined
+immunosuppressed_forearm_sf_mean_bacterial_loads.df <- immunosuppressed_forearm_genus_data.df %>% group_by(Sampletype_final_refined) %>% dplyr::summarise(Mean_bacterial_load = mean(Bacterial_load_CFU)) %>% as.data.frame()
+rownames(immunosuppressed_forearm_sf_mean_bacterial_loads.df) <- immunosuppressed_forearm_sf_mean_bacterial_loads.df$Sampletype_final_refined
 
 # Calculate abundance value proportional to bacterial load
-immunocompromised_genus_summary.df$Mean_relative_abundance_rarefied_BL_proportional <-
-  apply(immunocompromised_genus_summary.df, 1, function(x) as.numeric(x["Normalised_mean_relative_abundance"]) * immunocompromised_sf_mean_bacterial_loads.df[x["Sampletype_final_refined"],"Mean_bacterial_load"])
+immunosuppressed_genus_summary.df$Mean_relative_abundance_rarefied_BL_proportional <-
+  apply(immunosuppressed_genus_summary.df, 1, function(x) as.numeric(x["Normalised_mean_relative_abundance"]) * immunosuppressed_sf_mean_bacterial_loads.df[x["Sampletype_final_refined"],"Mean_bacterial_load"])
 
 immunocompetent_genus_summary.df$Mean_relative_abundance_rarefied_BL_proportional <- NA
 #   apply(immunocompetent_genus_summary.df, 1, function(x) as.numeric(x["Mean_relative_abundance_rarefied"]) * immunocompetent_sf_mean_bacterial_loads.df[x["Sampletype_final_refined"],"Mean_bacterial_load"])
 
-immunocompromised_forearm_genus_summary.df$Mean_relative_abundance_rarefied_BL_proportional <-
-  apply(immunocompromised_forearm_genus_summary.df, 1, function(x) as.numeric(x["Normalised_mean_relative_abundance"]) * immunocompromised_forearm_sf_mean_bacterial_loads.df[x["Sampletype_final_refined"],"Mean_bacterial_load"])
+immunosuppressed_forearm_genus_summary.df$Mean_relative_abundance_rarefied_BL_proportional <-
+  apply(immunosuppressed_forearm_genus_summary.df, 1, function(x) as.numeric(x["Normalised_mean_relative_abundance"]) * immunosuppressed_forearm_sf_mean_bacterial_loads.df[x["Sampletype_final_refined"],"Mean_bacterial_load"])
 
 # Get unique list of taxa, ensure "Other" is first
-# most_abundant_taxa <- sort(unique(immunocompromised_genus_summary.df$taxonomy_label))
+# most_abundant_taxa <- sort(unique(immunosuppressed_genus_summary.df$taxonomy_label))
 # most_abundant_taxa <- c("Other", most_abundant_taxa[!grepl("Other", most_abundant_taxa)])
 
 
 # Order taxonomy by the abundance. This is only approximate.
 # The Other group should be last as it is the largest. This is not enforced however, so just be aware of it
-immunocompromised_genus_summary.df <- immunocompromised_genus_summary.df %>% group_by(Sampletype_final_refined) %>% arrange(Normalised_mean_relative_abundance) %>% as.data.frame()
-my_levels <- c(unique(immunocompromised_genus_summary.df$taxonomy_label)[unique(immunocompromised_genus_summary.df$taxonomy_label) != "Other"], "Other")
-immunocompromised_genus_summary.df$taxonomy_label <- factor(immunocompromised_genus_summary.df$taxonomy_label, levels = my_levels)
-immunocompromised_genus_summary.df$value_label <- as.character(lapply(immunocompromised_genus_summary.df$Normalised_mean_relative_abundance, function(x) ifelse(x >= 0.05, paste0(round(x*100), "%"), "")))
+immunosuppressed_genus_summary.df <- immunosuppressed_genus_summary.df %>% group_by(Sampletype_final_refined) %>% arrange(Normalised_mean_relative_abundance) %>% as.data.frame()
+my_levels <- c(unique(immunosuppressed_genus_summary.df$taxonomy_label)[unique(immunosuppressed_genus_summary.df$taxonomy_label) != "Other"], "Other")
+immunosuppressed_genus_summary.df$taxonomy_label <- factor(immunosuppressed_genus_summary.df$taxonomy_label, levels = my_levels)
+immunosuppressed_genus_summary.df$value_label <- as.character(lapply(immunosuppressed_genus_summary.df$Normalised_mean_relative_abundance, function(x) ifelse(x >= 0.05, paste0(round(x*100), "%"), "")))
 
 immunocompetent_genus_summary.df <- immunocompetent_genus_summary.df %>% group_by(Sampletype_final_refined) %>% arrange(Normalised_mean_relative_abundance) %>% as.data.frame()
 my_levels <- c(unique(immunocompetent_genus_summary.df$taxonomy_label)[unique(immunocompetent_genus_summary.df$taxonomy_label) != "Other"], "Other")
 immunocompetent_genus_summary.df$taxonomy_label <- factor(immunocompetent_genus_summary.df$taxonomy_label, levels = my_levels)
 immunocompetent_genus_summary.df$value_label <- as.character(lapply(immunocompetent_genus_summary.df$Normalised_mean_relative_abundance, function(x) ifelse(x >= 0.05, paste0(round(x*100), "%"), "")))
 
-immunocompromised_forearm_genus_summary.df <- immunocompromised_forearm_genus_summary.df %>% group_by(Sampletype_final_refined) %>% arrange(Normalised_mean_relative_abundance) %>% as.data.frame()
-my_levels <- c(unique(immunocompromised_forearm_genus_summary.df$taxonomy_label)[unique(immunocompromised_forearm_genus_summary.df$taxonomy_label) != "Other"], "Other")
-immunocompromised_forearm_genus_summary.df$taxonomy_label <- factor(immunocompromised_forearm_genus_summary.df$taxonomy_label, levels = my_levels)
-immunocompromised_forearm_genus_summary.df$value_label <- as.character(lapply(immunocompromised_forearm_genus_summary.df$Normalised_mean_relative_abundance, function(x) ifelse(x >= 0.05, paste0(round(x*100), "%"), "")))
+immunosuppressed_forearm_genus_summary.df <- immunosuppressed_forearm_genus_summary.df %>% group_by(Sampletype_final_refined) %>% arrange(Normalised_mean_relative_abundance) %>% as.data.frame()
+my_levels <- c(unique(immunosuppressed_forearm_genus_summary.df$taxonomy_label)[unique(immunosuppressed_forearm_genus_summary.df$taxonomy_label) != "Other"], "Other")
+immunosuppressed_forearm_genus_summary.df$taxonomy_label <- factor(immunosuppressed_forearm_genus_summary.df$taxonomy_label, levels = my_levels)
+immunosuppressed_forearm_genus_summary.df$value_label <- as.character(lapply(immunosuppressed_forearm_genus_summary.df$Normalised_mean_relative_abundance, function(x) ifelse(x >= 0.05, paste0(round(x*100), "%"), "")))
 
 
 # Combine the cohorts summaries
-immunocompromised_genus_summary.df$Project <- "immunocompromised"
+immunosuppressed_genus_summary.df$Project <- "immunosuppressed"
 immunocompetent_genus_summary.df$Project <- "immunocompetent"
-immunocompromised_forearm_genus_summary.df$Project <- "immunocompromised_forearm"
+immunosuppressed_forearm_genus_summary.df$Project <- "immunosuppressed_forearm"
 
-both_cohorts_taxa_summary.df <- rbind(immunocompromised_genus_summary.df,immunocompetent_genus_summary.df)
+both_cohorts_taxa_summary.df <- rbind(immunosuppressed_genus_summary.df,immunocompetent_genus_summary.df)
 both_cohorts_taxa_summary.df <- both_cohorts_taxa_summary.df %>% group_by(Sampletype_final_refined) %>% arrange(Normalised_mean_relative_abundance) %>% as.data.frame()
 my_levels <- c(as.character(unique(both_cohorts_taxa_summary.df$taxonomy_label))[as.character(unique(both_cohorts_taxa_summary.df$taxonomy_label)) != "Other"], "Other")
 both_cohorts_taxa_summary.df$taxonomy_label <- factor(both_cohorts_taxa_summary.df$taxonomy_label, levels = my_levels)
@@ -452,8 +452,8 @@ write.csv(both_cohorts_taxa_summary.df[with(both_cohorts_taxa_summary.df, order(
 # ------------------------------------------------------------------------------------
 # Now plot
 
-# Immunocompromised
-immunocompromised_just_legend_plot <- ggplot(immunocompromised_genus_summary.df, aes(x = Sampletype_final_refined, y = Normalised_mean_relative_abundance, fill = taxonomy_label)) +
+# Immunosuppressed
+immunosuppressed_just_legend_plot <- ggplot(immunosuppressed_genus_summary.df, aes(x = Sampletype_final_refined, y = Normalised_mean_relative_abundance, fill = taxonomy_label)) +
   geom_bar(stat = "identity", colour = "black", lwd = .2) +
   coord_flip() +
   scale_fill_manual(values = both_cohorts_genus_palette, name = "Taxonomy", guide = guide_legend(title.position = "top",nrow= 5)) +
@@ -470,9 +470,9 @@ immunocompromised_just_legend_plot <- ggplot(immunocompromised_genus_summary.df,
 #   bars +
 #   guides(fill=guide_legend("ordering"))
 
-# bars <- map(unique(immunocompromised_genus_summary.df$Sampletype_final_refined), ~geom_bar(stat = "identity", position = "stack", data = immunocompromised_genus_summary.df %>% filter(Sampletype_final_refined == .x)))
+# bars <- map(unique(immunosuppressed_genus_summary.df$Sampletype_final_refined), ~geom_bar(stat = "identity", position = "stack", data = immunosuppressed_genus_summary.df %>% filter(Sampletype_final_refined == .x)))
 
-immunocompromised_abundance_plot <- ggplot(immunocompromised_genus_summary.df, aes(x = Sampletype_final_refined, y = Normalised_mean_relative_abundance*100, fill = taxonomy_label)) +
+immunosuppressed_abundance_plot <- ggplot(immunosuppressed_genus_summary.df, aes(x = Sampletype_final_refined, y = Normalised_mean_relative_abundance*100, fill = taxonomy_label)) +
   geom_bar(stat = "identity", colour = "black", lwd = .2) +
   geom_text(aes(label = value_label), position = position_stack(vjust = 0.5), size = 2,color = "grey10") +
   coord_flip() +
@@ -482,7 +482,7 @@ immunocompromised_abundance_plot <- ggplot(immunocompromised_genus_summary.df, a
   ylab("Mean relative abundance (%)") +
   common_theme
 
-immunocompromised_BL_abundance_plot <- ggplot(immunocompromised_genus_summary.df, aes(x = Sampletype_final_refined, y = Mean_relative_abundance_rarefied_BL_proportional, fill = taxonomy_label)) +
+immunosuppressed_BL_abundance_plot <- ggplot(immunosuppressed_genus_summary.df, aes(x = Sampletype_final_refined, y = Mean_relative_abundance_rarefied_BL_proportional, fill = taxonomy_label)) +
   geom_bar(stat = "identity", colour = "black", lwd = .2) + 
   coord_flip() +
   scale_fill_manual(values = both_cohorts_genus_palette,guide = F) +
@@ -496,7 +496,7 @@ immunocompromised_BL_abundance_plot <- ggplot(immunocompromised_genus_summary.df
 
 
 # Extract the legend
-my_legend_taxa <- cowplot::get_legend(immunocompromised_just_legend_plot + 
+my_legend_taxa <- cowplot::get_legend(immunosuppressed_just_legend_plot + 
                                         theme(
                                           legend.position = "right",
                                           legend.text = element_text(size = 6),
@@ -509,9 +509,9 @@ my_legend_taxa <- cowplot::get_legend(immunocompromised_just_legend_plot +
 )
 
 # Make a grid of plots with the list of plots for both cohorts
-grid_plot <- plot_grid(plotlist = list(immunocompromised_abundance_plot, NULL, immunocompromised_BL_abundance_plot),ncol = 3,nrow=1, rel_widths = c(1,-.12,1),align = "hv")
+grid_plot <- plot_grid(plotlist = list(immunosuppressed_abundance_plot, NULL, immunosuppressed_BL_abundance_plot),ncol = 3,nrow=1, rel_widths = c(1,-.12,1),align = "hv")
 grid_plot <- plot_grid(grid_plot, my_legend_taxa, rel_heights = c(1,0.4), ncol = 1, nrow=2)
-ggsave(filename = "Result_figures/abundance_analysis_plots/immunocompromised_sampletype_relative_abundance_and_bacterial_load.pdf", plot = grid_plot, width = 30, height = 8, units = "cm")
+ggsave(filename = "Result_figures/abundance_analysis_plots/immunosuppressed_sampletype_relative_abundance_and_bacterial_load.pdf", plot = grid_plot, width = 30, height = 8, units = "cm")
 
 # ----------------------------------------
 # Immunocompentent
@@ -590,7 +590,7 @@ my_legend_taxa <- cowplot::get_legend(combined_just_legend_plot +
                                           # plot.margin = unit(c(0, 0, 0, 0), "cm")
                                         )
 )
-compromised_title <- ggdraw() + 
+suppressed_title <- ggdraw() + 
   draw_label(
     "Immunosuppressed",
     fontface = 'bold',
@@ -607,8 +607,8 @@ competent_title <- ggdraw() +
   )
 
 
-grid_plot <- plot_grid(plotlist = list(immunocompromised_abundance_plot + ylab(""),NULL,immunocompromised_BL_abundance_plot+ylab("")), ncol = 3, nrow =1, rel_widths = c(1,-.05,1),align = "hv")
-grid_plot <- plot_grid(compromised_title, grid_plot,ncol = 1,rel_heights = c(0.1, 1))
+grid_plot <- plot_grid(plotlist = list(immunosuppressed_abundance_plot + ylab(""),NULL,immunosuppressed_BL_abundance_plot+ylab("")), ncol = 3, nrow =1, rel_widths = c(1,-.05,1),align = "hv")
+grid_plot <- plot_grid(suppressed_title, grid_plot,ncol = 1,rel_heights = c(0.1, 1))
 grid_plot2 <- plot_grid(plotlist = list(immunocompentent_abundance_plot,NULL,immunocompentent_BL_abundance_plot), ncol = 3, nrow =1, rel_widths = c(1,-.05,1),align = "hv")
 grid_plot2 <- plot_grid(competent_title, grid_plot2,ncol = 1,rel_heights = c(0.1, 1))
 
@@ -618,7 +618,7 @@ ggsave(filename = "Result_figures/abundance_analysis_plots/both_cohorts_samplety
 
 # 
 # 
-# grid_plot <- plot_grid(plotlist = list(immunocompromised_abundance_plot + ylab(""),NULL,immunocompromised_BL_abundance_plot+ylab(""),
+# grid_plot <- plot_grid(plotlist = list(immunosuppressed_abundance_plot + ylab(""),NULL,immunosuppressed_BL_abundance_plot+ylab(""),
 #                           NULL, NULL,NULL,
 #                           immunocompentent_abundance_plot,NULL, immunocompentent_BL_abundance_plot), ncol = 3, nrow=3, rel_widths = c(1,-0.1,1), rel_heights = c(1,-0.15,0.9), align = "hv")
 # 
@@ -629,7 +629,7 @@ ggsave(filename = "Result_figures/abundance_analysis_plots/both_cohorts_samplety
 # ---------------------------------------------------------------------------------
 # Now create figure for just forearm samples
 
-immunocompromised_forearm_just_legend_plot <- ggplot(immunocompromised_forearm_genus_summary.df, aes(x = Sampletype_final_refined, y = Normalised_mean_relative_abundance, fill = taxonomy_label)) +
+immunosuppressed_forearm_just_legend_plot <- ggplot(immunosuppressed_forearm_genus_summary.df, aes(x = Sampletype_final_refined, y = Normalised_mean_relative_abundance, fill = taxonomy_label)) +
   geom_bar(stat = "identity", colour = "black", lwd = .2) +
   coord_flip() +
   scale_fill_manual(values = both_cohorts_genus_palette, name = "Taxonomy", guide = guide_legend(title.position = "top",nrow= 2)) +
@@ -637,7 +637,7 @@ immunocompromised_forearm_just_legend_plot <- ggplot(immunocompromised_forearm_g
   ylab("Mean relative abundance") +
   common_theme 
 
-immunocompromised_forearm_abundance_plot <- ggplot(immunocompromised_forearm_genus_summary.df, aes(x = Sampletype_final_refined, y = Normalised_mean_relative_abundance*100, fill = taxonomy_label)) +
+immunosuppressed_forearm_abundance_plot <- ggplot(immunosuppressed_forearm_genus_summary.df, aes(x = Sampletype_final_refined, y = Normalised_mean_relative_abundance*100, fill = taxonomy_label)) +
   geom_bar(stat = "identity", colour = "black", lwd = .2) +
   # geom_text(aes(label = value_label), position = position_stack(vjust = 0.5), size = 2,color = "grey10") + 
   coord_flip() +
@@ -647,7 +647,7 @@ immunocompromised_forearm_abundance_plot <- ggplot(immunocompromised_forearm_gen
   ylab("Mean relative abundance (%)") +
   common_theme
 
-immunocompromised_forearm_BL_abundance_plot <- ggplot(immunocompromised_forearm_genus_summary.df, aes(x = Sampletype_final_refined, y = Mean_relative_abundance_rarefied_BL_proportional, fill = taxonomy_label)) +
+immunosuppressed_forearm_BL_abundance_plot <- ggplot(immunosuppressed_forearm_genus_summary.df, aes(x = Sampletype_final_refined, y = Mean_relative_abundance_rarefied_BL_proportional, fill = taxonomy_label)) +
   geom_bar(stat = "identity", colour = "black", lwd = .2) + 
   coord_flip() +
   scale_fill_manual(values = both_cohorts_genus_palette,guide = F) +
@@ -661,7 +661,7 @@ immunocompromised_forearm_BL_abundance_plot <- ggplot(immunocompromised_forearm_
 
 
 # Extract the legend
-my_legend_taxa <- cowplot::get_legend(immunocompromised_forearm_just_legend_plot + 
+my_legend_taxa <- cowplot::get_legend(immunosuppressed_forearm_just_legend_plot + 
                                         theme(
                                           legend.position = "right",
                                           legend.text = element_text(size = 6),
@@ -674,7 +674,7 @@ my_legend_taxa <- cowplot::get_legend(immunocompromised_forearm_just_legend_plot
 )
 
 # Make a grid of plots with the list of plots for both cohorts
-grid_plot <- plot_grid(plotlist = list(immunocompromised_forearm_abundance_plot, NULL, immunocompromised_forearm_BL_abundance_plot),
+grid_plot <- plot_grid(plotlist = list(immunosuppressed_forearm_abundance_plot, NULL, immunosuppressed_forearm_BL_abundance_plot),
                        ncol = 3,nrow=1, rel_widths = c(1,-.08,1),align = "hv")
 mytitle <- ggdraw() + 
   draw_label(
@@ -691,6 +691,6 @@ grid_plot <- plot_grid(
 )
 
 grid_plot <- plot_grid(grid_plot, my_legend_taxa, rel_heights = c(1,0.4), ncol = 1, nrow=2)
-ggsave(filename = "Result_figures/abundance_analysis_plots/immunocompromised_forearm_sampletype_relative_abundance_and_bacterial_load.pdf", plot = grid_plot, width = 30, height = 4, units = "cm")
+ggsave(filename = "Result_figures/abundance_analysis_plots/immunosuppressed_forearm_sampletype_relative_abundance_and_bacterial_load.pdf", plot = grid_plot, width = 30, height = 4, units = "cm")
 
 

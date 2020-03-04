@@ -76,7 +76,7 @@ dim(metadata.df)
 dim(genus.m)
 dim(otu.m)
 dim(subset(metadata.df, Cohort == "immunocompetent"))
-dim(subset(metadata.df, Cohort == "immunocompromised"))
+dim(subset(metadata.df, Cohort == "immunosuppressed"))
 
 genus_data.df <- read.csv("Result_tables/combined_counts_abundances_and_metadata_tables/Genus_counts_abundances_and_metadata.csv",header = T)
 length(unique(genus_data.df$Sample))
@@ -101,11 +101,11 @@ metadata.df$Gender <- factor(metadata.df$Gender)
 colour_columns <- names(metadata.df)[grepl("colour", names(metadata.df))]
 metadata.df[colour_columns] <- lapply(metadata.df[colour_columns], factor)
 
-# Filter to just immunocompromised or snapshot samples
-metadata.df <- subset(metadata.df, Cohort == "immunocompromised" | Snapshot_sample_5 == "yes")
-dim(subset(metadata.df, Cohort == "immunocompromised" | Snapshot_sample_5 == "yes"))
+# Filter to just immunosuppressed or snapshot samples
+metadata.df <- subset(metadata.df, Cohort == "immunosuppressed" | Snapshot_sample_5 == "yes")
+dim(subset(metadata.df, Cohort == "immunosuppressed" | Snapshot_sample_5 == "yes"))
 dim(subset(metadata.df, Snapshot_sample_5 == "yes"))
-dim(subset(metadata.df,  Cohort == "immunocompromised"))
+dim(subset(metadata.df,  Cohort == "immunosuppressed"))
 
 # Order the metadata.df by the index value
 metadata.df <- metadata.df[order(metadata.df$Index),]
@@ -218,10 +218,10 @@ immunocompetent_genus_pca <- rda(t(genus_clr.m[,immunocompetent_samples]))
 immunocompetent_samples_2 <- as.character(metadata.df[which(!metadata.df$Patient %in% c("MS003", "MS012","MS013","MS014") & metadata.df$Cohort == "immunocompetent"),]$Index)
 immunocompetent_genus_pca2 <- rda(t(genus_clr.m[,immunocompetent_samples_2]))
 
-# Immunocompromised, all sample types
-immunocompromised_samples <- as.character(metadata.df$Index[metadata.df$Cohort == "immunocompromised"])
-immunocompromised_otu_pca <- rda(t(otu_clr.m[,immunocompromised_samples]))
-immunocompromised_genus_pca <- rda(t(genus_clr.m[,immunocompromised_samples]))
+# Immunosuppressed, all sample types
+immunosuppressed_samples <- as.character(metadata.df$Index[metadata.df$Cohort == "immunosuppressed"])
+immunosuppressed_otu_pca <- rda(t(otu_clr.m[,immunosuppressed_samples]))
+immunosuppressed_genus_pca <- rda(t(genus_clr.m[,immunosuppressed_samples]))
 
 temp <- calculate_PC_abundance_correlations(genus_pca, mydata.df = genus_data.df,taxa_column = "taxonomy_genus",variables = discrete_variables)
 # temp[order(temp$PC1_contribution_percentage,decreasing = T),]
@@ -444,15 +444,15 @@ generate_pca(immunocompetent_genus_pca2, mymetadata = metadata.df[immunocompeten
              filename = paste0("Result_figures/ordination_plots/genus/immunocompetent_patient2.pdf"))
 
 # ---------------------------------------------------------------------------------------------------------
-# Immunocompromised, all sample types
+# Immunosuppressed, all sample types
 # Lesion_type_final
-generate_pca(immunocompromised_genus_pca, mymetadata = metadata.df[immunocompromised_samples,],
+generate_pca(immunosuppressed_genus_pca, mymetadata = metadata.df[immunosuppressed_samples,],
              plot_height = 5, plot_width = 5,
              legend_x = -5, legend_y = 8,
              point_size = .7, point_line_thickness = 0.3,point_alpha =.9,
              legend_title = "Lesion type",
              legend_cex = .5,
-             plot_title = "immunocompromised cohort, all lesion types",
+             plot_title = "immunosuppressed cohort, all lesion types",
              limits = c(-5,5,-5,8),
              plot_spiders = F,
              plot_ellipses = F,
@@ -468,17 +468,17 @@ generate_pca(immunocompromised_genus_pca, mymetadata = metadata.df[immunocomprom
              plot_arrows = F,arrow_alpha = .7, arrow_colour = "grey20",arrow_scalar = 2,arrow_thickness = .7,
              label_arrows = T, arrow_label_size = .5, arrow_label_colour = "black", arrow_label_font_type = 1,
              specie_labeller_function = genus_relabeller_function,arrow_label_offset = 0,
-             filename = paste0("Result_figures/ordination_plots/genus/immunocompromised_lesion_type_refined.pdf"))
+             filename = paste0("Result_figures/ordination_plots/genus/immunosuppressed_lesion_type_refined.pdf"))
 
 
 # Patient ***
-generate_pca(immunocompromised_genus_pca, mymetadata = metadata.df[immunocompromised_samples,],
+generate_pca(immunosuppressed_genus_pca, mymetadata = metadata.df[immunosuppressed_samples,],
              plot_height = 5, plot_width = 5,
              legend_x = -5, legend_y = 8,
              point_size = .7, point_line_thickness = 0.3,point_alpha =.9,
              legend_title = "Patient",
              legend_cex = .5,
-             plot_title = "immunocompromised cohort, all lesion types",
+             plot_title = "immunosuppressed cohort, all lesion types",
              limits = c(-4,5,-5,8),
              plot_spiders = F,
              plot_ellipses = T,
@@ -495,15 +495,15 @@ generate_pca(immunocompromised_genus_pca, mymetadata = metadata.df[immunocomprom
              plot_arrows = F,arrow_alpha = .7, arrow_colour = "grey20",arrow_scalar = 2,arrow_thickness = .7,
              label_arrows = T, arrow_label_size = .5, arrow_label_colour = "black", arrow_label_font_type = 1,
              specie_labeller_function = genus_relabeller_function,arrow_label_offset = 0,
-             filename = paste0("Result_figures/ordination_plots/genus/immunocompromised_patient.pdf"))
+             filename = paste0("Result_figures/ordination_plots/genus/immunosuppressed_patient.pdf"))
 
-generate_pca(immunocompromised_otu_pca, mymetadata = metadata.df[immunocompromised_samples,],
+generate_pca(immunosuppressed_otu_pca, mymetadata = metadata.df[immunosuppressed_samples,],
              plot_height = 5, plot_width = 5,
              legend_x = -5, legend_y = 8,
              point_size = .7, point_line_thickness = 0.3,point_alpha =.9,
              legend_title = "Patient",
              legend_cex = .5,
-             plot_title = "immunocompromised cohort, all lesion types",
+             plot_title = "immunosuppressed cohort, all lesion types",
              limits = c(-4,7,-8,8),
              plot_spiders = F,
              plot_ellipses = T,
@@ -520,18 +520,18 @@ generate_pca(immunocompromised_otu_pca, mymetadata = metadata.df[immunocompromis
              plot_arrows = F,arrow_alpha = .7, arrow_colour = "grey20",arrow_scalar = 3,arrow_thickness = .7,
              label_arrows = T, arrow_label_size = .2, arrow_label_colour = "black", arrow_label_font_type = 1,
              specie_labeller_function = otu_relabeller_function,arrow_label_offset = 0,
-             filename = paste0("Result_figures/ordination_plots/otu/immunocompromised_patient.pdf"))
+             filename = paste0("Result_figures/ordination_plots/otu/immunosuppressed_patient.pdf"))
 
 
 # Gender
 source("Code/helper_functions.R")
-generate_pca(immunocompromised_genus_pca, mymetadata = metadata.df[immunocompromised_samples,],
+generate_pca(immunosuppressed_genus_pca, mymetadata = metadata.df[immunosuppressed_samples,],
              plot_height = 5, plot_width = 5,
              legend_x = -5, legend_y = 8,
              point_size = .7, point_line_thickness = 0.3,point_alpha =.9,
              legend_title = "Gender",
              legend_cex = .5,
-             plot_title = "immunocompromised cohort, all lesion types",
+             plot_title = "immunosuppressed cohort, all lesion types",
              limits = c(-5,5,-5,8),
              plot_spiders = F,
              plot_ellipses = F,
@@ -548,7 +548,7 @@ generate_pca(immunocompromised_genus_pca, mymetadata = metadata.df[immunocomprom
              plot_arrows = F,arrow_alpha = .7, arrow_colour = "grey20",arrow_scalar = 2,arrow_thickness = .7,
              label_arrows = T, arrow_label_size = .5, arrow_label_colour = "black", arrow_label_font_type = 1,
              specie_labeller_function = genus_relabeller_function,arrow_label_offset = 0,
-             filename = paste0("Result_figures/ordination_plots/genus/immunocompromised_gender.pdf"))
+             filename = paste0("Result_figures/ordination_plots/genus/immunosuppressed_gender.pdf"))
 
 # ---------------------------------------------------------------------------------------------------------
 
@@ -662,10 +662,8 @@ for (cohort in unique(metadata.df$Cohort)){
 make_publication_plot <- function(){
   source("Code/helper_functions.R")
   graphics.off()
-  svg(filename = "Paper_drafts/figures_results_for_publication/lesion_type_patient_genus_PCA_for_publication.svg",
-      width = 8,height = 8)
-  # pdf(file = "Paper_drafts/figures_results_for_publication/lesion_type_patient_genus_PCA_for_publication.pdf",
-      # width = 8,height = 8)
+  svg(filename = "Paper_drafts/figures_results_for_publication/lesion_type_patient_genus_PCA_for_publication.svg",width = 8,height = 7)
+  # pdf(file = "Paper_drafts/figures_results_for_publication/lesion_type_patient_genus_PCA_for_publication.pdf",width = 8,height = 7)
   # par(mfrow = c(2,2))
   # par(mfrow = c(2,2),
   #     mar = c(1,10,5,1))
@@ -674,7 +672,7 @@ make_publication_plot <- function(){
   # plot.new()
   par(mar = c(1,4,3,1))
   # par(bg = rgb(61, 55, 72, maxColorValue = 255))
-  generate_pca(immunocompromised_genus_pca, mymetadata = metadata.df[immunocompromised_samples,],
+  generate_pca(immunosuppressed_genus_pca, mymetadata = metadata.df[immunosuppressed_samples,],
                plot_height = 5, plot_width = 5,
                legend_x = -5, legend_y = 8,
                point_size = .7, point_line_thickness = 0.3,point_alpha =.9,
@@ -738,7 +736,7 @@ make_publication_plot <- function(){
   title(outer=F,adj=.5,main="Immunocompetent",cex.main=4,col.main="black",font.main=2,line=1, cex.main =1.5, family = "serif")
   
   par(mar = c(4,4,0,1))
-  generate_pca(immunocompromised_genus_pca, mymetadata = metadata.df[immunocompromised_samples,],
+  generate_pca(immunosuppressed_genus_pca, mymetadata = metadata.df[immunosuppressed_samples,],
                plot_height = 5, plot_width = 5,
                legend_x = -5, legend_y = 8,
                point_size = .7, point_line_thickness = 0.3,point_alpha =.9,

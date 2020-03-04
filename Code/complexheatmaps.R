@@ -163,11 +163,11 @@ metadata.df$Index <- gsub("_J.*", "", metadata.df$Index)
 samples_removed <- metadata.df$Index[!metadata.df$Index %in% colnames(otu_genus_rare_log.m)]
 metadata.df <- metadata.df[! metadata.df$Index %in% samples_removed,]
 
-# genus_data.df <- subset(genus_data.df, Project == "immunocompromised" | Snapshot_sample == "yes")
-metadata.df <- subset(metadata.df, Project == "immunocompromised" | Snapshot_sample_1 == "yes")
-# genus_data.df <- subset(genus_data.df, Project == "immunocompromised" | Snapshot_sample_2 == "yes")
-# genus_data.df <- subset(genus_data.df, Project == "immunocompromised" | Snapshot_sample_3 == "yes")
-# genus_data.df <- subset(genus_data.df, Project == "immunocompromised" | Snapshot_sample_4 == "yes")
+# genus_data.df <- subset(genus_data.df, Project == "immunosuppressed" | Snapshot_sample == "yes")
+metadata.df <- subset(metadata.df, Project == "immunosuppressed" | Snapshot_sample_1 == "yes")
+# genus_data.df <- subset(genus_data.df, Project == "immunosuppressed" | Snapshot_sample_2 == "yes")
+# genus_data.df <- subset(genus_data.df, Project == "immunosuppressed" | Snapshot_sample_3 == "yes")
+# genus_data.df <- subset(genus_data.df, Project == "immunosuppressed" | Snapshot_sample_4 == "yes")
 
 # Remove samples that are not in the metadata.
 # otu_rare_log.m <- otu_rare_log.m[,colnames(otu_rare_log.m) %in% metadata.df$Index]
@@ -422,12 +422,12 @@ make_heatmap(heatmap_family_rel.m,
              palette_choice = 'blue'
 )
 
-# family, immunocompromised
+# family, immunosuppressed
 # discrete_variables <- c("Patient","Sampletype_final","Number_of_meds","Fitzpatrick_skin_type","Patient_group")
 discrete_variables <- c("Patient","Sampletype_final")
 make_heatmap(heatmap_family_rel.m, 
-             subset(metadata.df, Project == "immunocompromised"),
-             filename = paste0("Result_figures/heatmaps/family_relative_abundance_immunocompromised_clustered.pdf"),
+             subset(metadata.df, Project == "immunosuppressed"),
+             filename = paste0("Result_figures/heatmaps/family_relative_abundance_immunosuppressed_clustered.pdf"),
              variables = discrete_variables,
              plot_height = 10,
              plot_width = 25,
@@ -438,8 +438,8 @@ make_heatmap(heatmap_family_rel.m,
 )
 # discrete_variables <- c("Sampletype_pooled")
 make_heatmap(heatmap_family_rel.m, 
-             subset(metadata.df, Project == "immunocompromised"),
-             filename = paste0("Result_figures/heatmaps/family_relative_abundance_immunocompromised.pdf"),
+             subset(metadata.df, Project == "immunosuppressed"),
+             filename = paste0("Result_figures/heatmaps/family_relative_abundance_immunosuppressed.pdf"),
              variables = discrete_variables,
              plot_height = 10,
              plot_width = 25,
@@ -541,9 +541,9 @@ make_heatmap(heatmap_otu_rel.m,
 
 # Compromised
 make_heatmap(heatmap_otu_rel.m, 
-             subset(metadata.df, Project == "immunocompromised"),
+             subset(metadata.df, Project == "immunosuppressed"),
              my_row_labels = row_labels.df,
-             filename = paste0("Result_figures/heatmaps/otu_relative_abundance_immunocompromised.pdf"),
+             filename = paste0("Result_figures/heatmaps/otu_relative_abundance_immunosuppressed.pdf"),
              variables = discrete_variables,
              plot_height = 10,
              plot_width = 25,
@@ -554,9 +554,9 @@ make_heatmap(heatmap_otu_rel.m,
 )
 
 make_heatmap(heatmap_otu_rel.m, 
-             subset(metadata.df, Project == "immunocompromised"),
+             subset(metadata.df, Project == "immunosuppressed"),
              my_row_labels = row_labels.df,
-             filename = paste0("Result_figures/heatmaps/otu_relative_abundance_immunocompromised_clustered.pdf"),
+             filename = paste0("Result_figures/heatmaps/otu_relative_abundance_immunosuppressed_clustered.pdf"),
              variables = discrete_variables,
              plot_height = 10,
              plot_width = 25,
@@ -626,8 +626,8 @@ make_heatmap(heatmap_genus_rel.m,
 
 # Compromised
 make_heatmap(heatmap_genus_rel.m, 
-             subset(metadata.df, Project == "immunocompromised"),
-             filename = paste0("Result_figures/heatmaps/genus_relative_abundance_immunocompromised.pdf"),
+             subset(metadata.df, Project == "immunosuppressed"),
+             filename = paste0("Result_figures/heatmaps/genus_relative_abundance_immunosuppressed.pdf"),
              variables = discrete_variables,
              plot_height = 10,
              plot_width = 25,
@@ -638,8 +638,8 @@ make_heatmap(heatmap_genus_rel.m,
 )
 
 make_heatmap(heatmap_genus_rel.m, 
-             subset(metadata.df, Project == "immunocompromised"),
-             filename = paste0("Result_figures/heatmaps/genus_relative_abundance_immunocompromised_clustered.pdf"),
+             subset(metadata.df, Project == "immunosuppressed"),
+             filename = paste0("Result_figures/heatmaps/genus_relative_abundance_immunosuppressed_clustered.pdf"),
              variables = discrete_variables,
              plot_height = 10,
              plot_width = 25,
@@ -697,20 +697,20 @@ make_heatmap(patient_deseq_heatmap_otu_rel.m,
 
 
 discrete_variables <- c("Patient","Sampletype","Sampletype_pooled")
-# Immunocompromised
-patient_deseq_heatmap_otu_rel_compromised.m <- otu_rare_rel.m[patient_deseq.df[grepl("MST", patient_deseq.df$Variable),]$OTU,]
+# Immunosuppressed
+patient_deseq_heatmap_otu_rel_suppressed.m <- otu_rare_rel.m[patient_deseq.df[grepl("MST", patient_deseq.df$Variable),]$OTU,]
 patient_deseq_heatmap_otu_rel_competent.m <- otu_rare_rel.m[patient_deseq.df[!grepl("MST", patient_deseq.df$Variable),]$OTU,]
 
-new_row_names_compromised <- unlist(lapply(rownames(patient_deseq_heatmap_otu_rel_compromised.m), function(x) {paste0(otu_taxonomy_map.df[otu_taxonomy_map.df$OTU.ID == x,]$Genus,"; ", x)}))
-row_labels_compromised.df <- data.frame("Row_label" = rownames(patient_deseq_heatmap_otu_rel_compromised.m), "Row_label_new" = new_row_names_compromised)
+new_row_names_suppressed <- unlist(lapply(rownames(patient_deseq_heatmap_otu_rel_suppressed.m), function(x) {paste0(otu_taxonomy_map.df[otu_taxonomy_map.df$OTU.ID == x,]$Genus,"; ", x)}))
+row_labels_suppressed.df <- data.frame("Row_label" = rownames(patient_deseq_heatmap_otu_rel_suppressed.m), "Row_label_new" = new_row_names_suppressed)
 new_row_names_competent <- unlist(lapply(rownames(patient_deseq_heatmap_otu_rel_competent.m), function(x) {paste0(otu_taxonomy_map.df[otu_taxonomy_map.df$OTU.ID == x,]$Genus,"; ", x)}))
 row_labels_competent.df <- data.frame("Row_label" = rownames(patient_deseq_heatmap_otu_rel_competent.m), "Row_label_new" = new_row_names_competent)
 
 
-make_heatmap(patient_deseq_heatmap_otu_rel_compromised.m, 
-             subset(metadata.df, Project == "immunocompromised"),
-             my_row_labels = row_labels_compromised.df,
-             filename = paste0("Result_figures/heatmaps/patient_immunocompromised_deseq_relative_abundance_clustered.pdf"),
+make_heatmap(patient_deseq_heatmap_otu_rel_suppressed.m, 
+             subset(metadata.df, Project == "immunosuppressed"),
+             my_row_labels = row_labels_suppressed.df,
+             filename = paste0("Result_figures/heatmaps/patient_immunosuppressed_deseq_relative_abundance_clustered.pdf"),
              variables = discrete_variables,
              plot_height = 15,
              plot_width = 25,
@@ -724,7 +724,7 @@ make_heatmap(patient_deseq_heatmap_otu_rel_compromised.m,
 
 make_heatmap(patient_deseq_heatmap_otu_rel_competent.m, 
              subset(metadata.df, Project == "immunocompetent"),
-             my_row_labels = row_labels_compromised.df,
+             my_row_labels = row_labels_suppressed.df,
              filename = paste0("Result_figures/heatmaps/patient_immunocompetent_deseq_relative_abundance_clustered.pdf"),
              variables = discrete_variables,
              plot_height = 8,
@@ -752,19 +752,19 @@ df2matrix <- function(mydataframe){
 genus_data.df <- read.csv("Result_tables/other/Genus_counts_abundances_and_metadata.csv",header = T)
 genus_data.df <- subset(genus_data.df, Sampletype_final_refined != "negative")
 immunocompetent_genus_data.df <- subset(genus_data.df, Project == "immunocompetent" & Snapshot_sample_5 == "yes")
-immunocompromised_genus_data.df <- subset(genus_data.df, Project == "immunocompromised")
+immunosuppressed_genus_data.df <- subset(genus_data.df, Project == "immunosuppressed")
 
-immunocompromised_genus_taxa_summary.df <- generate_taxa_summary(mydata = immunocompromised_genus_data.df,
+immunosuppressed_genus_taxa_summary.df <- generate_taxa_summary(mydata = immunosuppressed_genus_data.df,
                                                taxa_column = "taxonomy_genus",
                                                group_by_columns = c("Project", "Sampletype_final_refined"))
 
-immunocompromised_genus_taxa_summary_filtered.df <- filter_summary_to_top_n(taxa_summary = immunocompromised_genus_taxa_summary.df, 
+immunosuppressed_genus_taxa_summary_filtered.df <- filter_summary_to_top_n(taxa_summary = immunosuppressed_genus_taxa_summary.df, 
                                                           grouping_variables = c("Sampletype_final_refined"),
                                                           abundance_column = "Mean_relative_abundance",
                                                           my_top_n = 9)
 
-temp <- immunocompromised_genus_taxa_summary.df[c("Sampletype_final_refined", "taxonomy_genus","Mean_relative_abundance")]
-temp <- temp[temp$taxonomy_genus %in% immunocompromised_genus_taxa_summary_filtered.df$taxonomy_genus,]
+temp <- immunosuppressed_genus_taxa_summary.df[c("Sampletype_final_refined", "taxonomy_genus","Mean_relative_abundance")]
+temp <- temp[temp$taxonomy_genus %in% immunosuppressed_genus_taxa_summary_filtered.df$taxonomy_genus,]
 temp <- temp %>% spread(Sampletype_final_refined, Mean_relative_abundance,fill = 0)
 temp <- df2matrix(temp)
 

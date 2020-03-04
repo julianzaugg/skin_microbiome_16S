@@ -72,7 +72,9 @@ lesion_palette_10 <- c("#d4a33e","#5ca876","#687fc9","#ce5944","#51b2d0","#9b62c
 # Cohort / Project
 #335fa5 - blue
 #c12a2a - red
-cohort_palette_2 <- c("#335fa5", "#c12a2a")
+#61b4c1 blue lighter
+#c93434 red lighter
+cohort_palette_2 <- c("#61b4c1", "#c93434")
 
 # Length of suppression pallete
 length_of_suppression_palette <- c("#78a34a","#a464c4","#ce624c")
@@ -121,8 +123,18 @@ dir.create(file.path("./Result_other", "sequences"), showWarnings = FALSE,recurs
 
 dir.create(file.path("./Result_figures", "abundance_analysis_plots"), showWarnings = FALSE)
 dir.create(file.path("./Result_figures/abundance_analysis_plots/boxplots"), showWarnings = FALSE, recursive = T)
-# dir.create(file.path("./Result_figures/abundance_analysis_plots/boxplots/Cohort_lesion_type_refined"), showWarnings = FALSE, recursive = T)
-# dir.create(file.path("./Result_figures/abundance_analysis_plots/boxplots/Cohort"), showWarnings = FALSE, recursive = T)
+dir.create(file.path("./Result_figures/abundance_analysis_plots/boxplots/Cohort/otu"), showWarnings = FALSE, recursive = T)
+dir.create(file.path("./Result_figures/abundance_analysis_plots/boxplots/Cohort/species"), showWarnings = FALSE, recursive = T)
+dir.create(file.path("./Result_figures/abundance_analysis_plots/boxplots/Cohort/genus"), showWarnings = FALSE, recursive = T)
+dir.create(file.path("./Result_figures/abundance_analysis_plots/boxplots/Lesion_type_refined/otu"), showWarnings = FALSE, recursive = T)
+dir.create(file.path("./Result_figures/abundance_analysis_plots/boxplots/Lesion_type_refined/species"), showWarnings = FALSE, recursive = T)
+dir.create(file.path("./Result_figures/abundance_analysis_plots/boxplots/Lesion_type_refined/genus"), showWarnings = FALSE, recursive = T)
+dir.create(file.path("./Result_figures/abundance_analysis_plots/boxplots/immunosuppressed/Lesion_type_refined/otu"), showWarnings = FALSE, recursive = T)
+dir.create(file.path("./Result_figures/abundance_analysis_plots/boxplots/immunosuppressed/Lesion_type_refined/species"), showWarnings = FALSE, recursive = T)
+dir.create(file.path("./Result_figures/abundance_analysis_plots/boxplots/immunosuppressed/Lesion_type_refined/genus"), showWarnings = FALSE, recursive = T)
+dir.create(file.path("./Result_figures/abundance_analysis_plots/boxplots/immunocompetent/Lesion_type_refined/otu"), showWarnings = FALSE, recursive = T)
+dir.create(file.path("./Result_figures/abundance_analysis_plots/boxplots/immunocompetent/Lesion_type_refined/species"), showWarnings = FALSE, recursive = T)
+dir.create(file.path("./Result_figures/abundance_analysis_plots/boxplots/immunocompetent/Lesion_type_refined/genus"), showWarnings = FALSE, recursive = T)
 dir.create(file.path("./Result_figures/abundance_analysis_plots/pie_charts"), showWarnings = FALSE, recursive = T)
 
 
@@ -153,8 +165,8 @@ dir.create(file.path("./Result_tables/diversity_analysis/both_cohorts/", "otu"),
 dir.create(file.path("./Result_tables/diversity_analysis/both_cohorts/", "genus"), showWarnings = FALSE,recursive = T)
 dir.create(file.path("./Result_tables/diversity_analysis/immunocompetent/", "otu"), showWarnings = FALSE,recursive = T)
 dir.create(file.path("./Result_tables/diversity_analysis/immunocompetent/", "genus"), showWarnings = FALSE,recursive = T)
-dir.create(file.path("./Result_tables/diversity_analysis/immunocompromised/", "otu"), showWarnings = FALSE,recursive = T)
-dir.create(file.path("./Result_tables/diversity_analysis/immunocompromised/", "genus"), showWarnings = FALSE,recursive = T)
+dir.create(file.path("./Result_tables/diversity_analysis/immunosuppressed/", "otu"), showWarnings = FALSE,recursive = T)
+dir.create(file.path("./Result_tables/diversity_analysis/immunosuppressed/", "genus"), showWarnings = FALSE,recursive = T)
 
 
 dir.create(file.path("./Result_figures", "diversity_analysis"), showWarnings = FALSE)
@@ -162,8 +174,8 @@ dir.create(file.path("./Result_figures/diversity_analysis/both_cohorts/", "otu")
 dir.create(file.path("./Result_figures/diversity_analysis/both_cohorts/", "genus"), showWarnings = FALSE,recursive = T)
 dir.create(file.path("./Result_figures/diversity_analysis/immunocompetent/", "otu"), showWarnings = FALSE,recursive = T)
 dir.create(file.path("./Result_figures/diversity_analysis/immunocompetent/", "genus"), showWarnings = FALSE,recursive = T)
-dir.create(file.path("./Result_figures/diversity_analysis/immunocompromised/", "otu"), showWarnings = FALSE,recursive = T)
-dir.create(file.path("./Result_figures/diversity_analysis/immunocompromised/", "genus"), showWarnings = FALSE,recursive = T)
+dir.create(file.path("./Result_figures/diversity_analysis/immunosuppressed/", "otu"), showWarnings = FALSE,recursive = T)
+dir.create(file.path("./Result_figures/diversity_analysis/immunosuppressed/", "genus"), showWarnings = FALSE,recursive = T)
 
 dir.create(file.path("./Result_tables", "mixomics"), showWarnings = FALSE)
 dir.create(file.path("./Result_tables", "other"), showWarnings = FALSE)
@@ -307,7 +319,7 @@ create_combined_dataframe_no_rare <- function(counts.df, abundances.df, mymetada
 
 # ------------------------------------------------------------------------------------------------------------------
 # Load the and process metadata
-metadata.df <- read.table("data/metadata_immunocompromised_competent.tsv", header = T, sep = "\t")
+metadata.df <- read.table("data/metadata_immunosuppressed_competent.tsv", header = T, sep = "\t")
 
 # Re-assign the index coloumn to the internal + Job ID. This will match the read files, which 
 # were re-named to handle repeats
@@ -325,9 +337,9 @@ rownames(metadata.df) <- metadata.df$Index
 # Remove samples with no specified cohort
 metadata.df <- subset(metadata.df, !is.na(Cohort))
 
-# Filter samples to those that are immunocompromised, immunocompetent snapshot 5 samples or negative
+# Filter samples to those that are immunosuppressed, immunocompetent snapshot 5 samples or negative
 # this saves processing time later
-metadata.df <- metadata.df[which(metadata.df$Cohort == "immunocompromised" | metadata.df$Snapshot_sample_5 == "yes" | metadata.df$Lesion_type == "negative"),]
+metadata.df <- metadata.df[which(metadata.df$Cohort == "immunosuppressed" | metadata.df$Snapshot_sample_5 == "yes" | metadata.df$Lesion_type == "negative"),]
 
 # ---------------------------------------------
 # Create Lesion_final_refined variable. This will likely be used for publication.
@@ -337,7 +349,7 @@ metadata.df <- metadata.df[which(metadata.df$Cohort == "immunocompromised" | met
 # SCC_PL (SCC_PL and IEC_PL)
 # SCC (SCC and IEC)
 
-# For the immunocompromised cohort:
+# For the immunosuppressed cohort:
 # C (swabs from proper control patients as indicated before)
 # C_P (all C and AK_PL from remaining patients)
 # AK (AK)
@@ -349,11 +361,11 @@ metadata.df[metadata.df$Cohort == "immunocompetent" & metadata.df$Lesion_type %i
 metadata.df[metadata.df$Cohort == "immunocompetent" & metadata.df$Lesion_type %in% c("SCC_PL", "IEC_PL"),]$Lesion_type_refined <- "SCC_PL"
 metadata.df[metadata.df$Cohort == "immunocompetent" & metadata.df$Lesion_type %in% c("SCC", "IEC"),]$Lesion_type_refined <- "SCC"
 
-metadata.df[metadata.df$Cohort == "immunocompromised" & metadata.df$Lesion_type %in% c("C", "AK_PL"),]$Lesion_type_refined <- "C_P"
-metadata.df[metadata.df$Cohort == "immunocompromised" & metadata.df$Lesion_type_compromised_refined %in% c("C"),]$Lesion_type_refined <- "C"
-metadata.df[metadata.df$Cohort == "immunocompromised" & metadata.df$Lesion_type %in% c("AK"),]$Lesion_type_refined <- "AK"
-metadata.df[metadata.df$Cohort == "immunocompromised" & metadata.df$Lesion_type %in% c("SCC_PL", "IEC_PL"),]$Lesion_type_refined <- "SCC_PL"
-metadata.df[metadata.df$Cohort == "immunocompromised" & metadata.df$Lesion_type %in% c("SCC", "IEC"),]$Lesion_type_refined <- "SCC"
+metadata.df[metadata.df$Cohort == "immunosuppressed" & metadata.df$Lesion_type %in% c("C", "AK_PL"),]$Lesion_type_refined <- "C_P"
+metadata.df[metadata.df$Cohort == "immunosuppressed" & metadata.df$Lesion_type_suppressed_refined %in% c("C"),]$Lesion_type_refined <- "C"
+metadata.df[metadata.df$Cohort == "immunosuppressed" & metadata.df$Lesion_type %in% c("AK"),]$Lesion_type_refined <- "AK"
+metadata.df[metadata.df$Cohort == "immunosuppressed" & metadata.df$Lesion_type %in% c("SCC_PL", "IEC_PL"),]$Lesion_type_refined <- "SCC_PL"
+metadata.df[metadata.df$Cohort == "immunosuppressed" & metadata.df$Lesion_type %in% c("SCC", "IEC"),]$Lesion_type_refined <- "SCC"
 metadata.df[metadata.df$Lesion_type %in% c("negative"),]$Lesion_type_refined <- "negative"
 metadata.df$Lesion_type_refined <- factor(metadata.df$Lesion_type_refined)
 
@@ -389,7 +401,7 @@ metadata.df <- metadata.df[metadata.df$Lesion_type %in% c("C","AK_PL","IEC_PL","
 # Remove unnessary columns / variables from metadata
 names(metadata.df)
 metadata.df <- metadata.df %>% select( 
-                       -Lesion_type_compromised_refined, 
+                       -Lesion_type_suppressed_refined, 
                        -Patient_group,
                        -Patient_group_other,
                        # -Patient_ID_number,
@@ -466,7 +478,7 @@ project_otu_table.df$taxonomy_phylum <- with(project_otu_table.df, paste(Domain,
 # project_otu_table_unfiltered.df <- project_otu_table.df
 # ------------------------------------------------------------------------------------------------------------------------------
 # ------------------------------------------------------------------------------------------------------------------------------
-# There were a number of samples from the immunocompromised cohort 
+# There were a number of samples from the immunosuppressed cohort 
 # that were repeated and that were marked for discarding (see metadata). Remove these samples.
 # Some are retained to combine with repeats, either the original run produced enough reads
 # or both runs produced enough reads
@@ -481,7 +493,7 @@ sample_ids <- grep("R[0-9].*|S[AB][0-9].*|S[0-9].*", names(project_otu_table.df)
 # The immunocompetent study from 2018 has repeat samples that should be combined.
 # For example, S4284_J220 + S4284b_J220 = S4284_J220
 # Go through the samples in the project table and combine as necessary (sum and remove b sample)
-# Some of the immunocompromised samples are also combined here
+# Some of the immunosuppressed samples are also combined here
 
 # First get the b samples S4284b_J220
 repeat_samples.v <- grep("b_", sample_ids, value = T)
@@ -534,7 +546,7 @@ metadata.df <- temp_meta.df
 n_samples_before <- length(sample_ids)
 sample_ids <- grep("R[0-9].*|S[AB][0-9].*|S[0-9].*", names(project_otu_table.df), value = T)
 
-paste0("There are ", length(sample_ids), " samples in the data after consolidating immunocompetent and (some) immunocompromised samples. This is a loss of ",
+paste0("There are ", length(sample_ids), " samples in the data after consolidating immunocompetent and (some) immunosuppressed samples. This is a loss of ",
        n_samples_before, "-", length(sample_ids)," = ", n_samples_before - length(sample_ids), " samples")
 
 # Store a version of the unfiltered* project table
@@ -589,8 +601,8 @@ dim(metadata.df)
 metadata.df <- metadata.df[!metadata.df$Index %in% missing_samples_metadata.v,]
 dim(metadata.df)
 
-# Remove immunocompetent patient samples that were sequenced along with the immunocompromised samples
-MS_resequenced_samples <- metadata.df[grep("Sequenced during immunocompromised batch", metadata.df$Sample_note),]$Index
+# Remove immunocompetent patient samples that were sequenced along with the immunosuppressed samples
+MS_resequenced_samples <- metadata.df[grep("Sequenced during immunosuppressed batch", metadata.df$Sample_note),]$Index
 metadata.df <- metadata.df[!metadata.df$Index %in% MS_resequenced_samples,]
 project_otu_table.df <- project_otu_table.df[,!names(project_otu_table.df) %in% MS_resequenced_samples]
 
@@ -603,7 +615,7 @@ project_otu_table.df <- project_otu_table.df[,c(sample_ids[sample_ids %in% rowna
 dim(project_otu_table.df)
 dim(metadata.df)
 # summary(metadata.df$Lesion_type)
-# which(metadata.df$Cohort == "immunocompromised" | metadata.df$Snapshot_sample_5 == "yes" | metadata.df$Lesion_type == "negative")
+# which(metadata.df$Cohort == "immunosuppressed" | metadata.df$Snapshot_sample_5 == "yes" | metadata.df$Lesion_type == "negative")
 # ------------------------------------------------------------------------------------------------
 # ------------------------------------------------------------------------------------------------
 # Assign unique colours for each discrete state for variables
@@ -799,16 +811,16 @@ otu_unfiltered_rel.m[is.nan(otu_unfiltered_rel.m)] <- 0
 # want to retain the negative samples abundances to profile them later
 
 negative_sample_ids <- as.character(metadata.df[metadata.df$Lesion_type == "negative",]$Index)
-immunocompromised_negative_sample_ids <- as.character(subset(metadata.df, Lesion_type == "negative" & Cohort == "immunocompromised")$Index)
+immunosuppressed_negative_sample_ids <- as.character(subset(metadata.df, Lesion_type == "negative" & Cohort == "immunosuppressed")$Index)
 immunocompetent_negative_sample_ids <- as.character(subset(metadata.df, Lesion_type == "negative" & Cohort == "immunocompetent")$Index)
-immunocompromised_sample_ids <- as.character(subset(metadata.df, Cohort == "immunocompromised")$Index)
+immunosuppressed_sample_ids <- as.character(subset(metadata.df, Cohort == "immunosuppressed")$Index)
 immunocompetent_sample_ids <- as.character(subset(metadata.df, Cohort == "immunocompetent")$Index)
 
 negative_otu.m <- otu.m[,negative_sample_ids]
 negative_otu_rel.m <- otu_rel.m[,negative_sample_ids]
 
-immunocompromised_negative_otu.m <- otu.m[,immunocompromised_negative_sample_ids]
-immunocompromised_negative_otu_rel.m <- otu_rel.m[,immunocompromised_negative_sample_ids]
+immunosuppressed_negative_otu.m <- otu.m[,immunosuppressed_negative_sample_ids]
+immunosuppressed_negative_otu_rel.m <- otu_rel.m[,immunosuppressed_negative_sample_ids]
 immunocompetent_negative_otu.m <- otu.m[,immunocompetent_negative_sample_ids]
 immunocompetent_negative_otu_rel.m <- otu_rel.m[,immunocompetent_negative_sample_ids]
 
@@ -818,8 +830,8 @@ immunocompetent_negative_otu_rel.m <- otu_rel.m[,immunocompetent_negative_sample
 negative_otu.df <- m2df(negative_otu.m, "OTU.ID")
 negative_otu_rel.df <- m2df(negative_otu_rel.m, "OTU.ID")
 
-immunocompromised_negative_otu.df <- m2df(immunocompromised_negative_otu.m, "OTU.ID")
-immunocompromised_negative_otu_rel.df <- m2df(immunocompromised_negative_otu_rel.m, "OTU.ID")
+immunosuppressed_negative_otu.df <- m2df(immunosuppressed_negative_otu.m, "OTU.ID")
+immunosuppressed_negative_otu_rel.df <- m2df(immunosuppressed_negative_otu_rel.m, "OTU.ID")
 immunocompetent_negative_otu.df <- m2df(immunocompetent_negative_otu.m, "OTU.ID")
 immunocompetent_negative_otu_rel.df <- m2df(immunocompetent_negative_otu_rel.m, "OTU.ID")
 
@@ -959,13 +971,13 @@ write.table(phylum_combined, file = "Result_tables/combined_counts_abundances_an
 
 # For each cohort, identify contaminants and remove
 # Since we are processing each cohort separately, create feature tables for each cohort
-immunocompromised_otu.m <- otu.m[,rownames(metadata.df[metadata.df$Cohort == "immunocompromised",])]
-immunocompromised_otu_rel.m <- otu_rel.m[,rownames(metadata.df[metadata.df$Cohort == "immunocompromised",])]
+immunosuppressed_otu.m <- otu.m[,rownames(metadata.df[metadata.df$Cohort == "immunosuppressed",])]
+immunosuppressed_otu_rel.m <- otu_rel.m[,rownames(metadata.df[metadata.df$Cohort == "immunosuppressed",])]
 
 immunocompetent_otu.m <- otu.m[,rownames(metadata.df[metadata.df$Cohort == "immunocompetent",])]
 immunocompetent_otu_rel.m <- otu_rel.m[,rownames(metadata.df[metadata.df$Cohort == "immunocompetent",])]
 # dim(metadata.df)
-# dim(immunocompromised_otu.m)
+# dim(immunosuppressed_otu.m)
 # dim(immunocompetent_otu.m)
 
 # 1. Use Decontam to identify contaminants
@@ -973,9 +985,9 @@ decontam_contaminants.df <- isContaminant(t(otu.m),
                                           method = "prevalence", 
                                           neg = rownames(t(otu.m)) %in% negative_sample_ids, 
                                           threshold = 0.5)
-decontam_contaminants_immunocompromised.df <- isContaminant(t(immunocompromised_otu.m), 
+decontam_contaminants_immunosuppressed.df <- isContaminant(t(immunosuppressed_otu.m), 
                                           method = "prevalence", 
-                                          neg = rownames(t(immunocompromised_otu.m)) %in% immunocompromised_negative_sample_ids, 
+                                          neg = rownames(t(immunosuppressed_otu.m)) %in% immunosuppressed_negative_sample_ids, 
                                           threshold = 0.5)
 decontam_contaminants_immunocompetent.df <- isContaminant(t(immunocompetent_otu.m), 
                                                             method = "prevalence", 
@@ -985,7 +997,7 @@ decontam_contaminants_immunocompetent.df <- isContaminant(t(immunocompetent_otu.
 hist(decontam_contaminants.df$p,100, ylim = c(0,7000), xlim = c(0,1))
 abline(v = 0.5, col = 'red')
 decontam_contaminants_features <- rownames(subset(decontam_contaminants.df, contaminant == T))
-decontam_contaminants_features_immunocompromised <- rownames(subset(decontam_contaminants_immunocompromised.df, contaminant == T))
+decontam_contaminants_features_immunosuppressed <- rownames(subset(decontam_contaminants_immunosuppressed.df, contaminant == T))
 decontam_contaminants_features_immunocompetent <- rownames(subset(decontam_contaminants_immunocompetent.df, contaminant == T))
 
 # unique(subset(otu_taxonomy_map.df, OTU.ID %in% decontam_contaminants_features)$taxonomy_species)
@@ -1011,15 +1023,15 @@ decontam_contaminants_features_immunocompetent <- rownames(subset(decontam_conta
 # summary(microdecon_contaminants_features %in% decontam_contaminants_features)
 # summary(decontam_contaminants_features %in% microdecon_contaminants_features)
 
-# microdecon_data_immunocompromised.df <- m2df(immunocompromised_otu.m[,colnames(immunocompromised_otu.m) %in% immunocompromised_negative_sample_ids], column_name = "OTU.ID")
-# microdecon_data_immunocompromised.df <- cbind(microdecon_data_immunocompromised.df, immunocompromised_otu.m[,!colnames(immunocompromised_otu.m) %in% immunocompromised_negative_sample_ids])
-# microdecon_data_immunocompromised.df$taxonomy_species <- subset(otu_taxonomy_map.df, OTU.ID %in% microdecon_data_immunocompromised.df$OTU.ID)$taxonomy_species
-# microdecon_contaminants_immunocompromised.df <- decon(microdecon_data_immunocompromised.df,
-#                                     numb.blanks = length(immunocompromised_negative_sample_ids),
-#                                     numb.ind = length(immunocompromised_sample_ids) - length(immunocompromised_negative_sample_ids),
+# microdecon_data_immunosuppressed.df <- m2df(immunosuppressed_otu.m[,colnames(immunosuppressed_otu.m) %in% immunosuppressed_negative_sample_ids], column_name = "OTU.ID")
+# microdecon_data_immunosuppressed.df <- cbind(microdecon_data_immunosuppressed.df, immunosuppressed_otu.m[,!colnames(immunosuppressed_otu.m) %in% immunosuppressed_negative_sample_ids])
+# microdecon_data_immunosuppressed.df$taxonomy_species <- subset(otu_taxonomy_map.df, OTU.ID %in% microdecon_data_immunosuppressed.df$OTU.ID)$taxonomy_species
+# microdecon_contaminants_immunosuppressed.df <- decon(microdecon_data_immunosuppressed.df,
+#                                     numb.blanks = length(immunosuppressed_negative_sample_ids),
+#                                     numb.ind = length(immunosuppressed_sample_ids) - length(immunosuppressed_negative_sample_ids),
 #                                     taxa = T,
 #                                     runs = 2,regression = 1)
-# microdecon_contaminants_features_immunocompromised <- microdecon_contaminants_immunocompromised.df$OTUs.removed$OTU.ID
+# microdecon_contaminants_features_immunosuppressed <- microdecon_contaminants_immunosuppressed.df$OTUs.removed$OTU.ID
 # 
 # microdecon_data_immunocompetent.df <- m2df(immunocompetent_otu.m[,colnames(immunocompetent_otu.m) %in% immunocompetent_negative_sample_ids], column_name = "OTU.ID")
 # microdecon_data_immunocompetent.df <- cbind(microdecon_data_immunocompetent.df, immunocompetent_otu.m[,!colnames(immunocompetent_otu.m) %in% immunocompetent_negative_sample_ids])
@@ -1033,7 +1045,7 @@ decontam_contaminants_features_immunocompetent <- rownames(subset(decontam_conta
 
 # 3. Identify features that are present in negative controls (very extreme approach) 
 negative_present_features <- rownames(negative_otu.m[rowSums(negative_otu.m) > 0,])
-negative_present_features_immunocompromised <- rownames(immunocompromised_negative_otu.m[rowSums(immunocompromised_negative_otu.m) > 0,])
+negative_present_features_immunosuppressed <- rownames(immunosuppressed_negative_otu.m[rowSums(immunosuppressed_negative_otu.m) > 0,])
 negative_present_features_immunocompetent <- rownames(immunocompetent_negative_otu.m[rowSums(immunocompetent_negative_otu.m) > 0,])
 
 # 4. Identify features that are more prevalent in negative controls.
@@ -1058,7 +1070,7 @@ contaminating_otus_from_prevalences <- names(otu_negative_sample_prevalences[otu
 
 # Final contaminating features to remove
 contaminating_features <- unique(c(decontam_contaminants_features))
-contaminating_features_immunocompromised <- unique(c(decontam_contaminants_features_immunocompromised))
+contaminating_features_immunosuppressed <- unique(c(decontam_contaminants_features_immunosuppressed))
 contaminating_features_immunocompetent <- unique(c(decontam_contaminants_features_immunocompetent))
 
 # -----------------------
@@ -1073,10 +1085,10 @@ contaminating_feature_taxonomy_data.df$RepSeq <- temp
 # write.csv(x = contaminating_feature_taxonomy_data.df, file = "Result_tables/other/contaminate_taxonomy_data.csv", quote =F, row.names = F)
 
 # ...also/or for each cohort
-contaminating_feature_taxonomy_data.df <- otu_taxonomy_map.df[otu_taxonomy_map.df$OTU.ID %in% unique(c(contaminating_features_immunocompromised, contaminating_features_immunocompetent)),]
+contaminating_feature_taxonomy_data.df <- otu_taxonomy_map.df[otu_taxonomy_map.df$OTU.ID %in% unique(c(contaminating_features_immunosuppressed, contaminating_features_immunocompetent)),]
 contaminating_feature_taxonomy_data.df <- unique(contaminating_feature_taxonomy_data.df)
 contaminating_feature_taxonomy_data.df <- unique(contaminating_feature_taxonomy_data.df)
-contaminating_feature_taxonomy_data.df$Present_immunocompromised <- contaminating_feature_taxonomy_data.df$OTU.ID %in% contaminating_features_immunocompromised
+contaminating_feature_taxonomy_data.df$Present_immunosuppressed <- contaminating_feature_taxonomy_data.df$OTU.ID %in% contaminating_features_immunosuppressed
 contaminating_feature_taxonomy_data.df$Present_immunocompetent <- contaminating_feature_taxonomy_data.df$OTU.ID %in% contaminating_features_immunocompetent
 temp <- contaminating_feature_taxonomy_data.df$RepSeq
 contaminating_feature_taxonomy_data.df$RepSeq <- NULL
@@ -1095,18 +1107,18 @@ file.out = paste0("Result_other/sequences/contaminate_features.fasta"))
 
 # ----------------------------------------
 # Remove contaminants from data for each cohort
-immunocompromised_otu.m <- immunocompromised_otu.m[!rownames(immunocompromised_otu.m) %in% unique(c(contaminating_features_immunocompromised)),]
-immunocompromised_otu_rel.m <- immunocompromised_otu_rel.m[!rownames(immunocompromised_otu_rel.m) %in% unique(c(contaminating_features_immunocompromised)),]
+immunosuppressed_otu.m <- immunosuppressed_otu.m[!rownames(immunosuppressed_otu.m) %in% unique(c(contaminating_features_immunosuppressed)),]
+immunosuppressed_otu_rel.m <- immunosuppressed_otu_rel.m[!rownames(immunosuppressed_otu_rel.m) %in% unique(c(contaminating_features_immunosuppressed)),]
 immunocompetent_otu.m <- immunocompetent_otu.m[!rownames(immunocompetent_otu.m) %in% unique(c(contaminating_features_immunocompetent)),]
 immunocompetent_otu_rel.m <- immunocompetent_otu_rel.m[!rownames(immunocompetent_otu_rel.m) %in% unique(c(contaminating_features_immunocompetent)),]
   
 length(contaminating_features_immunocompetent)
-length(contaminating_features_immunocompromised)
-dim(immunocompromised_otu.m)
+length(contaminating_features_immunosuppressed)
+dim(immunosuppressed_otu.m)
 dim(immunocompetent_otu.m)
 
 # Combine cohort tables together to create new primary otu.m
-temp1 <- melt(immunocompromised_otu.m)
+temp1 <- melt(immunosuppressed_otu.m)
 temp2 <- melt(immunocompetent_otu.m)
 temp1 <- temp1[temp1$value != 0,]
 temp2 <- temp2[temp2$value != 0,]

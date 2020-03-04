@@ -67,10 +67,10 @@ genus_data.df <- read.csv("Result_tables/combined_counts_abundances_and_metadata
 genus_data.df$Family_Genus <- genus_relabeller_function(as.character(genus_data.df$taxonomy_genus))
 genus_data_all.df <- genus_data.df
 
-# Filter to immunocompromised or snapshot samples
-genus_data.df <- subset(genus_data.df, Project == "immunocompromised" | Snapshot_sample_5 == "yes")
+# Filter to immunosuppressed or snapshot samples
+genus_data.df <- subset(genus_data.df, Project == "immunosuppressed" | Snapshot_sample_5 == "yes")
 
-immunocompromised_genus_data.df <- subset(genus_data.df, Cohort == "immunocompromised")
+immunosuppressed_genus_data.df <- subset(genus_data.df, Cohort == "immunosuppressed")
 immunocompetent_genus_data.df <- subset(genus_data.df, Cohort == "immunocompetent")
 immunocompetent_genus_data_all.df <- subset(genus_data_all.df, Cohort == "immunocompetent")
 
@@ -210,21 +210,21 @@ make_pie_graph <- function(mydata, taxonomy_column, mytitle = NULL,  mysubtitle 
   pie_chart
 } 
 # -------------------------------------------------------
-# immunocompromised and immunocompetent Lesion_type_refined
-immunocompromised_lesions_top_genus <- c()
+# immunosuppressed and immunocompetent Lesion_type_refined
+immunosuppressed_lesions_top_genus <- c()
 immunocompetent_lesions_top_genus <- c()
-immunocompromised_lesions_forearm_top_genus <-c()
+immunosuppressed_lesions_forearm_top_genus <-c()
 immunocompetent_all_lesions_top_genus <- c()
 
 forearm_swab_ids <- c("1383","1385","1470","1561","1599","1647","1649")
 forearm_indices <- c("R1383_J1425", "SA6550_J1427", "R1368_J1477", "R1460_J1425", "R1498_J1425", "SB4909_J1426", "SB4911_J1426")
 
-# Get the top # genera for immunocompromised cohort
-for (lesion in unique(immunocompromised_genus_data.df$Lesion_type_refined)){
+# Get the top # genera for immunosuppressed cohort
+for (lesion in unique(immunosuppressed_genus_data.df$Lesion_type_refined)){
   if (is.na(lesion)) {next}
-  data_subset <- subset(immunocompromised_genus_data.df, Lesion_type_refined == lesion)
+  data_subset <- subset(immunosuppressed_genus_data.df, Lesion_type_refined == lesion)
   taxa_summary <- generate_taxa_summary_simple(data_subset, taxa_column = "Family_Genus", abundance_column = "Relative_abundance")
-  immunocompromised_lesions_top_genus <- unique(c(immunocompromised_lesions_top_genus, get_top_taxa(taxa_summary,my_top_n = 9)))
+  immunosuppressed_lesions_top_genus <- unique(c(immunosuppressed_lesions_top_genus, get_top_taxa(taxa_summary,my_top_n = 9)))
 }
 
 
@@ -248,21 +248,21 @@ for (lesion in unique(immunocompetent_genus_data_all.df$Lesion_type_refined)){
 # taxa_summary$nma <- taxa_summary$Mean_abundance / sum(taxa_summary$Mean_abundance)
 # taxa_summary <- taxa_summary %>% group_by(Family_Genus) %>% summarise(nma = sum(nma)) %>% as.data.frame()
 
-# Get the top genera for immunocompromised cohort, forearm only
-immunocompromised_forearm.df <- immunocompromised_genus_data.df[immunocompromised_genus_data.df$Swab_ID %in% forearm_swab_ids,]
-immunocompromised_forearm.df <- subset(immunocompromised_forearm.df, Sampletype_final == "SCC") # ensure only SCC samples
-immunocompromised_forearm.df$Lesion_type_refined <- factor(immunocompromised_forearm.df$Lesion_type_refined)
+# Get the top genera for immunosuppressed cohort, forearm only
+immunosuppressed_forearm.df <- immunosuppressed_genus_data.df[immunosuppressed_genus_data.df$Swab_ID %in% forearm_swab_ids,]
+immunosuppressed_forearm.df <- subset(immunosuppressed_forearm.df, Sampletype_final == "SCC") # ensure only SCC samples
+immunosuppressed_forearm.df$Lesion_type_refined <- factor(immunosuppressed_forearm.df$Lesion_type_refined)
 
-for (lesion in unique(immunocompromised_forearm.df$Lesion_type_refined)){
+for (lesion in unique(immunosuppressed_forearm.df$Lesion_type_refined)){
   if (is.na(lesion)) {next}
-  data_subset <- subset(immunocompromised_forearm.df, Lesion_type_refined == lesion)
+  data_subset <- subset(immunosuppressed_forearm.df, Lesion_type_refined == lesion)
   taxa_summary <- generate_taxa_summary_simple(data_subset, taxa_column = "Family_Genus",abundance_column = "Relative_abundance_rarefied")
-  immunocompromised_lesions_forearm_top_genus <- unique(c(immunocompromised_lesions_top_genus, get_top_taxa(taxa_summary,my_top_n = 9)))
+  immunosuppressed_lesions_forearm_top_genus <- unique(c(immunosuppressed_lesions_top_genus, get_top_taxa(taxa_summary,my_top_n = 9)))
 }
 
 # Combine lists for both cohorts and get unique set
-both_cohorts_lesions_top_genus <- unique(c(immunocompromised_lesions_top_genus, immunocompetent_lesions_top_genus, immunocompromised_lesions_forearm_top_genus))
-# both_cohorts_lesions_top_genus <- unique(c(immunocompromised_lesions_top_genus, immunocompetent_lesions_top_genus, immunocompromised_lesions_forearm_top_genus,immunocompetent_all_lesions_top_genus))
+both_cohorts_lesions_top_genus <- unique(c(immunosuppressed_lesions_top_genus, immunocompetent_lesions_top_genus, immunosuppressed_lesions_forearm_top_genus))
+# both_cohorts_lesions_top_genus <- unique(c(immunosuppressed_lesions_top_genus, immunocompetent_lesions_top_genus, immunosuppressed_lesions_forearm_top_genus,immunocompetent_all_lesions_top_genus))
 
 # Create palette based on unique set
 # both_cohorts_genus_palette <- setNames(my_colour_palette_206_distinct[1:length(both_cohorts_lesions_top_genus)], both_cohorts_lesions_top_genus)
@@ -271,11 +271,11 @@ both_cohorts_genus_palette <- setNames(my_colour_palette_30_distinct[1:length(bo
 both_cohorts_genus_palette["Other"] <- "grey"
 
 # Generate pie charts for each lesion type
-for (cohort in c("immunocompromised", "immunocompetent", "immunocompromised_forearm")){
-  if (cohort == "immunocompromised") {
-    dataset <- immunocompromised_genus_data.df
-  } else if (cohort == "immunocompromised_forearm"){
-    dataset <- immunocompromised_forearm.df
+for (cohort in c("immunosuppressed", "immunocompetent", "immunosuppressed_forearm")){
+  if (cohort == "immunosuppressed") {
+    dataset <- immunosuppressed_genus_data.df
+  } else if (cohort == "immunosuppressed_forearm"){
+    dataset <- immunosuppressed_forearm.df
   }
   else {
     dataset <- immunocompetent_genus_data.df
@@ -308,9 +308,9 @@ for (lesion in unique(immunocompetent_genus_data_all.df$Lesion_type_refined)){
 }
 
 
-# # Create legend just for immunocompromised cohort, using colouring scheme for both cohorts
-# myplot <- make_pie_graph(genus_data.df[genus_data.df$Family_Genus %in% immunocompromised_lesions_top_genus,], "Family_Genus", n_taxa = 50, my_colour_list = both_cohorts_genus_palette) 
-# ggsave(myplot, filename = paste0("Result_figures/abundance_analysis_plots/piecharts/immunocompromised_sampletype_final_for_legend.pdf"), height = 15, width =45, units = "cm")
+# # Create legend just for immunosuppressed cohort, using colouring scheme for both cohorts
+# myplot <- make_pie_graph(genus_data.df[genus_data.df$Family_Genus %in% immunosuppressed_lesions_top_genus,], "Family_Genus", n_taxa = 50, my_colour_list = both_cohorts_genus_palette) 
+# ggsave(myplot, filename = paste0("Result_figures/abundance_analysis_plots/piecharts/immunosuppressed_sampletype_final_for_legend.pdf"), height = 15, width =45, units = "cm")
 # 
 # # Create legend just for immunocompetent cohort, using colouring scheme for both cohorts
 # myplot <- make_pie_graph(genus_data.df[genus_data.df$Family_Genus %in% immunocompetent_lesions_top_genus,], "Family_Genus", n_taxa = 50, my_colour_list = both_cohorts_genus_palette) 
@@ -328,7 +328,7 @@ for (lesion in unique(immunocompetent_genus_data_all.df$Lesion_type_refined)){
 
 
 # -------------------------------------------------------
-# immunocompromised, Sampletype_final, just forearm
+# immunosuppressed, Sampletype_final, just forearm
 forearm_swab_ids <- c("1383","1385","1470","1561","1599","1647","1649")
 forearm_indices <- c("R1383_J1425", "SA6550_J1427", "R1368_J1477", "R1460_J1425", "R1498_J1425", "SB4909_J1426", "SB4911_J1426")
 # R1383_J1425 MST
@@ -338,40 +338,40 @@ forearm_indices <- c("R1383_J1425", "SA6550_J1427", "R1368_J1477", "R1460_J1425"
 # R1498_J1425 MST
 # 1647 SB4909_J1426 REMOVED
 # 1649 SB4911_J1426 REMOVED
-immunocompromised_lesions_top_genus <- c()
-# unique(immunocompromised_forearm.df[c("Sample","Sampletype", "Sampletype_final", "Swab_ID")])
+immunosuppressed_lesions_top_genus <- c()
+# unique(immunosuppressed_forearm.df[c("Sample","Sampletype", "Sampletype_final", "Swab_ID")])
 
-immunocompromised_forearm.df <- immunocompromised_genus_data.df[immunocompromised_genus_data.df$Swab_ID %in% forearm_swab_ids,]
-immunocompromised_forearm.df <- subset(immunocompromised_forearm.df, Sampletype_final == "SCC") # ensure only SCC samples
-immunocompromised_forearm.df$Sampletype_final <- factor(immunocompromised_forearm.df$Sampletype_final)
+immunosuppressed_forearm.df <- immunosuppressed_genus_data.df[immunosuppressed_genus_data.df$Swab_ID %in% forearm_swab_ids,]
+immunosuppressed_forearm.df <- subset(immunosuppressed_forearm.df, Sampletype_final == "SCC") # ensure only SCC samples
+immunosuppressed_forearm.df$Sampletype_final <- factor(immunosuppressed_forearm.df$Sampletype_final)
 
-for (lesion in unique(immunocompromised_forearm.df$Sampletype_final)){
+for (lesion in unique(immunosuppressed_forearm.df$Sampletype_final)){
   if (is.na(lesion)) {next}
-  data_subset <- subset(immunocompromised_forearm.df, Sampletype_final == lesion)
+  data_subset <- subset(immunosuppressed_forearm.df, Sampletype_final == lesion)
   taxa_summary <- generate_taxa_summary_simple(data_subset, taxa_column = "Family_Genus",abundance_column = "Relative_abundance_rarefied")
-  immunocompromised_lesions_top_genus <- unique(c(immunocompromised_lesions_top_genus, get_top_taxa(taxa_summary,my_top_n = 10)))
+  immunosuppressed_lesions_top_genus <- unique(c(immunosuppressed_lesions_top_genus, get_top_taxa(taxa_summary,my_top_n = 10)))
 }
-# immunocompromised_genus_palette <- setNames(my_colour_palette_30_distinct[1:length(immunocompromised_lesions_top_genus)], immunocompromised_lesions_top_genus)
-# names(immunocompromised_genus_palette) <- gsub(".*(f__.*)", "\\1",names(immunocompromised_genus_palette))
-# immunocompromised_genus_palette["Other"] <- "grey"
+# immunosuppressed_genus_palette <- setNames(my_colour_palette_30_distinct[1:length(immunosuppressed_lesions_top_genus)], immunosuppressed_lesions_top_genus)
+# names(immunosuppressed_genus_palette) <- gsub(".*(f__.*)", "\\1",names(immunosuppressed_genus_palette))
+# immunosuppressed_genus_palette["Other"] <- "grey"
 
-# data_subset <- subset(immunocompromised_forearm.df, Sampletype_compromised_refined == "SCC")
+# data_subset <- subset(immunosuppressed_forearm.df, Sampletype_suppressed_refined == "SCC")
 
-for (lesion in unique(immunocompromised_forearm.df$Sampletype_final)){
+for (lesion in unique(immunosuppressed_forearm.df$Sampletype_final)){
   print(lesion)
   if (is.na(lesion)) {next}
-  data_subset <- subset(immunocompromised_forearm.df, Sampletype_final == lesion)
+  data_subset <- subset(immunosuppressed_forearm.df, Sampletype_final == lesion)
   n_patients <- length(unique(data_subset$Patient))
   n_samples <- length(unique(data_subset$Sample))
-  my_title <- paste0("immunocompromised, forearm,", lesion) 
+  my_title <- paste0("immunosuppressed, forearm,", lesion) 
   my_subtitle <- paste0("# samples = ", n_samples, "\n# patients = ", n_patients) 
-  myplot <- make_pie_graph(data_subset, "Family_Genus", mytitle = my_title, mysubtitle = my_subtitle, n_taxa = 10, my_colour_list = both_cohorts_genus_palette)#immunocompromised_genus_palette) 
-  outname <- paste0("immunocompromised", "_", lesion, "_sampletype_final_forearm_top_genera_pie_chart.pdf") 
+  myplot <- make_pie_graph(data_subset, "Family_Genus", mytitle = my_title, mysubtitle = my_subtitle, n_taxa = 10, my_colour_list = both_cohorts_genus_palette)#immunosuppressed_genus_palette) 
+  outname <- paste0("immunosuppressed", "_", lesion, "_sampletype_final_forearm_top_genera_pie_chart.pdf") 
   ggsave(myplot, filename = paste0("Result_figures/abundance_analysis_plots/",outname), height = 10, width =25, units = "cm")
 }
 
-myplot <- make_pie_graph(genus_data.df[genus_data.df$Family_Genus %in% immunocompromised_lesions_top_genus,], "taxonomy_genus", n_taxa = 20, my_colour_list = immunocompromised_genus_palette) 
-ggsave(myplot, filename = paste0("Result_figures/abundance_analysis_plots/immunocompromised_sampletype_compromised_refined_forearm_for_legend.pdf"), height = 15, width =45, units = "cm")
+myplot <- make_pie_graph(genus_data.df[genus_data.df$Family_Genus %in% immunosuppressed_lesions_top_genus,], "taxonomy_genus", n_taxa = 20, my_colour_list = immunosuppressed_genus_palette) 
+ggsave(myplot, filename = paste0("Result_figures/abundance_analysis_plots/immunosuppressed_sampletype_suppressed_refined_forearm_for_legend.pdf"), height = 15, width =45, units = "cm")
 
 
 
@@ -405,81 +405,81 @@ ggsave(myplot, filename = paste0("Result_figures/abundance_analysis_plots/immuno
 
 # -------------------------------------------------------
 # 
-temp <- subset(genus_data.df, Project == "immunocompromised")
-immunocompromised_patient_group_top_genus <- c()
+temp <- subset(genus_data.df, Project == "immunosuppressed")
+immunosuppressed_patient_group_top_genus <- c()
 for (pg in unique(temp$Patient_group)){
   data_subset <- subset(temp, Patient_group == pg)
   taxa_summary <- generate_taxa_summary_simple(data_subset, taxa_column = "taxonomy_genus",abundance_column = "Relative_abundance_rarefied")
-  immunocompromised_patient_group_top_genus <- unique(c(immunocompromised_patient_group_top_genus, get_top_taxa(taxa_summary,my_top_n = 10)))
+  immunosuppressed_patient_group_top_genus <- unique(c(immunosuppressed_patient_group_top_genus, get_top_taxa(taxa_summary,my_top_n = 10)))
 }
-immunocompromised_genus_palette <- setNames(my_colour_palette_30_distinct[1:length(immunocompromised_patient_group_top_genus)], immunocompromised_patient_group_top_genus)
-names(immunocompromised_genus_palette) <- gsub(".*(f__.*)", "\\1",names(immunocompromised_genus_palette))
-immunocompromised_genus_palette["Other"] <- "grey"
+immunosuppressed_genus_palette <- setNames(my_colour_palette_30_distinct[1:length(immunosuppressed_patient_group_top_genus)], immunosuppressed_patient_group_top_genus)
+names(immunosuppressed_genus_palette) <- gsub(".*(f__.*)", "\\1",names(immunosuppressed_genus_palette))
+immunosuppressed_genus_palette["Other"] <- "grey"
 
 for (pg in unique(temp$Patient_group)){
   data_subset <- subset(temp, Patient_group == pg)
   n_patients <- length(unique(data_subset$Patient))
   n_samples <- length(unique(data_subset$Sample))
-  my_title <- paste0("immunocompromised, ", pg) 
+  my_title <- paste0("immunosuppressed, ", pg) 
   my_subtitle <- paste0("# samples = ", n_samples, "\n# patients = ", n_patients) 
   
-  myplot <- make_pie_graph(data_subset, "taxonomy_genus", mytitle = my_title,mysubtitle = my_subtitle, n_taxa = 10, my_colour_list = immunocompromised_genus_palette) 
-  outname <- paste0("immunocompromised", "_", pg, "_patient_group_top_genera_pie_chart.pdf") 
+  myplot <- make_pie_graph(data_subset, "taxonomy_genus", mytitle = my_title,mysubtitle = my_subtitle, n_taxa = 10, my_colour_list = immunosuppressed_genus_palette) 
+  outname <- paste0("immunosuppressed", "_", pg, "_patient_group_top_genera_pie_chart.pdf") 
   ggsave(myplot, filename = paste0("Result_figures/abundance_analysis_plots/",outname), height = 10, width =25, units = "cm")
 }
 
-myplot <- make_pie_graph(temp[temp$taxonomy_genus %in% immunocompromised_patient_group_top_genus,], "taxonomy_genus", n_taxa = 20, my_colour_list = immunocompromised_genus_palette) 
-ggsave(myplot, filename = paste0("Result_figures/abundance_analysis_plots/immunocompromised_patient_group_for_legend.pdf"), height = 10, width =45, units = "cm")
+myplot <- make_pie_graph(temp[temp$taxonomy_genus %in% immunosuppressed_patient_group_top_genus,], "taxonomy_genus", n_taxa = 20, my_colour_list = immunosuppressed_genus_palette) 
+ggsave(myplot, filename = paste0("Result_figures/abundance_analysis_plots/immunosuppressed_patient_group_for_legend.pdf"), height = 10, width =45, units = "cm")
 # -------------------------------------------------------
 # Number of medications
-immunocompromised_nmed_top_genus <- c()
+immunosuppressed_nmed_top_genus <- c()
 for (nmed in unique(temp$Number_of_meds)){
   data_subset <- subset(temp, Number_of_meds == nmed)
   taxa_summary <- generate_taxa_summary_simple(data_subset, taxa_column = "taxonomy_genus",abundance_column = "Relative_abundance_rarefied")
-  immunocompromised_nmed_top_genus <- unique(c(immunocompromised_nmed_top_genus, get_top_taxa(taxa_summary,my_top_n = 10)))
+  immunosuppressed_nmed_top_genus <- unique(c(immunosuppressed_nmed_top_genus, get_top_taxa(taxa_summary,my_top_n = 10)))
 }
-immunocompromised_genus_palette <- setNames(my_colour_palette_30_distinct[1:length(immunocompromised_nmed_top_genus)], immunocompromised_nmed_top_genus)
-names(immunocompromised_genus_palette) <- gsub(".*(f__.*)", "\\1",names(immunocompromised_genus_palette))
-immunocompromised_genus_palette["Other"] <- "grey"
+immunosuppressed_genus_palette <- setNames(my_colour_palette_30_distinct[1:length(immunosuppressed_nmed_top_genus)], immunosuppressed_nmed_top_genus)
+names(immunosuppressed_genus_palette) <- gsub(".*(f__.*)", "\\1",names(immunosuppressed_genus_palette))
+immunosuppressed_genus_palette["Other"] <- "grey"
 
 for (nmed in unique(temp$Number_of_meds)){
   data_subset <- subset(temp, Number_of_meds == nmed)
   n_patients <- length(unique(data_subset$Patient))
   n_samples <- length(unique(data_subset$Sample))
-  my_title <- paste0("immunocompromised, ", nmed) 
+  my_title <- paste0("immunosuppressed, ", nmed) 
   my_subtitle <- paste0("# samples = ", n_samples, "\n# patients = ", n_patients) 
-  myplot <- make_pie_graph(data_subset, "taxonomy_genus",mytitle = my_title, mysubtitle = my_subtitle, n_taxa = 10, my_colour_list = immunocompromised_genus_palette) 
-  outname <- paste0("immunocompromised", "_", nmed, "_number_of_medications_top_genera_pie_chart.pdf") 
+  myplot <- make_pie_graph(data_subset, "taxonomy_genus",mytitle = my_title, mysubtitle = my_subtitle, n_taxa = 10, my_colour_list = immunosuppressed_genus_palette) 
+  outname <- paste0("immunosuppressed", "_", nmed, "_number_of_medications_top_genera_pie_chart.pdf") 
   ggsave(myplot, filename = paste0("Result_figures/abundance_analysis_plots/",outname), height = 10, width =25, units = "cm")
 }
 
-myplot <- make_pie_graph(temp[temp$taxonomy_genus %in% immunocompromised_nmed_top_genus,], "taxonomy_genus", n_taxa = 20, my_colour_list = immunocompromised_genus_palette) 
-ggsave(myplot, filename = paste0("Result_figures/abundance_analysis_plots/immunocompromised_number_of_medications_for_legend.pdf"), height = 12, width =35, units = "cm")
+myplot <- make_pie_graph(temp[temp$taxonomy_genus %in% immunosuppressed_nmed_top_genus,], "taxonomy_genus", n_taxa = 20, my_colour_list = immunosuppressed_genus_palette) 
+ggsave(myplot, filename = paste0("Result_figures/abundance_analysis_plots/immunosuppressed_number_of_medications_for_legend.pdf"), height = 12, width =35, units = "cm")
 # -------------------------------------------------------
 # Fitzpatrick_skin_type
-immunocompromised_f_skin_type_top_genus <- c()
+immunosuppressed_f_skin_type_top_genus <- c()
 for (fst in unique(temp$Fitzpatrick_skin_type)){
   data_subset <- subset(temp, Fitzpatrick_skin_type == fst)
   taxa_summary <- generate_taxa_summary_simple(data_subset, taxa_column = "taxonomy_genus",abundance_column = "Relative_abundance_rarefied")
-  immunocompromised_f_skin_type_top_genus <- unique(c(immunocompromised_f_skin_type_top_genus, get_top_taxa(taxa_summary,my_top_n = 10)))
+  immunosuppressed_f_skin_type_top_genus <- unique(c(immunosuppressed_f_skin_type_top_genus, get_top_taxa(taxa_summary,my_top_n = 10)))
 }
-immunocompromised_genus_palette <- setNames(my_colour_palette_30_distinct[1:length(immunocompromised_f_skin_type_top_genus)], immunocompromised_f_skin_type_top_genus)
-names(immunocompromised_genus_palette) <- gsub(".*(f__.*)", "\\1",names(immunocompromised_genus_palette))
-immunocompromised_genus_palette["Other"] <- "grey"
+immunosuppressed_genus_palette <- setNames(my_colour_palette_30_distinct[1:length(immunosuppressed_f_skin_type_top_genus)], immunosuppressed_f_skin_type_top_genus)
+names(immunosuppressed_genus_palette) <- gsub(".*(f__.*)", "\\1",names(immunosuppressed_genus_palette))
+immunosuppressed_genus_palette["Other"] <- "grey"
 
 for (fst in unique(temp$Fitzpatrick_skin_type)){
   data_subset <- subset(temp, Fitzpatrick_skin_type == fst)
   n_patients <- length(unique(data_subset$Patient))
   n_samples <- length(unique(data_subset$Sample))
-  my_title <- paste0("immunocompromised, ", fst)
+  my_title <- paste0("immunosuppressed, ", fst)
   my_subtitle <- paste0("# samples = ", n_samples, "\n# patients = ", n_patients) 
-  myplot <- make_pie_graph(data_subset, "taxonomy_genus", mytitle = my_title, mysubtitle = my_subtitle, n_taxa = 10, my_colour_list = immunocompromised_genus_palette) 
-  outname <- paste0("immunocompromised", "_", fst, "_fitzpatrick_skin_type_top_genera_pie_chart.pdf") 
+  myplot <- make_pie_graph(data_subset, "taxonomy_genus", mytitle = my_title, mysubtitle = my_subtitle, n_taxa = 10, my_colour_list = immunosuppressed_genus_palette) 
+  outname <- paste0("immunosuppressed", "_", fst, "_fitzpatrick_skin_type_top_genera_pie_chart.pdf") 
   ggsave(myplot, filename = paste0("Result_figures/abundance_analysis_plots/",outname), height = 12, width =25, units = "cm")
 }
 
-myplot <- make_pie_graph(temp[temp$taxonomy_genus %in% immunocompromised_f_skin_type_top_genus,], "taxonomy_genus", n_taxa = 20, my_colour_list = immunocompromised_genus_palette) 
-ggsave(myplot, filename = paste0("Result_figures/abundance_analysis_plots/immunocompromised_fitzpatrick_skin_type_for_legend.pdf"), height = 12, width =25, units = "cm")
+myplot <- make_pie_graph(temp[temp$taxonomy_genus %in% immunosuppressed_f_skin_type_top_genus,], "taxonomy_genus", n_taxa = 20, my_colour_list = immunosuppressed_genus_palette) 
+ggsave(myplot, filename = paste0("Result_figures/abundance_analysis_plots/immunosuppressed_fitzpatrick_skin_type_for_legend.pdf"), height = 12, width =25, units = "cm")
 
 
 
@@ -583,46 +583,46 @@ ggsave(pie_chart, filename = "Result_figures/abundance_analysis_plots/pie_chart_
 # ------------------------------------------------------------------------
 # top 10 genus by mean relative abundances for each community. Values are normalised for pie chart.
 # Generate taxonomy summary (to get mean for each genus)
-genus_taxa_summary_immunocompromised.df <- generate_taxa_summary_simple(subset(genus_data.df, Project == "immunocompromised"),taxa_column = "taxonomy_genus", abundance_column = "Relative_abundance_rarefied")
+genus_taxa_summary_immunosuppressed.df <- generate_taxa_summary_simple(subset(genus_data.df, Project == "immunosuppressed"),taxa_column = "taxonomy_genus", abundance_column = "Relative_abundance_rarefied")
 genus_taxa_summary_immunocompetent.df <- generate_taxa_summary_simple(subset(genus_data.df, Project == "immunocompetent"),taxa_column = "taxonomy_genus", abundance_column = "Relative_abundance_rarefied")
 
 # Relabel each genus not in top 10 to 'Other'
-genus_data_processed_immunocompromised.df <- relabel_low_abundance_taxa(subset(genus_data.df, Project == "immunocompromised"), genus_taxa_summary_immunocompromised.df, my_top_n =8)
+genus_data_processed_immunosuppressed.df <- relabel_low_abundance_taxa(subset(genus_data.df, Project == "immunosuppressed"), genus_taxa_summary_immunosuppressed.df, my_top_n =8)
 genus_data_processed_immunocompetent.df <- relabel_low_abundance_taxa(subset(genus_data.df, Project == "immunocompetent"), genus_taxa_summary_immunocompetent.df, my_top_n =8)
 
 # Put the re-labelled data back through the summary function. This will calculate the mean abundance for the Other taxa!
-genus_data_processed_immunocompromised_summary.df <- generate_taxa_summary_simple(genus_data_processed_immunocompromised.df,taxa_column = "taxonomy_genus",abundance_column = "Relative_abundance_rarefied")
+genus_data_processed_immunosuppressed_summary.df <- generate_taxa_summary_simple(genus_data_processed_immunosuppressed.df,taxa_column = "taxonomy_genus",abundance_column = "Relative_abundance_rarefied")
 genus_data_processed_immunocompetent_summary.df <- generate_taxa_summary_simple(genus_data_processed_immunocompetent.df,taxa_column = "taxonomy_genus",abundance_column = "Relative_abundance_rarefied")
 
 # Assign community
-genus_data_processed_immunocompromised_summary.df$Project <- "immunocompromised"
+genus_data_processed_immunosuppressed_summary.df$Project <- "immunosuppressed"
 genus_data_processed_immunocompetent_summary.df$Project <- "immunocompetent"
 
 # Normalise the mean abundance
-genus_data_processed_immunocompromised_summary.df$Normalised_mean_abundance <- genus_data_processed_immunocompromised_summary.df$Mean_abundance / sum(genus_data_processed_immunocompromised_summary.df$Mean_abundance)
+genus_data_processed_immunosuppressed_summary.df$Normalised_mean_abundance <- genus_data_processed_immunosuppressed_summary.df$Mean_abundance / sum(genus_data_processed_immunosuppressed_summary.df$Mean_abundance)
 genus_data_processed_immunocompetent_summary.df$Normalised_mean_abundance <- genus_data_processed_immunocompetent_summary.df$Mean_abundance / sum(genus_data_processed_immunocompetent_summary.df$Mean_abundance)
 
 # Create pie label
-genus_data_processed_immunocompromised_summary.df$pie_label <- lapply(genus_data_processed_immunocompromised_summary.df$Normalised_mean_abundance, function(x) ifelse(x >= 0.01, paste0(round(x*100), "%"), "<1%"))
+genus_data_processed_immunosuppressed_summary.df$pie_label <- lapply(genus_data_processed_immunosuppressed_summary.df$Normalised_mean_abundance, function(x) ifelse(x >= 0.01, paste0(round(x*100), "%"), "<1%"))
 genus_data_processed_immunocompetent_summary.df$pie_label <- lapply(genus_data_processed_immunocompetent_summary.df$Normalised_mean_abundance, function(x) ifelse(x >= 0.01, paste0(round(x*100), "%"), "<1%"))
 
 # Order by Normalised_mean_abundance
-genus_data_processed_immunocompromised_summary.df <- genus_data_processed_immunocompromised_summary.df[rev(order(genus_data_processed_immunocompromised_summary.df$Normalised_mean_abundance)),]
+genus_data_processed_immunosuppressed_summary.df <- genus_data_processed_immunosuppressed_summary.df[rev(order(genus_data_processed_immunosuppressed_summary.df$Normalised_mean_abundance)),]
 genus_data_processed_immunocompetent_summary.df <- genus_data_processed_immunocompetent_summary.df[rev(order(genus_data_processed_immunocompetent_summary.df$Normalised_mean_abundance)),]
 
 # Create the taxa label
-genus_data_processed_immunocompromised_summary.df$taxa_label <- gsub(".*(f__.*)", "\\1",genus_data_processed_immunocompromised_summary.df$taxonomy_genus)
+genus_data_processed_immunosuppressed_summary.df$taxa_label <- gsub(".*(f__.*)", "\\1",genus_data_processed_immunosuppressed_summary.df$taxonomy_genus)
 genus_data_processed_immunocompetent_summary.df$taxa_label <- gsub(".*(f__.*)", "\\1",genus_data_processed_immunocompetent_summary.df$taxonomy_genus)
 
 # Factor taxonomy_genus and label to correct level ordering
-genus_data_processed_immunocompromised_summary.df$taxonomy_genus <- factor(genus_data_processed_immunocompromised_summary.df$taxonomy_genus, levels = unique(as.character(genus_data_processed_immunocompromised_summary.df$taxonomy_genus)))
+genus_data_processed_immunosuppressed_summary.df$taxonomy_genus <- factor(genus_data_processed_immunosuppressed_summary.df$taxonomy_genus, levels = unique(as.character(genus_data_processed_immunosuppressed_summary.df$taxonomy_genus)))
 genus_data_processed_immunocompetent_summary.df$taxonomy_genus <- factor(genus_data_processed_immunocompetent_summary.df$taxonomy_genus, levels = unique(as.character(genus_data_processed_immunocompetent_summary.df$taxonomy_genus)))
-genus_data_processed_immunocompromised_summary.df$taxa_label <- factor(genus_data_processed_immunocompromised_summary.df$taxa_label, levels = unique(as.character(genus_data_processed_immunocompromised_summary.df$taxa_label)))
+genus_data_processed_immunosuppressed_summary.df$taxa_label <- factor(genus_data_processed_immunosuppressed_summary.df$taxa_label, levels = unique(as.character(genus_data_processed_immunosuppressed_summary.df$taxa_label)))
 genus_data_processed_immunocompetent_summary.df$taxa_label <- factor(genus_data_processed_immunocompetent_summary.df$taxa_label, levels = unique(as.character(genus_data_processed_immunocompetent_summary.df$taxa_label)))
 
 # Assign the y location for the labels
-genus_data_processed_immunocompromised_summary.df <-
-  genus_data_processed_immunocompromised_summary.df %>%
+genus_data_processed_immunosuppressed_summary.df <-
+  genus_data_processed_immunosuppressed_summary.df %>%
   arrange(desc(taxonomy_genus)) %>%
   mutate(lab.ypos = cumsum(Normalised_mean_abundance) - .5*Normalised_mean_abundance)
 
@@ -633,16 +633,16 @@ genus_data_processed_immunocompetent_summary.df <-
 
 
 # Assign colours for taxa
-# taxa_colours_immunocompromised.l <- setNames(c("grey", my_colour_palette_12_soft), unique(genus_data_processed_immunocompromised_summary.df$taxonomy_genus))
+# taxa_colours_immunosuppressed.l <- setNames(c("grey", my_colour_palette_12_soft), unique(genus_data_processed_immunosuppressed_summary.df$taxonomy_genus))
 # taxa_colours_immunocompetent.l <- setNames(c("grey", my_colour_palette_12_soft), unique(genus_data_processed_immunocompetent_summary.df$taxonomy_genus)) 
-taxa_colours.l <- setNames(c("grey", my_colour_palette_12_soft),unique(c(as.character(genus_data_processed_immunocompromised_summary.df$taxa_label), as.character(genus_data_processed_immunocompetent_summary.df$taxa_label))))
+taxa_colours.l <- setNames(c("grey", my_colour_palette_12_soft),unique(c(as.character(genus_data_processed_immunosuppressed_summary.df$taxa_label), as.character(genus_data_processed_immunocompetent_summary.df$taxa_label))))
 
 
-pie_chart_immunocompromised <- ggplot(genus_data_processed_immunocompromised_summary.df,aes(x ="", y= Normalised_mean_abundance, fill = taxa_label)) + 
+pie_chart_immunosuppressed <- ggplot(genus_data_processed_immunosuppressed_summary.df,aes(x ="", y= Normalised_mean_abundance, fill = taxa_label)) + 
   geom_bar(width = 1, stat = "identity", color = "white",size = .2) +
   coord_polar("y", start=0) +
   scale_fill_manual(values = taxa_colours.l, name = "Genus") +
-  labs(title="Immunocompromised",
+  labs(title="Immunosuppressed",
        subtitle="(Normalised) mean relative abundances across all samples") +
        # geom_text(aes(y = lab.ypos, label = pie_label), color = "white") +
        theme(axis.text = element_blank(),
@@ -652,8 +652,8 @@ pie_chart_immunocompromised <- ggplot(genus_data_processed_immunocompromised_sum
        axis.ticks = element_blank(),
        plot.title = element_text(hjust = 0.5),
        plot.subtitle = element_text(size = 8, hjust = .5))
-pie_chart_immunocompromised
-ggsave(pie_chart_immunocompromised, filename = "Result_figures/abundance_analysis_plots/pie_chart_top_genera_immunocompromised.pdf", height = 10, width =30, units = "cm")
+pie_chart_immunosuppressed
+ggsave(pie_chart_immunosuppressed, filename = "Result_figures/abundance_analysis_plots/pie_chart_top_genera_immunosuppressed.pdf", height = 10, width =30, units = "cm")
        
        
 pie_chart_immunocompetent <- ggplot(genus_data_processed_immunocompetent_summary.df,aes(x ="", y= Normalised_mean_abundance, fill = taxa_label)) + 

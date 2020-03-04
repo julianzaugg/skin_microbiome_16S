@@ -210,8 +210,8 @@ create_stacked_bar_charts <- function(mydata, facet_variable, annotate_variable)
 my_grid_plot <- create_stacked_bar_charts(mydata = subset(class_data_processed.df, Project == "immunocompetent"), facet_variable = "Patient", annotate_variable = "Sampletype_pooled")
 ggsave(my_grid_plot, filename = "Result_figures/abundance_analysis_plots/immunocompetent_stacked_bar_charts.pdf", height = 50, width =70, units = "cm")
 
-my_grid_plot <- create_stacked_bar_charts(mydata = subset(class_data_processed.df, Project == "immunocompromised"), facet_variable = "Patient", annotate_variable = "Sampletype_pooled")
-ggsave(my_grid_plot, filename = "Result_figures/abundance_analysis_plots/immunocompromised_stacked_bar_charts.pdf", height = 50, width =40, units = "cm")
+my_grid_plot <- create_stacked_bar_charts(mydata = subset(class_data_processed.df, Project == "immunosuppressed"), facet_variable = "Patient", annotate_variable = "Sampletype_pooled")
+ggsave(my_grid_plot, filename = "Result_figures/abundance_analysis_plots/immunosuppressed_stacked_bar_charts.pdf", height = 50, width =40, units = "cm")
 
 
 
@@ -295,7 +295,7 @@ barplots.l <- barplots.l[!names(barplots.l) %in% c("MS014")]
 # "MS001,MS002,MS004,MS005,MS006,MS007,MS008,MS009,MS010,MS011,MS013,MS014,MST001,MST002,MST003,MST004,MST005,MST006,MST007,MST008,MST009,MST010,MST012,MST013,MST014,MST015,MST016,MST017,MST018,MST019,MST020,MST021,MST022,MST023,MST024,MST025,MST026,MST027,MST028,MST029,MST030,MST031,MST032"
 
 # ggsave(
-#   filename = paste0("Result_figures/immunocompromised_taxa_barplots.pdf"), 
+#   filename = paste0("Result_figures/immunosuppressed_taxa_barplots.pdf"), 
 #   arrangeGrob(
 #     barplots.l[['MST002']],
 #     barplots.l[['MST003']],
@@ -357,9 +357,9 @@ grid_plot_competent <- plot_grid(grid_plot_competent, my_legend, rel_widths = c(
 ggsave(grid_plot_competent, filename = "Result_figures/stacked_bar_charts_immunocompetent.pdf", height = 40, width =40, units = "cm")
 
 
-grid_plot_compromised <- cowplot::plot_grid(plotlist = barplots.l[MST_plot_names])
-grid_plot_compromised <- plot_grid(grid_plot_compromised, my_legend, rel_widths = c(1,.4), ncol = 2)
-ggsave(grid_plot_compromised, filename = "Result_figures/stacked_bar_charts_immunocompromised.pdf", height = 20, width =40, units = "cm")
+grid_plot_suppressed <- cowplot::plot_grid(plotlist = barplots.l[MST_plot_names])
+grid_plot_suppressed <- plot_grid(grid_plot_suppressed, my_legend, rel_widths = c(1,.4), ncol = 2)
+ggsave(grid_plot_suppressed, filename = "Result_figures/stacked_bar_charts_immunosuppressed.pdf", height = 20, width =40, units = "cm")
 
 
 

@@ -1051,6 +1051,9 @@ run_permdisp_custom <- function(my_metadata, my_data, my_group, my_method = "euc
 }
 
 run_anosim_custom <- function(my_metadata, my_data, my_group, my_method = "euclidean", permutations = 999, label = NULL){
+  
+  # Test whether there is a statistical difference between groups
+  # Uses a dissimilarity matrix. Non-parametric (does not assume distribution).
   stat_sig_table <- NULL
   anosim_object <- with(my_metadata, anosim(x = t(my_data), 
                                             grouping = get(my_group),

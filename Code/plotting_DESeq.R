@@ -54,8 +54,8 @@ setwd("/Users/julianzaugg/Desktop/ACE/major_projects/skin_microbiome_16S")
 otu_data.df <- read.csv("Result_tables/other/OTU_counts_abundances_and_metadata.csv")
 genus_data.df <- read.csv("Result_tables/other/genus_counts_abundances_and_metadata.csv")
 
-immunocompromised_sampletype_final_otu_deseq <- read.csv("Result_tables/DESeq_results/immunocompromised_otu_sampletype_final.csv", header = T)
-immunocompromised_sampletype_final_genus_deseq <- read.csv("Result_tables/DESeq_results/immunocompromised_genus_sampletype_final.csv", header = T)
+immunosuppressed_sampletype_final_otu_deseq <- read.csv("Result_tables/DESeq_results/immunosuppressed_otu_sampletype_final.csv", header = T)
+immunosuppressed_sampletype_final_genus_deseq <- read.csv("Result_tables/DESeq_results/immunosuppressed_genus_sampletype_final.csv", header = T)
 
 immunocompetent_sampletype_final_otu_deseq <- read.csv("Result_tables/DESeq_results/immunocompetent_otu_sampletype_final.csv", header = T)
 immunocompetent_sampletype_final_genus_deseq <- read.csv("Result_tables/DESeq_results/immunocompetent_genus_sampletype_final.csv", header = T)
@@ -178,11 +178,11 @@ make_deseq_boxplots <- function(my_data, variable, taxonomy_level,
 }
 
 # ----------------------------------------------------------------
-# immunocompromised
+# immunosuppressed
 
 # Filter to project
-genus_data_filtered.df <- genus_data.df[genus_data.df$Project == "immunocompromised",]
-otu_data_filtered.df <- otu_data.df[otu_data.df$Project == "immunocompromised",]
+genus_data_filtered.df <- genus_data.df[genus_data.df$Project == "immunosuppressed",]
+otu_data_filtered.df <- otu_data.df[otu_data.df$Project == "immunosuppressed",]
 
 # Remove negative if present
 genus_data_filtered.df <- genus_data_filtered.df[genus_data_filtered.df$Sampletype != "negative",]
@@ -193,11 +193,11 @@ genus_data_filtered.df$Sampletype_final <- factor(genus_data_filtered.df$Samplet
 otu_data_filtered.df$Sampletype_final <- factor(otu_data_filtered.df$Sampletype_final, levels = c("C", "LC", "AK", "SCC"))
 
 # Filter data to significant genera/OTUs for each deseq result
-sampletype_final_genus_data_filtered.df <- genus_data_filtered.df[genus_data_filtered.df$taxonomy_genus %in% immunocompromised_sampletype_final_genus_deseq$Taxonomy,]
-sampletype_final_otu_data_filtered.df <- otu_data_filtered.df[otu_data_filtered.df$OTU.ID %in% immunocompromised_sampletype_final_otu_deseq$OTU,]
+sampletype_final_genus_data_filtered.df <- genus_data_filtered.df[genus_data_filtered.df$taxonomy_genus %in% immunosuppressed_sampletype_final_genus_deseq$Taxonomy,]
+sampletype_final_otu_data_filtered.df <- otu_data_filtered.df[otu_data_filtered.df$OTU.ID %in% immunosuppressed_sampletype_final_otu_deseq$OTU,]
 
 grid_plot <- make_deseq_boxplots(my_data = sampletype_final_genus_data_filtered.df, 
-                                 # my_deseq_results = immunocompromised_sampletype_pooled_genus_deseq, 
+                                 # my_deseq_results = immunosuppressed_sampletype_pooled_genus_deseq, 
                                  variable = "Sampletype_final", 
                                  taxonomy_level = "Genus",
                                  outlocation = "Result_figures/DESeq_plots/boxplots/sampletype_final_genus/")
@@ -205,7 +205,7 @@ grid_plot <- make_deseq_boxplots(my_data = sampletype_final_genus_data_filtered.
 ggsave(plot = grid_plot,filename =  paste0("Result_figures/DESeq_plots/boxplots/all_genus_sampletype_final.pdf"), width = 30, height = 15, units = "cm")
 
 grid_plot <- make_deseq_boxplots(my_data = sampletype_final_otu_data_filtered.df, 
-                                 # my_deseq_results = immunocompromised_sampletype_pooled_otu_deseq, 
+                                 # my_deseq_results = immunosuppressed_sampletype_pooled_otu_deseq, 
                                  variable = "Sampletype_final", 
                                  taxonomy_level = "OTU",
                                  outlocation = "Result_figures/DESeq_plots/boxplots/sampletype_final_otu/")
@@ -288,25 +288,25 @@ plot_genus_deseq <- function(deseq_result_table, facet_plot = T, limit_to = NULL
 sampletype_pooled_otu_deseq <- read.csv("Result_tables/DESeq_results/by_patient/patient_otu__Sampletype_pooled_combined.csv", header = T)
 sampletype_pooled_genus_deseq <- read.csv("Result_tables/DESeq_results/by_patient/patient_genus__Sampletype_pooled_combined.csv", header = T)
 
-immunocompromised_sampletype_pooled_otu_deseq <- sampletype_pooled_otu_deseq[grepl("MST", sampletype_pooled_otu_deseq$Variable),]
-immunocompromised_sampletype_pooled_genus_deseq <- sampletype_pooled_genus_deseq[grepl("MST", sampletype_pooled_genus_deseq$Variable),]
+immunosuppressed_sampletype_pooled_otu_deseq <- sampletype_pooled_otu_deseq[grepl("MST", sampletype_pooled_otu_deseq$Variable),]
+immunosuppressed_sampletype_pooled_genus_deseq <- sampletype_pooled_genus_deseq[grepl("MST", sampletype_pooled_genus_deseq$Variable),]
 
 
-myplot <- plot_genus_deseq(immunocompromised_sampletype_pooled_otu_deseq,facet_plot = T,
-                           limit_to = ".", title = "Immunocompromised\nDifferentially abundant features between lesion types\ncalculated by patient at feature level",
+myplot <- plot_genus_deseq(immunosuppressed_sampletype_pooled_otu_deseq,facet_plot = T,
+                           limit_to = ".", title = "Immunosuppressed\nDifferentially abundant features between lesion types\ncalculated by patient at feature level",
                            pallete = my_colour_pallete_20,include_grid = T)
 
-ggsave(filename = paste0("Result_figures/DESeq_plots/immunocompromised_by_patient_otu_DESeq.pdf"),
+ggsave(filename = paste0("Result_figures/DESeq_plots/immunosuppressed_by_patient_otu_DESeq.pdf"),
        plot = myplot,
        width = 15,
        height = 15,
        units = "cm")
 
-myplot <- plot_genus_deseq(immunocompromised_sampletype_pooled_genus_deseq,facet_plot = T,
-                           limit_to = ".", title = "Immunocompromised\nDifferentially abundant features between lesion types\ncalculated by patient at genus level",
+myplot <- plot_genus_deseq(immunosuppressed_sampletype_pooled_genus_deseq,facet_plot = T,
+                           limit_to = ".", title = "Immunosuppressed\nDifferentially abundant features between lesion types\ncalculated by patient at genus level",
                            pallete = my_colour_pallete_20,include_grid = T)
 
-ggsave(filename = paste0("Result_figures/DESeq_plots/immunocompromised_by_patient_genus_DESeq.pdf"),
+ggsave(filename = paste0("Result_figures/DESeq_plots/immunosuppressed_by_patient_genus_DESeq.pdf"),
        plot = myplot,
        width = 10,
        height = 15,
@@ -340,28 +340,28 @@ ggsave(filename = paste0("Result_figures/DESeq_plots/immunocompetent_by_patient_
        units = "cm")
 # ----------------------------------------------------------------------------------------------------
 # Number of meds
-immunocompromised_number_of_meds_otu_deseq <- read.csv("Result_tables/DESeq_results/immunocompromised_otu_Number_of_meds.csv", header = T)
-immunocompromised_number_of_meds_genus_deseq <- read.csv("Result_tables/DESeq_results/immunocompromised_genus_Number_of_meds.csv", header = T)
-myplot <- plot_genus_deseq(immunocompromised_number_of_meds_otu_deseq,facet_plot = T,
-                           limit_to = ".", title = "Immunocompromised\nDifferentially abundant features\nnumber of medications",
+immunosuppressed_number_of_meds_otu_deseq <- read.csv("Result_tables/DESeq_results/immunosuppressed_otu_Number_of_meds.csv", header = T)
+immunosuppressed_number_of_meds_genus_deseq <- read.csv("Result_tables/DESeq_results/immunosuppressed_genus_Number_of_meds.csv", header = T)
+myplot <- plot_genus_deseq(immunosuppressed_number_of_meds_otu_deseq,facet_plot = T,
+                           limit_to = ".", title = "Immunosuppressed\nDifferentially abundant features\nnumber of medications",
                            pallete = my_colour_pallete_20,include_grid = T) 
 myplot
 
-ggsave(filename = paste0("Result_figures/DESeq_plots/immunocompromised_Number_of_meds_DESeq.pdf"),
+ggsave(filename = paste0("Result_figures/DESeq_plots/immunosuppressed_Number_of_meds_DESeq.pdf"),
        plot = myplot,
        width = 10,
        height = 12,
        units = "cm")
 # ----------------------------------------------------------------------------------------------------
 # Patient group
-immunocompromised_patient_group_otu_deseq <- read.csv("Result_tables/DESeq_results/immunocompromised_otu_Patient_group.csv", header = T)
-immunocompromised_patient_group_genus_deseq <- read.csv("Result_tables/DESeq_results/immunocompromised_genus_Patient_group.csv", header = T)
-myplot <- plot_genus_deseq(immunocompromised_patient_group_otu_deseq,facet_plot = T,
-                           limit_to = ".", title = "Immunocompromised\nDifferentially abundant features\nPatient group",
+immunosuppressed_patient_group_otu_deseq <- read.csv("Result_tables/DESeq_results/immunosuppressed_otu_Patient_group.csv", header = T)
+immunosuppressed_patient_group_genus_deseq <- read.csv("Result_tables/DESeq_results/immunosuppressed_genus_Patient_group.csv", header = T)
+myplot <- plot_genus_deseq(immunosuppressed_patient_group_otu_deseq,facet_plot = T,
+                           limit_to = ".", title = "Immunosuppressed\nDifferentially abundant features\nPatient group",
                            pallete = my_colour_pallete_20,include_grid = T) 
 myplot
 
-ggsave(filename = paste0("Result_figures/DESeq_plots/immunocompromised_Patient_group_DESeq.pdf"),
+ggsave(filename = paste0("Result_figures/DESeq_plots/immunosuppressed_Patient_group_DESeq.pdf"),
        plot = myplot,
        width = 10,
        height = 12,
@@ -396,24 +396,24 @@ ggsave(filename = paste0("Result_figures/DESeq_plots/lesion_type_between_cohorts
        height = 18,
        units = "cm")
 # ----------------------------------------------------------------------------------------------------
-immunocompromised_sampletype_pooled_otu_deseq <- read.csv("Result_tables/DESeq_results/immunocompromised_otu_sampletype_pooled.csv", header = T)
-immunocompromised_sampletype_pooled_genus_deseq <- read.csv("Result_tables/DESeq_results/immunocompromised_genus_sampletype_pooled.csv", header = T)
+immunosuppressed_sampletype_pooled_otu_deseq <- read.csv("Result_tables/DESeq_results/immunosuppressed_otu_sampletype_pooled.csv", header = T)
+immunosuppressed_sampletype_pooled_genus_deseq <- read.csv("Result_tables/DESeq_results/immunosuppressed_genus_sampletype_pooled.csv", header = T)
 
-myplot_otu <- plot_genus_deseq(immunocompromised_sampletype_pooled_otu_deseq,facet_plot = T,
-                           limit_to = ".", title = "Immunocompromised\nDifferentially abundant features\nSampletype pooled",
+myplot_otu <- plot_genus_deseq(immunosuppressed_sampletype_pooled_otu_deseq,facet_plot = T,
+                           limit_to = ".", title = "Immunosuppressed\nDifferentially abundant features\nSampletype pooled",
                            pallete = my_colour_pallete_20,include_grid = T) 
 
-myplot_genus <- plot_genus_deseq(immunocompromised_sampletype_pooled_genus_deseq,facet_plot = T,
-                               limit_to = ".", title = "Immunocompromised\nDifferentially abundant features\nSampletype pooled",
+myplot_genus <- plot_genus_deseq(immunosuppressed_sampletype_pooled_genus_deseq,facet_plot = T,
+                               limit_to = ".", title = "Immunosuppressed\nDifferentially abundant features\nSampletype pooled",
                                pallete = my_colour_pallete_20,include_grid = T) 
 
-ggsave(filename = paste0("Result_figures/DESeq_plots/immunocompromised_sampletype_pooled_otu_DESeq.pdf"),
+ggsave(filename = paste0("Result_figures/DESeq_plots/immunosuppressed_sampletype_pooled_otu_DESeq.pdf"),
        plot = myplot_otu,
        width =8,
        height = 12,
        units = "cm")
 
-ggsave(filename = paste0("Result_figures/DESeq_plots/immunocompromised_sampletype_pooled_genus_DESeq.pdf"),
+ggsave(filename = paste0("Result_figures/DESeq_plots/immunosuppressed_sampletype_pooled_genus_DESeq.pdf"),
        plot = myplot_genus,
        width = 10,
        height = 12,
@@ -427,17 +427,17 @@ ggsave(filename = paste0("Result_figures/DESeq_plots/immunocompromised_sampletyp
 
 
 # -------------------------------------------
-# Patient group, immunocompromised
+# Patient group, immunosuppressed
 
 # Filter data to significant OTUs
-# otu_data_filtered.df <- otu_data.df[otu_data.df$OTU.ID %in% immunocompromised_patient_group_otu_deseq$OTU,]
+# otu_data_filtered.df <- otu_data.df[otu_data.df$OTU.ID %in% immunosuppressed_patient_group_otu_deseq$OTU,]
 # 
-# # Filter to immunocompromised
-# otu_data_filtered.df <- otu_data_filtered.df[otu_data_filtered.df$Project == "immunocompromised",]
+# # Filter to immunosuppressed
+# otu_data_filtered.df <- otu_data_filtered.df[otu_data_filtered.df$Project == "immunosuppressed",]
 # # otu_data_filtered.df[otu_data_filtered.df$OTU.ID == "32f5ab03a3b49ab88fad406ac4592280",]$Patient_group
 # 
 # # Combine deseq results with read counts/metadata
-# otu_data_filtered.df <- merge(otu_data_filtered.df, immunocompromised_patient_group_otu_deseq,by.x = "OTU.ID", by.y ="OTU")
+# otu_data_filtered.df <- merge(otu_data_filtered.df, immunosuppressed_patient_group_otu_deseq,by.x = "OTU.ID", by.y ="OTU")
 # otu_data_filtered.df <- otu_data_filtered.df[otu_data_filtered.df$Sampletype != "negative",]
 # 
 # # Set the ordering of the patient group levels (variable of interest)

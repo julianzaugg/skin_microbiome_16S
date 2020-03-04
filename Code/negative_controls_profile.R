@@ -45,7 +45,7 @@ negative_genus_data.df <- read.csv("Result_tables/combined_counts_abundances_and
 
 negative_genus_data.df$taxonomy_label <- with(negative_genus_data.df, paste0(Domain,";", Class,";", Genus))
 
-negative_taxa_summary.df <- generate_taxa_summary(mydata = negative_genus_data.df, taxa_column = "taxonomy_label", group_by_columns = c("Sample", "Sampletype_final_refined"))
+negative_taxa_summary.df <- generate_taxa_summary(mydata = negative_genus_data.df, taxa_column = "taxonomy_label", group_by_columns = c("Sample", "Lesion_type_refined"))
 
 # Identify the top genus for each sample
 negative_top_taxa_summary.df <- filter_summary_to_top_n(taxa_summary = negative_taxa_summary.df, 
@@ -61,10 +61,10 @@ genus_palette["Other"] <- "grey"
 negative_taxa_summary.df[!negative_taxa_summary.df$taxonomy_label %in% negative_top_taxa_summary.df$taxonomy_label,]$taxonomy_label <- "Other"
 
 # Normalise the Mean_relative_abundance_rarefied values within each lesion
-# negative_taxa_summary.df <- negative_taxa_summary.df %>% group_by(Sampletype_final_refined) %>% mutate(Normalised_mean_relative_abundance = Mean_relative_abundance/sum(Mean_relative_abundance_rarefied)) %>% as.data.frame()
+# negative_taxa_summary.df <- negative_taxa_summary.df %>% group_by(Lesion_type_refined) %>% mutate(Normalised_mean_relative_abundance = Mean_relative_abundance/sum(Mean_relative_abundance_rarefied)) %>% as.data.frame()
 
 # Need a single entry for the Other group
-negative_taxa_summary.df <- negative_taxa_summary.df %>% group_by(Sample,Sampletype_final_refined, taxonomy_label) %>% dplyr::summarise(Relative_abundance = sum(Summed_relative_abundance)) %>% as.data.frame()
+negative_taxa_summary.df <- negative_taxa_summary.df %>% group_by(Sample,Lesion_type_refined, taxonomy_label) %>% dplyr::summarise(Relative_abundance = sum(Summed_relative_abundance)) %>% as.data.frame()
 
 negative_taxa_summary.df %>% group_by(Sample) %>% summarise(total = sum(Relative_abundance)) %>% as.data.frame()
 
@@ -94,7 +94,7 @@ negative_abundance_plot <- ggplot(negative_taxa_summary.df, aes(x = Sample, y = 
 negative_genus_data.df <- read.csv("Result_tables/combined_counts_abundances_and_metadata_tables/Negative_samples_Genus_counts_abundances_and_metadata.csv")
 negative_genus_data.df$taxonomy_label <- with(negative_genus_data.df, paste0(Domain,";", Class,";", Genus))
 
-negative_taxa_summary.df <- generate_taxa_summary(mydata = negative_genus_data.df, taxa_column = "taxonomy_label", group_by_columns = c("Sample", "Sampletype_final_refined"))
+negative_taxa_summary.df <- generate_taxa_summary(mydata = negative_genus_data.df, taxa_column = "taxonomy_label", group_by_columns = c("Sample", "Lesion_type_refined"))
 
 negative_genus_data_filtered.df <- filter_summary_to_top_n(taxa_summary = negative_taxa_summary.df, 
                                                           grouping_variables = c("Sample"),
@@ -107,13 +107,13 @@ heatmap.m <- heatmap.m %>% spread(Sample, Mean_relative_abundance,fill = 0)
 heatmap.m <- df2matrix(heatmap.m)
 
 names(negative_genus_data.df)
-heatmap_metadata.df <- unique(negative_genus_data.df[c("Sample", "Sampletype_final_refined","Patient","Job.ID", "Project","Length_of_immunosuppression_group_1", "Length_of_immunosuppression_group_2","Date_sampled","Transplant", grep("colour", names(negative_genus_data.df), value =T))])
+heatmap_metadata.df <- unique(negative_genus_data.df[c("Sample", "Lesion_type_refined","Patient","Job.ID", "Project","Length_of_immunosuppression_group_1", "Length_of_immunosuppression_group_2","Date_sampled","Transplant", grep("colour", names(negative_genus_data.df), value =T))])
 rownames(heatmap_metadata.df) <- heatmap_metadata.df$Sample
 
 make_heatmap(heatmap.m*100, 
              mymetadata = heatmap_metadata.df,
              filename = paste0("Result_figures/heatmaps/Negative_sample_genus_top_10_mean_relative_abundance_heatmap.pdf"),
-             variables = c("Project","Job.ID","Sampletype_final_refined","Patient","Transplant", "Length_of_immunosuppression_group_1", "Length_of_immunosuppression_group_2"),
+             variables = c("Project","Job.ID","Lesion_type_refined","Patient","Transplant", "Length_of_immunosuppression_group_1", "Length_of_immunosuppression_group_2"),
              column_title = "",
              row_title = "Genus",
              plot_height = 10,
