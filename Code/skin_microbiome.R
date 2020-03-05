@@ -644,7 +644,8 @@ metadata.df$Lesion_type_refined_colour <- all_sample_colours
 
 # For Cohort
 cohort_values <- factor(as.character(unique(metadata.df$Cohort)))
-cohort_colours <- setNames(cohort_palette_2[1:length(cohort_values)], cohort_values)
+# cohort_colours <- setNames(cohort_palette_2[1:length(cohort_values)], cohort_values)
+cohort_colours <- c("immunosuppressed" = "#c93434", "immunocompetent" = "#61b4c1")
 all_cohort_olours <- as.character(lapply(as.character(metadata.df$Cohort), function(x) cohort_colours[x]))
 metadata.df$Cohort_colour <- all_cohort_olours
 
@@ -1102,8 +1103,8 @@ names = as.character(contaminating_feature_taxonomy_data.df$OTU.ID),
 file.out = paste0("Result_other/sequences/contaminate_features.fasta"))
 
 # Remove contaminants from data.
-# otu_rel_decontaminated.m <- otu_rel.m[!rownames(otu_rel.m) %in% unique(c(contaminating_features)),]
-# otu_decontaminated.m <- otu.m[!rownames(otu.m) %in% unique(c(contaminating_features)),]
+otu_rel_decontaminated.m <- otu_rel.m[!rownames(otu_rel.m) %in% unique(c(contaminating_features)),]
+otu_decontaminated.m <- otu.m[!rownames(otu.m) %in% unique(c(contaminating_features)),]
 
 # ----------------------------------------
 # Remove contaminants from data for each cohort
@@ -1117,7 +1118,8 @@ length(contaminating_features_immunosuppressed)
 dim(immunosuppressed_otu.m)
 dim(immunocompetent_otu.m)
 
-# Combine cohort tables together to create new primary otu.m
+# Combine cohort tables together to create new primary otu.m that contains decontaminated counts
+# DO NOT re-normalise the abundances as we need them to summarise the contaminates
 temp1 <- melt(immunosuppressed_otu.m)
 temp2 <- melt(immunocompetent_otu.m)
 temp1 <- temp1[temp1$value != 0,]
@@ -1127,7 +1129,7 @@ temp3 <- rbind(temp1,temp2)
 # length(unique(temp3$Var1))
 temp4 <- spread(temp3,key = "Var2", value = "value",fill = 0)
 otu_decontaminated.m <- df2matrix(temp4)
-otu_rel_decontaminated.m <- t(t(otu_decontaminated.m)/colSums(otu_decontaminated.m))
+# otu_rel_decontaminated.m <- t(t(otu_decontaminated.m)/colSums(otu_decontaminated.m))
 
 # ----------------------------------------
 # ---- General ---- 
@@ -1137,9 +1139,8 @@ otu_rel_decontaminated.m <- t(t(otu_decontaminated.m)/colSums(otu_decontaminated
 # What is the break down per cohort?
 
 sample_contamination.df <- m2df(melt(round(100-colSums(otu_rel_decontaminated.m)*100,5),value.name = "Contaminant_abundance"),"Sample")
-sample_contamination.df <- sample_contamination.df[order(sample_contamination.df$Contaminant_abundance,decreasing = T),]
-
 rownames(sample_contamination.df) <- sample_contamination.df$Sample
+
 # Get the number of contaminant features in each sample
 temp <- otu_rel.m[contaminating_features,sample_contamination.df$Sample]
 temp[temp > 0] <- 1
@@ -1151,6 +1152,12 @@ temp[temp > 0] <- 1
 temp <- melt(colSums(temp))
 sample_contamination.df$Number_of_features <- temp[rownames(sample_contamination.df),]
 
+# Fix entries where if there are no features total, contaminant abundance must be 0
+sample_contamination.df[which(sample_contamination.df$Number_of_features == 0),]$Contaminant_abundance <- 0
+
+# Order by contamination
+sample_contamination.df <- sample_contamination.df[order(sample_contamination.df$Contaminant_abundance,decreasing = T),]
+
 # Add lesion, cohort and patient data
 sample_contamination.df$Lesion_type_refined <- metadata.df[rownames(sample_contamination.df),]$Lesion_type_refined
 sample_contamination.df$Cohort <- metadata.df[rownames(sample_contamination.df),]$Cohort
@@ -1159,18 +1166,21 @@ sample_contamination.df$Patient <- metadata.df[rownames(sample_contamination.df)
 
 write.csv(sample_contamination.df, "Result_tables/other/sample_contaminant_summary.csv", quote =F, row.names = F)
 
-# Re-normalise the data
+# Re-normalise the relative abundance data
 otu_rel_decontaminated.m <- t(t(otu_rel_decontaminated.m) / colSums(otu_rel_decontaminated.m))
 otu_rel_decontaminated.m[is.nan(otu_rel_decontaminated.m)] <- 0
 
 # (Optional) Use de-contamainated data going forward
 otu_rel.m <- otu_rel_decontaminated.m
+otu.m <- otu_decontaminated.m
 
 # (Optional) Remove negative samples as they are no longer needed
 otu_rel.m <- otu_rel.m[,!colnames(otu_rel.m) %in% negative_sample_ids]
-otu.m <- otu.m[,colnames(otu_rel.m)]
+otu.m <- otu.m[,!colnames(otu.m) %in% negative_sample_ids]
 metadata.df <- metadata.df[!rownames(metadata.df) %in% negative_sample_ids,]
-
+# dim(metadata.df)
+# dim(otu.m)
+# dim(otu_rel.m)
 # Reassign the sample ids
 sample_ids <- colnames(otu.m)
 # ------------------------------------------------------------------------------------------------------------------------

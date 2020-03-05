@@ -618,12 +618,15 @@ calculate_PC_abundance_correlations <- function(pca_object, mydata.df, taxa_colu
 # Function to create heatmap
 make_heatmap <- function(myheatmap_matrix,
                          mymetadata,
-                         filename,
-                         my_row_labels = NULL,
-                         height = 10,
-                         width = 10,
-                         heatmap_height = 10,
-                         heatmap_width = 10,
+                         filename= NULL,
+                         #...,
+                         # Dataframe with two columns. First must match row entry, second the new label
+                         my_row_labels = NULL, 
+                         my_col_labels = NULL, # Same as my_row_labels, though with columns
+                         height = 10, # Not currently used
+                         width = 10, # Not currently used
+                         heatmap_height = 10, # Not currently used
+                         heatmap_width = 10, # Not currently used
                          plot_height =10,
                          plot_width =10,
                          column_title_size = 10,
@@ -644,16 +647,27 @@ make_heatmap <- function(myheatmap_matrix,
                          simple_anno_size = unit(.5, "cm"), # size of annotations
                          show_column_dend = F,
                          show_row_dend = F,
-                         ...
-){
+                         do_not_order = F,
+                         show_cell_values = F,
+                         # If show_cell_values =T, cells less than this will have a black font colour
+                         # and above white
+                         cell_fun_value_col_threshold = 15,
+                         my_cell_fun = NULL,
+                         show_legend = T,
+                         show_top_annotation = T,
+                         ...){
+  # print(list(...))
+  argList<-list(...) # argument list for checking unspecified optional parameters
+  # print(argList$cell_fun)
+  # return(1)
   
   # Assign internal objects
   internal_heatmap_matrix.m <- myheatmap_matrix
   internal_metadata.df <- mymetadata
   # Order/filter the heatmap matrix to order/entries of metadata
-  internal_heatmap_matrix.m <- internal_heatmap_matrix.m[,rownames(internal_metadata.df)]
+  internal_heatmap_matrix.m <- internal_heatmap_matrix.m[,rownames(internal_metadata.df),drop = F]
   # Order the heatmap matrix by the variables
-  internal_heatmap_matrix.m <- internal_heatmap_matrix.m[,do.call(order, internal_metadata.df[,variables,drop=F])]
+  internal_heatmap_matrix.m <- internal_heatmap_matrix.m[,do.call(order, internal_metadata.df[,variables,drop=F]),drop =F]
   # Order the metadata by the variables
   internal_metadata.df <- internal_metadata.df[do.call(order, internal_metadata.df[,variables,drop=F]),,drop=F]
   # Create metadata just containing the variables
@@ -664,7 +678,6 @@ make_heatmap <- function(myheatmap_matrix,
   }
   
   # Create annotations
-  
   colour_lists <- list()
   for (myvar in variables){
     var_colour_name <- paste0(myvar, "_colour")
@@ -695,16 +708,19 @@ make_heatmap <- function(myheatmap_matrix,
   }
   
   # Appearance of the column annotations
-  ha <- HeatmapAnnotation(df = metadata_just_variables,
-                          which = "column",
+  #HeatmapAnnotation
+  ha <- columnAnnotation(df = metadata_just_variables,
+                          # which = "column",
                           col = colour_lists,
                           gp = gpar(col = "black",lwd =.2),
                           gap = unit(.1,"cm"),
                           show_annotation_name = T,
                           # annotation_legend_param, # ?color_mapping_legend for options
-                          show_legend = T,
+                          show_legend = show_legend,
                           simple_anno_size = simple_anno_size,
                           annotation_name_gp = gpar(fontsize = annotation_name_size))
+  
+  # TODO - add option for row annotation
   
   if (is.null(my_palette)){
     if (is.null(palette_choice)) {palette_choice <- "blue"}
@@ -732,15 +748,34 @@ make_heatmap <- function(myheatmap_matrix,
   
   my_row_labels.v = rownames(internal_heatmap_matrix.m)
   if (!is.null(my_row_labels)){
-    my_row_labels.v <- as.character(lapply(my_row_labels.v, function(x) as.character(row_labels.df[row_labels.df[,1] == x,][,2])))
+    my_row_labels.v <- as.character(lapply(my_row_labels.v, function(x) as.character(my_row_labels[my_row_labels[,1] == x,][,2])))
   }
-  # Order the heatmap rows by the row labels names
-  internal_heatmap_matrix.m <- internal_heatmap_matrix.m[order(my_row_labels.v),]
-  my_row_labels.v <- my_row_labels.v[order(my_row_labels.v)]
+  my_col_labels.v = colnames(internal_heatmap_matrix.m)
+  if (!is.null(my_col_labels)){
+    my_col_labels.v <- as.character(lapply(my_col_labels.v, function(x) as.character(my_col_labels[my_col_labels[,1] == x,][,2])))
+  }
   
+  if (do_not_order != T){
+    # Order the heatmap rows by the row labels names
+    internal_heatmap_matrix.m <- internal_heatmap_matrix.m[order(my_row_labels.v),]
+    my_row_labels.v <- my_row_labels.v[order(my_row_labels.v)]    
+  }
+  
+  
+  # if show values and no function provided
+  if (show_cell_values == T & is.null(my_cell_fun)){ 
+    my_cell_fun <- function(j, i, x, y, width, height, fill) {
+      # if(internal_heatmap_matrix.m[i, j] < cell_fun_value_col_threshold & internal_heatmap_matrix.m[i, j] != 0){
+      if(internal_heatmap_matrix.m[i, j] < cell_fun_value_col_threshold){
+        grid.text(sprintf("%.2f", internal_heatmap_matrix.m[i, j]), x, y, gp = gpar(fontsize = 6, col = "black"))}
+      else if(internal_heatmap_matrix.m[i, j] >= cell_fun_value_col_threshold ) {
+        grid.text(sprintf("%.2f", internal_heatmap_matrix.m[i, j]), x, y, gp = gpar(fontsize = 6, col = "white"))
+      }
+    }
+  }
   hm <- Heatmap(matrix = internal_heatmap_matrix.m,
                 
-                top_annotation = ha,
+                # top_annotation = ha,
                 
                 # Colours
                 col = col_fun,
@@ -750,6 +785,7 @@ make_heatmap <- function(myheatmap_matrix,
                 show_heatmap_legend = F,
                 row_names_max_width = unit(35,"cm"),
                 row_labels = my_row_labels.v,
+                column_labels = my_col_labels.v,
                 # row_names_side = "left",
                 # height = unit(height,"cm"),
                 # width = unit(width,"cm"),
@@ -782,8 +818,12 @@ make_heatmap <- function(myheatmap_matrix,
                 # Text appearance
                 row_names_gp = gpar(fontsize = 6),
                 column_names_gp = gpar(fontsize = 6),
+                cell_fun = my_cell_fun,
                 ...
   )
+  if (show_top_annotation == T){
+    hm <- ha %v% hm
+  }
   
   # Legend appearance
   if (is.null(legend_labels)){
@@ -814,13 +854,16 @@ make_heatmap <- function(myheatmap_matrix,
       title = legend_title,
       direction = "vertical",
       border = "black",
-      
     )
   }
   
-  pdf(filename,height=plot_height,width=plot_width)
-  draw(hm, annotation_legend_list = c(hm_legend))
-  dev.off()
+  if (!is.null(filename)){
+    pdf(filename,height=plot_height,width=plot_width)
+    draw(hm, annotation_legend_list = c(hm_legend))
+    dev.off()    
+  }
+  return(list("heatmap" = hm, "legend" = hm_legend))
+  
 }
 
 

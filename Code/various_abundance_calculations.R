@@ -515,7 +515,7 @@ for (taxa in as.character(unique(immunocompetent_lesion_type_genus_summary_top.d
 # ---------------------------------------------------------------------------------------------
 # Publication figures
 
-# Based on those taxa that looked interesting
+# Based on those taxa that we are interested in
 
 # ---------------------------------------------------------------------------------------------
 # ---------------------------------------------------------------------------------------------

@@ -28,30 +28,30 @@ my_colour_pallete_12_soft <-c("#9E788F","#4C5B61","#678D58","#AD5233","#A0A083",
 
 
 setwd("/Users/julianzaugg/Desktop/ACE/major_projects/skin_microbiome_16S/")
+source("Code/helper_functions.R")
+
+# Load the processed metadata
+metadata.df <- read.csv("Result_tables/other/processed_metadata.csv", sep =",", header = T)
+
+# Filter to snapshot or immunosuppressed samples
+metadata.df <- subset(metadata.df, Cohort == "immunosuppressed" | Snapshot_sample_5 == "yes")
 
 
 # Load QC results
 qc_results.df <- read.csv("Result_tables/other/QC_summary.csv")
 
-# Remove negative samples
-qc_results.df <- qc_results.df[!qc_results.df$Sampletype == "negative",]
-
-# length(qc_results.df$Patient[which(grepl("MST", qc_results.df$Patient))]) 
-# length(unique(qc_results.df$Patient[which(grepl("MST", qc_results.df$Patient))]))
-# length(qc_results.df$Patient[which(!grepl("MST", qc_results.df$Patient))])
-# length(unique(qc_results.df$Patient[which(!grepl("MST", qc_results.df$Patient))]))
+summary(qc_results.df$Sample_retained == "yes")
 
 qc_results.df %>%
-  group_by(Project, Sampletype_final) %>%
+  group_by(Cohort, Lesion_type_refined) %>%
   summarise(N_patient = n_distinct(Patient), N_sample = n_distinct(Sample)) %>%
   as.data.frame()
 
 #10 samples, 9 patients CORRECT
-# sort(subset(qc_results.df, Project == "immunosuppressed" & Sampletype_final == "SCC")$Patient)
-
+# sort(subset(qc_results.df, Cohort == "immunosuppressed" & Sampletype_final == "SCC")$Patient)
 
 # How many reads were lost from rarefaction and filtering
-qc_results.df$Reads_removed_from_filtering_rarefied
+qc_results.df$Reads_removed_from_filtering_rarefied[is.na(qc_results.df$Reads_removed_from_filtering_rarefied == qc_results.df$Reads_removed_from_filtering)]
 
 # Proportionally how many reads were lost from rarefaction
 qc_results.df$Proportion_reads_removed_from_filtering_rarefied
@@ -84,20 +84,20 @@ max(proportions)
 # Proportion of reads for each 'Domain' for both projects, before filtering and rarefection.
 # Using the same sample order, also plot the number of reads for each sample
 
-domain_proportions.df <- qc_results.df[c("Sample","Sampletype_final","Sample_retained", "Project", 
+domain_proportions.df <- qc_results.df[c("Sample","Sampletype_final","Sample_retained", "Cohort", 
                                          "Bacterial_proportion_original", 
                                          "Archaeal_proportion_original", 
                                          "Unassigned_proportion_original",
                                          "Mammal_proportion_original",
                                          "Fungal_proportion_original")]
 
-# domain_proportions.df <- qc_results.df[c("Sample","Sampletype_final", "Project", "Bacterial_proportion_original", "Archaeal_proportion_original", "Unassigned_proportion_original","Eukaryal_proportion_original")]
+# domain_proportions.df <- qc_results.df[c("Sample","Sampletype_final", "Cohort", "Bacterial_proportion_original", "Archaeal_proportion_original", "Unassigned_proportion_original","Eukaryal_proportion_original")]
 domain_proportions.df <- domain_proportions.df[order(domain_proportions.df$Bacterial_proportion_original),]
 sample_order <- domain_proportions.df$Sample
-# names(domain_proportions.df) <- c("Sample", "Sampletype_final", "Project", "Bacteria", "Archaea", "Unassigned", "Eukarya")
-names(domain_proportions.df) <- c("Sample", "Sampletype_final","Sample_retained", "Project", "Bacteria", "Archaea", "Unassigned", "Mammalia", "Fungal")
+# names(domain_proportions.df) <- c("Sample", "Sampletype_final", "Cohort", "Bacteria", "Archaea", "Unassigned", "Eukarya")
+names(domain_proportions.df) <- c("Sample", "Sampletype_final","Sample_retained", "Cohort", "Bacteria", "Archaea", "Unassigned", "Mammalia", "Fungal")
 domain_proportions.df$Other <- 1 - rowSums(domain_proportions.df[c("Bacteria", "Archaea", "Unassigned", "Mammalia", "Fungal")])
-domain_proportions.df <- melt(domain_proportions.df,id.vars = c("Sample", "Sampletype_final","Sample_retained", "Project"), variable.name = "Domain", value.name = "Abundance")
+domain_proportions.df <- melt(domain_proportions.df,id.vars = c("Sample", "Sampletype_final","Sample_retained", "Cohort"), variable.name = "Domain", value.name = "Abundance")
 # domain_proportions.df$Domain <- factor(domain_proportions.df$Domain, levels = c("Archaea","Bacteria","Eukarya", "Unassigned"))
 domain_proportions.df$Domain <- factor(domain_proportions.df$Domain, levels = c("Archaea","Bacteria","Fungal","Mammalia", "Unassigned", "Other"))
 domain_proportions.df$Sample <- factor(domain_proportions.df$Sample, levels = sample_order)
@@ -105,14 +105,14 @@ domain_proportions.df$Sample <- factor(domain_proportions.df$Sample, levels = sa
 # Set up consistent colours
 domain_colours <- setNames(c(rev(my_colour_pallete_12_soft[1:5]), "grey60"),c("Archaea","Bacteria","Fungal","Mammalia", "Unassigned", "Other")) 
 
-myplot <- ggplot(subset(domain_proportions.df, Project == "immunosuppressed"), aes(x = Sample, y = Abundance, fill = Domain)) + 
+myplot <- ggplot(subset(domain_proportions.df, Cohort == "immunosuppressed"), aes(x = Sample, y = Abundance, fill = Domain)) + 
   # geom_bar(stat ="identity", aes(colour = Sample_retained)) + 
   geom_bar(stat ="identity") + 
   # annotate(geom = "point", x = seq(1,length(unique(domain_proportions.df$Sample))), y = -0.03, size=1,stroke= 0) +
   xlab("Sample") +
   ylab("Abundance") +
   scale_fill_manual(values = domain_colours) +
-  facet_wrap(~Project, scales = "free_x") +
+  facet_wrap(~Cohort, scales = "free_x") +
   common_theme +
   theme(axis.text.x = element_text(angle = 90, size = 4, vjust = 0.5),
         axis.line = element_line(size = .3),
@@ -126,12 +126,12 @@ ggsave(filename = "Result_figures/exploratory_analysis/immunosuppressed_domain_p
        height = 10,
        units = "cm")
 
-myplot <- ggplot(subset(domain_proportions.df, Project == "immunocompetent"), aes(x = Sample, y = Abundance, fill = Domain)) + 
+myplot <- ggplot(subset(domain_proportions.df, Cohort == "immunocompetent"), aes(x = Sample, y = Abundance, fill = Domain)) + 
   geom_bar(stat ="identity") + 
   xlab("Sample") +
   ylab("Abundance") +
   scale_fill_manual(values = domain_colours) +
-  facet_wrap(~Project, scales = "free_x") +
+  facet_wrap(~Cohort, scales = "free_x") +
   common_theme +
   theme(axis.text.x = element_text(angle = 90, size = 2, vjust = 0.5),
         axis.line = element_line(size = .3),
@@ -145,29 +145,29 @@ ggsave(filename = "Result_figures/exploratory_analysis/immunocompetent_domain_pr
        units = "cm")
 
 # Now for read counts, keep same order
-# domain_read_counts.df <- qc_results.df[c("Sample","Sampletype_final", "Project", "Bacterial_read_count_original", "Archaeal_read_count_original", "Unassigned_read_count_original","Eukaryal_read_count_original")]
-domain_read_counts.df <- qc_results.df[c("Sample","Sampletype_final", "Project", 
+# domain_read_counts.df <- qc_results.df[c("Sample","Sampletype_final", "Cohort", "Bacterial_read_count_original", "Archaeal_read_count_original", "Unassigned_read_count_original","Eukaryal_read_count_original")]
+domain_read_counts.df <- qc_results.df[c("Sample","Sampletype_final", "Cohort", 
                                          "Bacterial_read_count_original", 
                                          "Archaeal_read_count_original", 
                                          "Unassigned_read_count_original",
                                          "Mammal_read_count_original", 
                                          "Fungal_read_count_original")]
-# names(domain_read_counts.df) <- c("Sample", "Sampletype_final", "Project", "Bacteria", "Archaea", "Unassigned", "Eukarya")
-names(domain_read_counts.df) <- c("Sample", "Sampletype_final", "Project", "Bacteria", "Archaea", "Unassigned", "Mammalia", "Fungal")
+# names(domain_read_counts.df) <- c("Sample", "Sampletype_final", "Cohort", "Bacteria", "Archaea", "Unassigned", "Eukarya")
+names(domain_read_counts.df) <- c("Sample", "Sampletype_final", "Cohort", "Bacteria", "Archaea", "Unassigned", "Mammalia", "Fungal")
 
 # summary(qc_results.df$Sample == domain_read_counts.df$Sample)
 domain_read_counts.df$Other <- qc_results.df$Original_read_counts - rowSums(domain_read_counts.df[c("Bacteria", "Archaea", "Unassigned", "Mammalia", "Fungal")])
-domain_read_counts.df <- melt(domain_read_counts.df,id.vars = c("Sample", "Sampletype_final", "Project"), variable.name = "Domain", value.name = "Read_count")
+domain_read_counts.df <- melt(domain_read_counts.df,id.vars = c("Sample", "Sampletype_final", "Cohort"), variable.name = "Domain", value.name = "Read_count")
 # domain_read_counts.df$Domain <- factor(domain_read_counts.df$Domain, levels = c("Archaea","Bacteria","Eukarya", "Unassigned"))
 domain_read_counts.df$Domain <- factor(domain_read_counts.df$Domain, levels = c("Archaea","Bacteria","Fungal","Mammalia", "Unassigned", "Other"))
 domain_read_counts.df$Sample <- factor(domain_read_counts.df$Sample, levels = sample_order)
 
-myplot <- ggplot(subset(domain_read_counts.df, Project == "immunosuppressed"), aes(x = Sample, y = Read_count, fill = Domain)) + 
+myplot <- ggplot(subset(domain_read_counts.df, Cohort == "immunosuppressed"), aes(x = Sample, y = Read_count, fill = Domain)) + 
   geom_bar(stat ="identity") + 
   xlab("Sample") +
   ylab("Read count") +
   scale_fill_manual(values = domain_colours) +
-  facet_wrap(~Project, scales = "free_x") +
+  facet_wrap(~Cohort, scales = "free_x") +
   common_theme +
   theme(axis.text.x = element_text(angle = 90, size = 4, vjust = 0.5),
         axis.line = element_line(size = .3),
@@ -178,12 +178,12 @@ ggsave(filename = "Result_figures/exploratory_analysis/immunosuppressed_domain_r
        height = 10,
        units = "cm")
 
-myplot <- ggplot(subset(domain_read_counts.df, Project == "immunocompetent"), aes(x = Sample, y = Read_count, fill = Domain)) + 
+myplot <- ggplot(subset(domain_read_counts.df, Cohort == "immunocompetent"), aes(x = Sample, y = Read_count, fill = Domain)) + 
   geom_bar(stat ="identity") + 
   xlab("Sample") +
   ylab("Read count") +
   scale_fill_manual(values = domain_colours) +
-  facet_wrap(~Project, scales = "free_x") +
+  facet_wrap(~Cohort, scales = "free_x") +
   common_theme +
   theme(axis.text.x = element_text(angle = 90, size = 2, vjust = 0.5),
         axis.line = element_line(size = .3),
@@ -199,22 +199,22 @@ ggsave(filename = "Result_figures/exploratory_analysis/immunocompetent_domain_re
 # -------------------------------------------------------------------------------------------
 # Proportion of reads for each 'Domain' for both projects, AFTER filtering and rarefection.
 qc_results.df$Fungal_proportion_after_filtering
-domain_proportions.df <- qc_results.df[c("Sample","Sampletype_final", "Project", "Bacterial_proportion_after_filtering_rarefied", "Fungal_proportion_after_filtering_rarefied")]
+domain_proportions.df <- qc_results.df[c("Sample","Sampletype_final", "Cohort", "Bacterial_proportion_after_filtering_rarefied", "Fungal_proportion_after_filtering_rarefied")]
 domain_proportions.df <- domain_proportions.df[which(!is.na(domain_proportions.df$Bacterial_proportion_after_filtering_rarefied)),]
 domain_proportions.df <- domain_proportions.df[order(domain_proportions.df$Bacterial_proportion_after_filtering_rarefied),]
 sample_order <- domain_proportions.df$Sample
-names(domain_proportions.df) <- c("Sample", "Sampletype_final", "Project", "Bacteria", "Fungal")
+names(domain_proportions.df) <- c("Sample", "Sampletype_final", "Cohort", "Bacteria", "Fungal")
 
-domain_proportions.df <- melt(domain_proportions.df,id.vars = c("Sample", "Sampletype_final", "Project"), variable.name = "Domain", value.name = "Abundance")
+domain_proportions.df <- melt(domain_proportions.df,id.vars = c("Sample", "Sampletype_final", "Cohort"), variable.name = "Domain", value.name = "Abundance")
 domain_proportions.df$Domain <- factor(domain_proportions.df$Domain, levels = c("Bacteria","Fungal"))
 domain_proportions.df$Sample <- factor(domain_proportions.df$Sample, levels = sample_order)
 
-myplot <- ggplot(subset(domain_proportions.df, Project == "immunosuppressed"), aes(x = Sample, y = Abundance, fill = Domain)) + 
+myplot <- ggplot(subset(domain_proportions.df, Cohort == "immunosuppressed"), aes(x = Sample, y = Abundance, fill = Domain)) + 
   geom_bar(stat ="identity") + 
   xlab("Sample") +
   ylab("Abundance") +
   scale_fill_manual(values = domain_colours) +
-  facet_wrap(~Project, scales = "free_x") +
+  facet_wrap(~Cohort, scales = "free_x") +
   common_theme +
   theme(axis.text.x = element_text(angle = 90, size = 4),
         axis.line = element_line(size = .3),
@@ -227,12 +227,12 @@ ggsave(filename = "Result_figures/exploratory_analysis/immunosuppressed_domain_p
        units = "cm")
 
 
-myplot <- ggplot(subset(domain_proportions.df, Project == "immunocompetent"), aes(x = Sample, y = Abundance, fill = Domain)) + 
+myplot <- ggplot(subset(domain_proportions.df, Cohort == "immunocompetent"), aes(x = Sample, y = Abundance, fill = Domain)) + 
   geom_bar(stat ="identity") + 
   xlab("Sample") +
   ylab("Abundance") +
   scale_fill_manual(values = domain_colours) +
-  facet_wrap(~Project, scales = "free_x") +
+  facet_wrap(~Cohort, scales = "free_x") +
   common_theme +
   theme(axis.text.x = element_text(angle = 90, size = 2),
         axis.line = element_line(size = .3),
@@ -245,22 +245,22 @@ ggsave(filename = "Result_figures/exploratory_analysis/immunocompetent_domain_pr
        units = "cm")
 
 # Now for read counts, keep same order
-domain_read_counts.df <- qc_results.df[c("Sample","Sampletype_final", "Project", 
+domain_read_counts.df <- qc_results.df[c("Sample","Sampletype_final", "Cohort", 
                                          "Bacterial_read_count_after_filtering_rarefied",
                                          "Fungal_read_count_after_filtering_rarefied")]
 domain_read_counts.df <- domain_read_counts.df[which(!is.na(domain_read_counts.df$Bacterial_read_count_after_filtering_rarefied)),]
-names(domain_read_counts.df) <- c("Sample", "Sampletype_final", "Project", "Bacteria","Fungal")
+names(domain_read_counts.df) <- c("Sample", "Sampletype_final", "Cohort", "Bacteria","Fungal")
 
-domain_read_counts.df <- melt(domain_read_counts.df,id.vars = c("Sample", "Sampletype_final", "Project"), variable.name = "Domain", value.name = "Read_count")
+domain_read_counts.df <- melt(domain_read_counts.df,id.vars = c("Sample", "Sampletype_final", "Cohort"), variable.name = "Domain", value.name = "Read_count")
 domain_read_counts.df$Domain <- factor(domain_read_counts.df$Domain, levels = c("Archaea","Bacteria","Fungal"))
 domain_read_counts.df$Sample <- factor(domain_read_counts.df$Sample, levels = sample_order)
 
-myplot <- ggplot(subset(domain_read_counts.df, Project == "immunosuppressed"), aes(x = Sample, y = Read_count, fill = Domain)) + 
+myplot <- ggplot(subset(domain_read_counts.df, Cohort == "immunosuppressed"), aes(x = Sample, y = Read_count, fill = Domain)) + 
   geom_bar(stat ="identity") + 
   xlab("Sample") +
   ylab("Read count") +
   scale_fill_manual(values = domain_colours) +
-  facet_wrap(~Project, scales = "free_x") +
+  facet_wrap(~Cohort, scales = "free_x") +
   common_theme +
   theme(axis.text.x = element_text(angle = 90, size = 4, vjust = 0.5),
         axis.line = element_line(size = .3),
@@ -271,12 +271,12 @@ ggsave(filename = "Result_figures/exploratory_analysis/immunosuppressed_domain_r
        height = 10,
        units = "cm")
 
-myplot <- ggplot(subset(domain_read_counts.df, Project == "immunocompetent"), aes(x = Sample, y = Read_count, fill = Domain)) + 
+myplot <- ggplot(subset(domain_read_counts.df, Cohort == "immunocompetent"), aes(x = Sample, y = Read_count, fill = Domain)) + 
   geom_bar(stat ="identity") + 
   xlab("Sample") +
   ylab("Read count") +
   scale_fill_manual(values = domain_colours) +
-  facet_wrap(~Project, scales = "free_x") +
+  facet_wrap(~Cohort, scales = "free_x") +
   common_theme +
   theme(axis.text.x = element_text(angle = 90, size = 2, vjust = 0.5),
         axis.line = element_line(size = .3),

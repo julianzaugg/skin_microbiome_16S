@@ -83,6 +83,7 @@ filter_heatmap_matrix <- function(myheatmap, row_max = 0, prevalence = 0){
 ####################################
 
 setwd("/Users/julianzaugg/Desktop/ACE/major_projects/skin_microbiome_16S/")
+source("Code/helper_functions.R")
 
 # Load the processed metadata
 metadata.df <- read.csv("Result_tables/other/processed_metadata.csv", sep =",", header = T)
@@ -93,700 +94,647 @@ rownames(metadata.df) <- metadata.df$Index
 # Load the OTU - taxonomy mapping file
 otu_taxonomy_map.df <- read.csv("Result_tables/other/otu_taxonomy_map.csv", header = T)
 
-# We are only interested in C,AK_PL,IEC_PL,SCC_PL,AK,IEC and SCC lesions. 
-# Remove samples for different lesion types (nasal,scar,scar_PL,KA,KA_PL,VV,VV_PL,SF,SF_PL,other,other_PL,negative) from metadata and otu table
-# metadata.df <- metadata.df[metadata.df$Sampletype %in% c("C","AK_PL","IEC_PL","SCC_PL","AK","IEC","SCC", "NLC"),]
-metadata.df <- metadata.df[metadata.df$Sampletype %in% c("C","AK_PL","IEC_PL","SCC_PL","AK","IEC","SCC", "LC"),]
 
-# Factorise discrete columns
+# Factorise discrete columns. Set order.
 metadata.df$Patient <- factor(metadata.df$Patient)
-metadata.df$Sampletype <- factor(metadata.df$Sampletype)
-metadata.df$Sampletype_pooled <- factor(metadata.df$Sampletype_pooled, levels = c("NLC", "AK","SCC"))
-metadata.df$Sampletype_final <- factor(metadata.df$Sampletype_final, levels = c("C","LC", "AK","SCC"))
-metadata.df$Project <- factor(metadata.df$Project)
-metadata.df$Patient_group <- factor(metadata.df$Patient_group, levels = c("Control", "AK","SCC"))
+metadata.df$Lesion_type_refined <- factor(metadata.df$Lesion_type_refined, levels = c("C", "C_P", "AK", "SCC_PL","SCC"))
+metadata.df$Cohort <- factor(metadata.df$Cohort)
 metadata.df$Gender <- factor(metadata.df$Gender)
-metadata.df$Number_of_meds <- factor(metadata.df$Number_of_meds, levels = c("1", "2","3"))
 
+# Load level specific data
+genus_data.df <- read.csv("Result_tables/combined_counts_abundances_and_metadata_tables/Genus_counts_abundances_and_metadata.csv",header = T)
+family_data.df <- read.csv("Result_tables/combined_counts_abundances_and_metadata_tables/Family_counts_abundances_and_metadata.csv",header = T)
 
 # Load count matrices and covert to log space
-# otu_rare_log.m <- log_matrix(as.matrix(read.table(file = "Result_tables/count_tables/OTU_counts_rarefied.csv", sep = ",", header = T, row.names = 1)))
-otu_genus_rare_log.m <- log_matrix(as.matrix(read.table(file = "Result_tables/count_tables/Genus_counts_rarefied.csv", sep = ",", header = T, row.names = 1)))
-otu_family_rare_log.m <- log_matrix(as.matrix(read.table(file = "Result_tables/count_tables/Family_counts_rarefied.csv", sep = ",", header = T, row.names = 1)))
-otu_order_rare_log.m <- log_matrix(as.matrix(read.table(file = "Result_tables/count_tables/Order_counts_rarefied.csv", sep = ",", header = T, row.names = 1)))
-otu_class_rare_log.m <- log_matrix(as.matrix(read.table(file = "Result_tables/count_tables/Class_counts_rarefied.csv", sep = ",", header = T, row.names = 1)))
-otu_phylum_rare_log.m <- log_matrix(as.matrix(read.table(file = "Result_tables/count_tables/Phylum_counts_rarefied.csv", sep = ",", header = T, row.names = 1)))
+# otu_log.m <- log_matrix(as.matrix(read.table(file = "Result_tables/count_tables/OTU_counts.csv", sep = ",", header = T, row.names = 1)))
+# genus_log.m <- log_matrix(as.matrix(read.table(file = "Result_tables/count_tables/Genus_counts.csv", sep = ",", header = T, row.names = 1)))
+# family_log.m <- log_matrix(as.matrix(read.table(file = "Result_tables/count_tables/Family_counts.csv", sep = ",", header = T, row.names = 1)))
+# order_log.m <- log_matrix(as.matrix(read.table(file = "Result_tables/count_tables/Order_counts.csv", sep = ",", header = T, row.names = 1)))
+# class_log.m <- log_matrix(as.matrix(read.table(file = "Result_tables/count_tables/Class_counts.csv", sep = ",", header = T, row.names = 1)))
+# phylum_log.m <- log_matrix(as.matrix(read.table(file = "Result_tables/count_tables/Phylum_counts.csv", sep = ",", header = T, row.names = 1)))
 
 # Load count matrices and apply CLR transformation
-# otu_rare_clr.m <- clr(as.matrix(read.table(file = "Result_tables/count_tables/OTU_counts_rarefied.csv", sep = ",", header = T, row.names = 1)))
-# otu_rare_species_clr.m <- clr(as.matrix(read.table(file = "Result_tables/count_tables/Specie_counts_rarefied.csv", sep = ",", header = T, row.names = 1)))
-otu_rare_genus_clr.m <- clr(as.matrix(read.table(file = "Result_tables/count_tables/Genus_counts_rarefied.csv", sep = ",", header = T, row.names = 1)))
-otu_rare_family_clr.m <- clr(as.matrix(read.table(file = "Result_tables/count_tables/Family_counts_rarefied.csv", sep = ",", header = T, row.names = 1)))
-otu_rare_order_clr.m <- clr(as.matrix(read.table(file = "Result_tables/count_tables/Order_counts_rarefied.csv", sep = ",", header = T, row.names = 1)))
-otu_rare_class_clr.m <- clr(as.matrix(read.table(file = "Result_tables/count_tables/Class_counts_rarefied.csv", sep = ",", header = T, row.names = 1)))
-otu_rare_phylum_clr.m <- clr(as.matrix(read.table(file = "Result_tables/count_tables/Phylum_counts_rarefied.csv", sep = ",", header = T, row.names = 1)))
+# otu_clr.m <- clr(as.matrix(read.table(file = "Result_tables/count_tables/OTU_counts.csv", sep = ",", header = T, row.names = 1)))
+# species_clr.m <- clr(as.matrix(read.table(file = "Result_tables/count_tables/Specie_counts.csv", sep = ",", header = T, row.names = 1)))
+# genus_clr.m <- clr(as.matrix(read.table(file = "Result_tables/count_tables/Genus_counts.csv", sep = ",", header = T, row.names = 1)))
+# family_clr.m <- clr(as.matrix(read.table(file = "Result_tables/count_tables/Family_counts.csv", sep = ",", header = T, row.names = 1)))
+# order_clr.m <- clr(as.matrix(read.table(file = "Result_tables/count_tables/Order_counts.csv", sep = ",", header = T, row.names = 1)))
+# class_clr.m <- clr(as.matrix(read.table(file = "Result_tables/count_tables/Class_counts.csv", sep = ",", header = T, row.names = 1)))
+# phylum_clr.m <- clr(as.matrix(read.table(file = "Result_tables/count_tables/Phylum_counts.csv", sep = ",", header = T, row.names = 1)))
 
 # Load relative abundance matrices
-otu_rare_rel.m <- as.matrix(read.table(file = "Result_tables/relative_abundance_tables/OTU_relative_abundances_rarefied.csv", sep = ",", header = T, row.names = 1))
-otu_genus_rare_rel.m <- as.matrix(read.table(file = "Result_tables/relative_abundance_tables/Genus_relative_abundances_rarefied.csv", sep = ",", header = T, row.names = 1))
-otu_family_rare_rel.m <- as.matrix(read.table(file = "Result_tables/relative_abundance_tables/Family_relative_abundances_rarefied.csv", sep = ",", header = T, row.names = 1))
-
-# Cleanup column (sample) names - log matrices
-# colnames(otu_rare_log.m) <- gsub("_J.*", "", colnames(otu_rare_log.m))
-colnames(otu_genus_rare_log.m) <- gsub("_J.*", "", colnames(otu_genus_rare_log.m))
-colnames(otu_family_rare_log.m) <- gsub("_J.*", "", colnames(otu_family_rare_log.m))
-colnames(otu_order_rare_log.m) <- gsub("_J.*", "", colnames(otu_order_rare_log.m))
-colnames(otu_class_rare_log.m) <- gsub("_J.*", "", colnames(otu_class_rare_log.m))
-colnames(otu_phylum_rare_log.m) <- gsub("_J.*", "", colnames(otu_phylum_rare_log.m))
-
-# Cleanup column (sample) names - CLR matrices
-# colnames(otu_rare_clr.m) <- gsub("_J.*", "", colnames(otu_rare_clr.m))
-# colnames(otu_rare_species_clr.m) <- gsub("_J.*", "", colnames(otu_rare_species_clr.m))
-colnames(otu_rare_genus_clr.m) <- gsub("_J.*", "", colnames(otu_rare_genus_clr.m))
-colnames(otu_rare_family_clr.m) <- gsub("_J.*", "", colnames(otu_rare_family_clr.m))
-colnames(otu_rare_order_clr.m) <- gsub("_J.*", "", colnames(otu_rare_order_clr.m))
-colnames(otu_rare_class_clr.m) <- gsub("_J.*", "", colnames(otu_rare_class_clr.m))
-colnames(otu_rare_phylum_clr.m) <- gsub("_J.*", "", colnames(otu_rare_phylum_clr.m))
-
-# Cleanup column (sample) names - Relative abundance matrices
-colnames(otu_rare_rel.m) <- gsub("_J.*", "", colnames(otu_rare_rel.m))
-colnames(otu_genus_rare_rel.m) <- gsub("_J.*", "", colnames(otu_genus_rare_rel.m))
-colnames(otu_family_rare_rel.m) <- gsub("_J.*", "", colnames(otu_family_rare_rel.m))
+otu_rel.m <- as.matrix(read.table(file = "Result_tables/relative_abundance_tables/OTU_relative_abundances.csv", sep = ",", header = T, row.names = 1))
+genus_rel.m <- as.matrix(read.table(file = "Result_tables/relative_abundance_tables/Genus_relative_abundances.csv", sep = ",", header = T, row.names = 1))
+family_rel.m <- as.matrix(read.table(file = "Result_tables/relative_abundance_tables/Family_relative_abundances.csv", sep = ",", header = T, row.names = 1))
+# 
+# # Cleanup column (sample) names - log matrices
+# # colnames(otu_log.m) <- gsub("_J.*", "", colnames(otu_log.m))
+# colnames(genus_log.m) <- gsub("_J.*", "", colnames(genus_log.m))
+# colnames(family_log.m) <- gsub("_J.*", "", colnames(family_log.m))
+# colnames(order_log.m) <- gsub("_J.*", "", colnames(order_log.m))
+# colnames(class_log.m) <- gsub("_J.*", "", colnames(class_log.m))
+# colnames(phylum_log.m) <- gsub("_J.*", "", colnames(phylum_log.m))
+# 
+# # Cleanup column (sample) names - CLR matrices
+# # colnames(otu_clr.m) <- gsub("_J.*", "", colnames(otu_clr.m))
+# # colnames(species_clr.m) <- gsub("_J.*", "", colnames(species_clr.m))
+# colnames(genus_clr.m) <- gsub("_J.*", "", colnames(genus_clr.m))
+# colnames(family_clr.m) <- gsub("_J.*", "", colnames(family_clr.m))
+# colnames(order_clr.m) <- gsub("_J.*", "", colnames(order_clr.m))
+# colnames(class_clr.m) <- gsub("_J.*", "", colnames(class_clr.m))
+# colnames(phylum_clr.m) <- gsub("_J.*", "", colnames(phylum_clr.m))
+# 
+# # Cleanup column (sample) names - Relative abundance matrices
+# colnames(otu_rel.m) <- gsub("_J.*", "", colnames(otu_rel.m))
+# colnames(genus_rel.m) <- gsub("_J.*", "", colnames(genus_rel.m))
+# colnames(family_rel.m) <- gsub("_J.*", "", colnames(family_rel.m))
 
 # and correct metadata
-rownames(metadata.df) <- gsub("_J.*", "", rownames(metadata.df))
-metadata.df$Index <- gsub("_J.*", "", metadata.df$Index)
+# rownames(metadata.df) <- gsub("_J.*", "", rownames(metadata.df))
+# metadata.df$Index <- gsub("_J.*", "", metadata.df$Index)
 
-
-# Since we likely removed samples from the count matrix
-# in the main script, remove them from the metadata.df here
-samples_removed <- metadata.df$Index[!metadata.df$Index %in% colnames(otu_genus_rare_log.m)]
-metadata.df <- metadata.df[! metadata.df$Index %in% samples_removed,]
-
-# genus_data.df <- subset(genus_data.df, Project == "immunosuppressed" | Snapshot_sample == "yes")
-metadata.df <- subset(metadata.df, Project == "immunosuppressed" | Snapshot_sample_1 == "yes")
-# genus_data.df <- subset(genus_data.df, Project == "immunosuppressed" | Snapshot_sample_2 == "yes")
-# genus_data.df <- subset(genus_data.df, Project == "immunosuppressed" | Snapshot_sample_3 == "yes")
-# genus_data.df <- subset(genus_data.df, Project == "immunosuppressed" | Snapshot_sample_4 == "yes")
+metadata.df <- subset(metadata.df, Project == "immunosuppressed" | Snapshot_sample_5 == "yes")
 
 # Remove samples that are not in the metadata.
-# otu_rare_log.m <- otu_rare_log.m[,colnames(otu_rare_log.m) %in% metadata.df$Index]
-otu_genus_rare_log.m <- otu_genus_rare_log.m[,colnames(otu_genus_rare_log.m) %in% metadata.df$Index]
-otu_family_rare_log.m <- otu_family_rare_log.m[,colnames(otu_family_rare_log.m) %in% metadata.df$Index]
-otu_order_rare_log.m <- otu_order_rare_log.m[,colnames(otu_order_rare_log.m) %in% metadata.df$Index]
-otu_class_rare_log.m <- otu_class_rare_log.m[,colnames(otu_class_rare_log.m) %in% metadata.df$Index]
-otu_phylum_rare_log.m <- otu_phylum_rare_log.m[,colnames(otu_phylum_rare_log.m) %in% metadata.df$Index]
+# otu_log.m <- otu_log.m[,colnames(otu_log.m) %in% metadata.df$Index]
+# genus_log.m <- genus_log.m[,colnames(genus_log.m) %in% metadata.df$Index]
+# family_log.m <- family_log.m[,colnames(family_log.m) %in% metadata.df$Index]
+# order_log.m <- order_log.m[,colnames(order_log.m) %in% metadata.df$Index]
+# class_log.m <- class_log.m[,colnames(class_log.m) %in% metadata.df$Index]
+# phylum_log.m <- phylum_log.m[,colnames(phylum_log.m) %in% metadata.df$Index]
 
 # Remove samples that are not in the metadata.
-# otu_rare_clr.m <- otu_rare_clr.m[,colnames(otu_rare_clr.m) %in% metadata.df$Index]
-otu_rare_species_clr.m <- otu_rare_species_clr.m[,colnames(otu_rare_species_clr.m) %in% metadata.df$Index]
-otu_rare_genus_clr.m <- otu_rare_genus_clr.m[,colnames(otu_rare_genus_clr.m) %in% metadata.df$Index]
-otu_rare_family_clr.m <- otu_rare_family_clr.m[,colnames(otu_rare_family_clr.m) %in% metadata.df$Index]
-otu_rare_order_clr.m <- otu_rare_order_clr.m[,colnames(otu_rare_order_clr.m) %in% metadata.df$Index]
-otu_rare_class_clr.m <- otu_rare_class_clr.m[,colnames(otu_rare_class_clr.m) %in% metadata.df$Index]
-otu_rare_phylum_clr.m <- otu_rare_phylum_clr.m[,colnames(otu_rare_phylum_clr.m) %in% metadata.df$Index]
+# otu_clr.m <- otu_clr.m[,colnames(otu_clr.m) %in% metadata.df$Index]
+# species_clr.m <- species_clr.m[,colnames(species_clr.m) %in% metadata.df$Index]
+# genus_clr.m <- genus_clr.m[,colnames(genus_clr.m) %in% metadata.df$Index]
+# family_clr.m <- family_clr.m[,colnames(family_clr.m) %in% metadata.df$Index]
+# order_clr.m <- order_clr.m[,colnames(order_clr.m) %in% metadata.df$Index]
+# class_clr.m <- class_clr.m[,colnames(class_clr.m) %in% metadata.df$Index]
+# phylum_clr.m <- phylum_clr.m[,colnames(phylum_clr.m) %in% metadata.df$Index]
 
 # Remove samples that are not in the metadata.
-otu_rare_rel.m <- otu_rare_rel.m[,colnames(otu_rare_rel.m) %in% metadata.df$Index,drop=F]
-otu_genus_rare_rel.m <- otu_genus_rare_rel.m[,colnames(otu_genus_rare_rel.m) %in% metadata.df$Index,drop=F]
-otu_family_rare_rel.m<- otu_family_rare_rel.m[,colnames(otu_family_rare_rel.m) %in% metadata.df$Index,drop=F]
+otu_rel.m <- otu_rel.m[,colnames(otu_rel.m) %in% metadata.df$Index,drop=F]
+genus_rel.m <- genus_rel.m[,colnames(genus_rel.m) %in% metadata.df$Index,drop=F]
+family_rel.m <- family_rel.m[,colnames(family_rel.m) %in% metadata.df$Index,drop=F]
 
 
 # If there are negative values in the CLR matrices, assign them a value of zero
-# otu_rare_clr.m[which(otu_rare_clr.m < 0)] <- 0
-otu_rare_species_clr.m[which(otu_rare_species_clr.m < 0)] <- 0
-otu_rare_genus_clr.m[which(otu_rare_genus_clr.m < 0)] <- 0
-otu_rare_family_clr.m[which(otu_rare_family_clr.m < 0)] <- 0
-otu_rare_order_clr.m[which(otu_rare_order_clr.m < 0)] <- 0
-otu_rare_class_clr.m[which(otu_rare_class_clr.m < 0)] <- 0
-otu_rare_phylum_clr.m[which(otu_rare_phylum_clr.m < 0)] <- 0
+# otu_clr.m[which(otu_clr.m < 0)] <- 0
+# species_clr.m[which(species_clr.m < 0)] <- 0
+# genus_clr.m[which(genus_clr.m < 0)] <- 0
+# family_clr.m[which(family_clr.m < 0)] <- 0
+# order_clr.m[which(order_clr.m < 0)] <- 0
+# class_clr.m[which(class_clr.m < 0)] <- 0
+# phylum_clr.m[which(phylum_clr.m < 0)] <- 0
+
+
+
+
+# ------------------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------------------
+# Family level, filtered to top taxa by mean abundance
+
+# Generate taxonomy summary
+family_taxa_summary.df <- generate_taxa_summary(mydata = family_data.df,taxa_column = "taxonomy_family",
+                                               group_by_columns = c("Cohort", "Lesion_type_refined"))
+
+# Get top taxa by mean abundance
+family_taxa_summary_filtered.df <- filter_summary_to_top_n(taxa_summary = family_taxa_summary.df, 
+                                                          grouping_variables = c("Cohort", "Lesion_type_refined"),
+                                                          abundance_column = "Mean_relative_abundance",
+                                                          my_top_n = 20)
+
+# Create heatmap matrix
+heatmap.m <- family_rel.m[rownames(family_rel.m) %in% family_taxa_summary_filtered.df$taxonomy_family,]
+
+# Make heatmap
+source("Code/helper_functions.R")
+make_heatmap(heatmap.m*100, 
+             # mymetadata = subset(metadata.df, Lesion_type_refined %in% c("SCC_PL", "SCC")),
+             mymetadata = metadata.df,
+             filename = paste0("Result_figures/heatmaps/family_top_20_by_mean_relative_abundance_heatmap.pdf"),
+             variables = c("Lesion_type_refined","Cohort"),
+             column_title = "Sample",
+             row_title = "Genus",
+             plot_height = 8,
+             plot_width = 60,
+             cluster_columns = F,
+             cluster_rows = T,
+             column_title_size = 10,
+             row_title_size = 10,
+             annotation_name_size = 6,
+             show_cell_values = F,
+             # my_annotation_palette = my_colour_palette_15,
+             legend_labels = c(c(0, 0.001, 0.005,0.05, seq(.1,.5,.1))*100, ">= 60"),
+             my_breaks = c(0, 0.001, 0.005,0.05, seq(.1,.6,.1))*100,
+             # legend_labels = c(c(0, 0.001, 0.005,0.05, seq(.1,1,.1))*100),
+             # my_breaks = c(0, 0.001, 0.005,0.05, seq(.1,1,.1))*100,
+             discrete_legend = T,
+             legend_title = "Mean relative abundance %",
+             palette_choice = 'purple',
+             row_dend_width = unit(3, "cm"),
+             simple_anno_size = unit(.25, "cm"),
+             show_top_annotation = T
+)
+
+
+# --------------------------------------------------------------------------------------------------------------------------------
+# Genus level, filtered to top taxa by mean abundance
+
+# Generate taxonomy summary
+genus_taxa_summary.df <- generate_taxa_summary(mydata = genus_data.df,taxa_column = "taxonomy_genus",
+                                               group_by_columns = c("Cohort", "Lesion_type_refined"))
+
+# Get top taxa by mean abundance
+genus_taxa_summary_filtered.df <- filter_summary_to_top_n(taxa_summary = genus_taxa_summary.df, 
+                                                          grouping_variables = c("Cohort", "Lesion_type_refined"),
+                                                          abundance_column = "Mean_relative_abundance",
+                                                          my_top_n = 20)
+
+# Create heatmap matrix
+heatmap.m <- genus_rel.m[rownames(genus_rel.m) %in% genus_taxa_summary_filtered.df$taxonomy_genus,]
+
+# Make heatmap
+make_heatmap(heatmap.m*100, 
+             # mymetadata = subset(metadata.df, Lesion_type_refined %in% c("SCC_PL", "SCC")),
+             mymetadata = metadata.df,
+             filename = paste0("Result_figures/heatmaps/genus_top_20_by_mean_relative_abundance_heatmap.pdf"),
+             variables = c("Lesion_type_refined","Cohort"),
+             column_title = "Sample",
+             row_title = "Genus",
+             plot_height = 10,
+             plot_width = 60,
+             cluster_columns = F,
+             cluster_rows = T,
+             column_title_size = 10,
+             row_title_size = 10,
+             annotation_name_size = 6,
+             show_cell_values = F,
+             # my_annotation_palette = my_colour_palette_15,
+             legend_labels = c(c(0, 0.001, 0.005,0.05, seq(.1,.5,.1))*100, ">= 60"),
+             my_breaks = c(0, 0.001, 0.005,0.05, seq(.1,.6,.1))*100,
+             # legend_labels = c(c(0, 0.001, 0.005,0.05, seq(.1,1,.1))*100),
+             # my_breaks = c(0, 0.001, 0.005,0.05, seq(.1,1,.1))*100,
+             discrete_legend = T,
+             legend_title = "Mean relative abundance %",
+             palette_choice = 'purple',
+             row_dend_width = unit(3, "cm"),
+             simple_anno_size = unit(.25, "cm"),
+             show_top_annotation =F
+)
+
+# --------------------------------------------------------------------------------------------------------------------------------
+# Genus level, filtered to top taxa by mean abundance
+# Collapsed to cohort and lesion type and displaying the mean abundance
+
+# Generate taxonomy summary for ...
+genus_taxa_summary.df <- generate_taxa_summary(mydata = genus_data.df,
+                                               taxa_column = "taxonomy_genus",
+                                               group_by_columns = c("Cohort", "Lesion_type_refined"))
+
+# Get top taxa by mean abundance
+genus_taxa_summary_filtered.df <- filter_summary_to_top_n(taxa_summary = genus_taxa_summary.df, 
+                                                                         grouping_variables = c("Cohort", "Lesion_type_refined"),
+                                                                         abundance_column = "Mean_relative_abundance",
+                                                                         my_top_n = 20)
+
+# Generate matrix for heatmap
+genus_taxa_summary.df$Cohort_Lesion_type_refined <- with(genus_taxa_summary.df, paste0(Cohort, "_", Lesion_type_refined))
+heatmap.m <- genus_taxa_summary.df[c("Cohort_Lesion_type_refined", "taxonomy_genus","Mean_relative_abundance")]
+heatmap.m <- heatmap.m[heatmap.m$taxonomy_genus %in% genus_taxa_summary_filtered.df$taxonomy_genus,]
+heatmap.m <- heatmap.m %>% spread(Cohort_Lesion_type_refined, Mean_relative_abundance,fill = 0)
+heatmap.m <- df2matrix(heatmap.m)
+
+heatmap_metadata.df <- metadata.df
+heatmap_metadata.df$Cohort_Lesion_type_refined <- with(heatmap_metadata.df, paste0(Cohort, "_", Lesion_type_refined))
+heatmap_metadata.df <- unique(heatmap_metadata.df[,c("Cohort_Lesion_type_refined", "Cohort", "Cohort_colour", "Lesion_type_refined", "Lesion_type_refined_colour")])
+rownames(heatmap_metadata.df) <- heatmap_metadata.df$Cohort_Lesion_type_refined
+source("Code/helper_functions.R")
+make_heatmap(heatmap.m*100, 
+             mymetadata = heatmap_metadata.df,
+             filename = paste0("Result_figures/heatmaps/Cohort_Lesion_type_refined_genus_top_20_mean_relative_abundance_heatmap.pdf"),
+             variables = c("Cohort_Lesion_type_refined"),
+             column_title = "Cohort_Lesion_type_refined",
+             row_title = "Genus",
+             plot_height = 15,
+             plot_width = 10,
+             cluster_columns = F,
+             cluster_rows = T,
+             column_title_size = 10,
+             row_title_size = 10,
+             annotation_name_size = 6,
+             show_cell_values = F,
+             # my_annotation_palette = my_colour_palette_15,
+             legend_labels = c(c(0, 0.001, 0.005,0.05, seq(.1,.5,.1))*100, ">= 60"),
+             my_breaks = c(0, 0.001, 0.005,0.05, seq(.1,.6,.1))*100,
+             # legend_labels = c(c(0, 0.001, 0.005,0.05, seq(.1,1,.1))*100),
+             # my_breaks = c(0, 0.001, 0.005,0.05, seq(.1,1,.1))*100,
+             discrete_legend = T,
+             legend_title = "Mean relative abundance %",
+             palette_choice = 'purple',
+             row_dend_width = unit(3, "cm"),
+             simple_anno_size = unit(.25, "cm"),
+             show_top_annotation =F
+)
+# --------------------------------------------------------------------------------------------------------------------------------
+
+
+
+
+
+
+
+
 
 
 # ------------------------------------------------------------------------------------
 
-# Function to create heatmap
-make_heatmap <- function(myheatmap_matrix,
-                         mymetadata,
-                         filename,
-                         my_row_labels = NULL,
-                         height = 10,
-                         width = 10,
-                         heatmap_height = 10,
-                         heatmap_width = 10,
-                         plot_height =10,
-                         plot_width =10,
-                         column_title_size = 10,
-                         row_title_size = 10,
-                         annotation_name_size = 10,
-                         variables = NULL, # Annotations
-                         cluster_columns = T,
-                         cluster_rows = T,
-                         my_breaks = NULL,
-                         my_palette = NULL,
-                         palette_choice = NULL,
-                         legend_title = NULL,
-                         column_title = "Sample",
-                         row_title = "Taxa",
-                         legend_labels = NULL,
-                         my_annotation_palette = NULL,
-                         ...
-){
-  
-  # Assign internal objects
-  internal_heatmap_matrix.m <- myheatmap_matrix
-  internal_metadata.df <- mymetadata
-  # Order/filter the heatmap matrix to order/entries of metadata
-  internal_heatmap_matrix.m <- internal_heatmap_matrix.m[,rownames(internal_metadata.df)]
-  # Order the heatmap matrix by the variables
-  internal_heatmap_matrix.m <- internal_heatmap_matrix.m[,do.call(order, internal_metadata.df[,variables,drop=F])]
-  # Order the metadata by the variables
-  internal_metadata.df <- internal_metadata.df[do.call(order, internal_metadata.df[,variables,drop=F]),,drop=F]
-  # Create metadata just containing the variables
-  metadata_just_variables <- internal_metadata.df[,variables, drop = F]
-  # Check that rownames match colnames
-  if (!all(rownames(internal_metadata.df) == colnames(internal_heatmap_matrix.m))){
-    stop("Row names in metadata do not match column names in matrix")
-  }
-  
-  # Create annotations
-  
-  colour_lists <- list()
-  for (myvar in variables){
-    var_colour_name <- paste0(myvar, "_colour")
-    # Assumes there is a colour column for each variable in the metadata
-    # If there is no colour column, create one and assign from palette
-    # internal_colour_palette_10_distinct <- c("#8eec45","#0265e8","#f6a800","#bf6549","#486900","#c655a0","#00d1b6","#ff4431","#aeb85c","#7e7fc8")
-    # internal_colour_palette_10_distinct <- my_colour_palette_20_distinct
-    if (is.null(my_annotation_palette)){
-      internal_colour_palette <- my_colour_palette_206_distinct
-    } else{
-      internal_colour_palette <- my_annotation_palette
-    }
-    if (!var_colour_name %in% names(internal_metadata.df)){
-      myvar_values <- factor(as.character(sort(unique(internal_metadata.df[,myvar]))))
-      myvar_colours <- setNames(internal_colour_palette[1:length(myvar_values)], myvar_values)
-      all_variable_colours <- as.character(lapply(as.character(internal_metadata.df[,myvar]), function(x) myvar_colours[x]))
-      internal_metadata.df[,paste0(myvar,"_colour")] <- all_variable_colours
-    }
-    
-    metadata_subset <- unique(internal_metadata.df[,c(myvar, var_colour_name)])
-    # Order by the variable column
-    metadata_subset <- metadata_subset[order(metadata_subset[,myvar]),]
-    # Factorise the variable column
-    metadata_subset[,myvar] <- factor(metadata_subset[,myvar])
-    metadata_subset <- metadata_subset[!is.na(metadata_subset[,myvar]),]
-    named_colour_list <- setNames(as.character(metadata_subset[, var_colour_name]), as.character(metadata_subset[,myvar]))
-    colour_lists[[myvar]] <- named_colour_list
-  }
-  
-  ha <- HeatmapAnnotation(df = metadata_just_variables,
-                          which = "column",
-                          col = colour_lists,
-                          gp = gpar(col = "black",lwd =.2),
-                          gap = unit(.1,"cm"),
-                          show_annotation_name = T,
-                          annotation_name_gp = gpar(fontsize = annotation_name_size))
-  
-  if (is.null(my_palette)){
-    if (is.null(palette_choice)) {palette_choice <- "blue"}
-    if (!palette_choice %in% c("blue", "purple","red")) { palette_choice <- "blue"}
-    if (palette_choice == "blue"){
-      my_palette <- colorRampPalette(c("white", "#ffffcc","#cce1b8", "#91cabc", "#61b4c1","#335fa5","#28387a", "#071447"))
-    } 
-    else if (palette_choice == "purple"){
-      my_palette <- colorRampPalette(c("white", "#f9cdac","#f3aca2", "#ee8b97", "#e96a8d","#db5087","#b8428c", "#973490", "#742796","#5e1f88", "#4d1a70", "#3d1459","#2d0f41"))
-    } else if (palette_choice == "red"){
-      my_palette <- colorRampPalette(c("white", "#fded86","#fde86e", "#f9d063", "#f5b857","#f0a04b","#eb8a40", "#e77235","#e35b2c", "#c74e29","#9d4429","#753c2c","#4c3430"))
-    } 
-  } else{
-    my_palette <- colorRampPalette(my_palette)
-  }
-  
-  if (!is.null(my_breaks)){
-    internal_breaks <- my_breaks
-    col_fun <- circlize::colorRamp2(breaks = internal_breaks, colors = my_palette(length(internal_breaks)))
-    
-  } else{
-    internal_breaks <- seq(min(internal_heatmap_matrix.m), max(internal_heatmap_matrix.m), length.out = 6)
-    col_fun <- circlize::colorRamp2(breaks = internal_breaks, colors = my_palette(length(internal_breaks)))
-  }
-  
-  my_row_labels.v = rownames(internal_heatmap_matrix.m)
-  if (!is.null(my_row_labels)){
-    my_row_labels.v <- as.character(lapply(my_row_labels.v, function(x) as.character(row_labels.df[row_labels.df[,1] == x,][,2])))
-  }
-  # Order the heatmap rows by the row labels names
-  internal_heatmap_matrix.m <- internal_heatmap_matrix.m[order(my_row_labels.v),]
-  my_row_labels.v <- my_row_labels.v[order(my_row_labels.v)]
-  
-  hm <- Heatmap(matrix = internal_heatmap_matrix.m,
-                
-                top_annotation = ha,
-                
-                # Colours
-                col = col_fun,
-                na_col = "grey",
-                
-                # Sizing
-                show_heatmap_legend = F,
-                row_names_max_width = unit(35,"cm"),
-                row_labels = my_row_labels.v,
-                # row_names_side = "left",
-                # height = unit(height,"cm"),
-                # width = unit(width,"cm"),
-                # heatmap_height = unit(heatmap_height,"cm"),
-                # heatmap_width = unit(heatmap_width,"cm"),
-                # heatmap_width = unit(15,"cm"),
-                
-                # Titles
-                column_title = column_title,
-                column_title_side = "bottom",
-                column_title_gp = gpar(fontsize = column_title_size),
-                row_title = row_title,
-                row_title_side = "left",
-                row_title_gp = gpar(fontsize = row_title_size),
-                
-                # Clustering
-                cluster_columns = cluster_columns,
-                cluster_rows = cluster_rows,
-                clustering_method_columns = "average",
-                clustering_method_rows = "average",
-                show_column_dend = T, 
-                show_row_dend = F,
-                
-                # Borders
-                border = F,
-                rect_gp = gpar(col = "white", lwd = 1),
-                
-                # Text appearance
-                row_names_gp = gpar(fontsize = 6),
-                column_names_gp = gpar(fontsize = 6),
-                ...
-  )
-  
-  # Legend appearance
-  if (is.null(legend_labels)){
-    my_labels <- internal_breaks
-  } else{
-    my_labels <- legend_labels
-  }
-  hm_legend <- Legend(col_fun = col_fun,
-                      labels = my_labels,
-                      at = internal_breaks,
-                      labels_gp = gpar(fontsize = 6),
-                      
-                      title_position = "leftcenter-rot",
-                      title_gp = gpar(fontsize = 6),
-                      # grid_width= unit(.1, "cm"),
-                      # title = "Relative abundance (%)",
-                      title = legend_title,
-                      # legend_height = unit(7,"cm"),
-                      # title_gp = gpar(fontsize = 10),
-                      direction = "vertical",
-                      # title_position = "topcenter",
-                      border = "black",
-                      # legend_width = unit(7,"cm"),
-                      
-  )
-  
-  pdf(filename,height=plot_height,width=plot_width)
-  draw(hm, annotation_legend_list = c(hm_legend))
-  dev.off()
-}
-
-# Define the discrete variables
-# discrete_variables <- c("Patient","Sampletype","Sampletype_pooled","Sampletype_pooled_IEC_sep","Sampletype_pooled_C_sep")
-# discrete_variables <- c("Patient","Sampletype_pooled")
-discrete_variables <- c("Patient","Sampletype_pooled", "Project")
-
-heatmap_family_rel.m <- filter_heatmap_matrix(otu_family_rare_rel.m, row_max = 0.05, prevalence = 0.1)
-heatmap_genus_rel.m <- filter_heatmap_matrix(otu_genus_rare_rel.m, row_max = 0.05, prevalence = 0.1)
-heatmap_otu_rel.m <- filter_heatmap_matrix(otu_rare_rel.m, row_max = 0.05, prevalence = 0.2)
-
-new_row_names <- unlist(lapply(rownames(heatmap_otu_rel.m), function(x) {paste0(x, "; ", otu_taxonomy_map.df[otu_taxonomy_map.df$OTU.ID == x,]$Genus)}))
-row_labels.df <- data.frame("Row_label" = rownames(heatmap_otu_rel.m), "Row_label_new" = new_row_names)
-
-
-
-# ------------------------------------
-# family, both cohorts
-make_heatmap(heatmap_family_rel.m, 
-             metadata.df,
-             filename = paste0("Result_figures/heatmaps/family_relative_abundance_both_cohorts_clustered.pdf"),
-             variables = discrete_variables,
-             plot_height = 10,
-             plot_width = 100,
-             cluster_columns = T,
-             my_breaks = c(0, 0.001, 0.005,0.05, seq(.1,1,.1)),
-             legend_title = "Relative abundance %",
-             palette_choice = 'blue'
-)
-
-# family, immunosuppressed
-# discrete_variables <- c("Patient","Sampletype_final","Number_of_meds","Fitzpatrick_skin_type","Patient_group")
-discrete_variables <- c("Patient","Sampletype_final")
-make_heatmap(heatmap_family_rel.m, 
-             subset(metadata.df, Project == "immunosuppressed"),
-             filename = paste0("Result_figures/heatmaps/family_relative_abundance_immunosuppressed_clustered.pdf"),
-             variables = discrete_variables,
-             plot_height = 10,
-             plot_width = 25,
-             cluster_columns = T,
-             my_breaks = c(0, 0.001, 0.005,0.05, seq(.1,1,.1)),
-             legend_title = "Relative abundance %",
-             palette_choice = 'purple'
-)
-# discrete_variables <- c("Sampletype_pooled")
-make_heatmap(heatmap_family_rel.m, 
-             subset(metadata.df, Project == "immunosuppressed"),
-             filename = paste0("Result_figures/heatmaps/family_relative_abundance_immunosuppressed.pdf"),
-             variables = discrete_variables,
-             plot_height = 10,
-             plot_width = 25,
-             cluster_columns = F,
-             my_breaks = c(0, 0.001, 0.005,0.05, seq(.1,1,.1)),
-             legend_title = "Relative abundance %",
-             palette_choice = 'purple'
-)
-
-
-
-# family, immunocompetent
-discrete_variables <- c("Patient","Sampletype_final")
-make_heatmap(heatmap_family_rel.m, 
-             subset(metadata.df, Project == "immunocompetent"),
-             filename = paste0("Result_figures/heatmaps/family_relative_abundance_immunocompetent_clustered.pdf"),
-             variables = discrete_variables,
-             plot_height = 10,
-             plot_width = 20,
-             cluster_columns = T,
-             my_breaks = c(0, 0.001, 0.005,0.05, seq(.1,1,.1)),
-             legend_title = "Relative abundance %",
-             palette_choice = 'purple'
-)
-make_heatmap(heatmap_family_rel.m, 
-             subset(metadata.df, Project == "immunocompetent"),
-             filename = paste0("Result_figures/heatmaps/family_relative_abundance_immunocompetent.pdf"),
-             variables = discrete_variables,
-             plot_height = 10,
-             plot_width = 20,
-             cluster_columns = F,
-             my_breaks = c(0, 0.001, 0.005,0.05, seq(.1,1,.1)),
-             legend_title = "Relative abundance %",
-             palette_choice = 'purple'
-)
-
-
-
-
-
-# ------------------------------------
-# OTU, both cohorts
-make_heatmap(heatmap_otu_rel.m, 
-             metadata.df,
-             my_row_labels = row_labels.df,
-             filename = paste0("Result_figures/heatmaps/otu_relative_abundance_both_cohorts.pdf"),
-             variables = discrete_variables,
-             plot_height = 10,
-             plot_width = 100,
-             cluster_columns = F,
-             my_breaks = c(0, 0.001, 0.005,0.05, seq(.1,1,.1)),
-             legend_title = "Relative abundance %",
-             palette_choice = 'blue'
-)
-
-make_heatmap(heatmap_otu_rel.m, 
-             metadata.df,
-             my_row_labels = row_labels.df,
-             filename = paste0("Result_figures/heatmaps/otu_relative_abundance_both_cohorts_clustered.pdf"),
-             variables = discrete_variables,
-             plot_height = 10,
-             plot_width = 100,
-             cluster_columns = T,
-             my_breaks = c(0, 0.001, 0.005,0.05, seq(.1,1,.1)),
-             legend_title = "Relative abundance %",
-             palette_choice = 'blue'
-)
-
-# ------------------------------------
-# OTU separate cohorts
-discrete_variables <- c("Patient","Sampletype","Sampletype_pooled")
-# Competent
-make_heatmap(heatmap_otu_rel.m, 
-             subset(metadata.df, Project == "immunocompetent"),
-             my_row_labels = row_labels.df,
-             filename = paste0("Result_figures/heatmaps/otu_relative_abundance_immunocompetent.pdf"),
-             variables = discrete_variables,
-             plot_height = 10,
-             plot_width = 100,
-             cluster_columns = F,
-             my_breaks = c(0, 0.001, 0.005,0.05, seq(.1,1,.1)),
-             legend_title = "Relative abundance %",
-             palette_choice = 'blue'
-)
-
-make_heatmap(heatmap_otu_rel.m, 
-             subset(metadata.df, Project == "immunocompetent"),
-             my_row_labels = row_labels.df,
-             filename = paste0("Result_figures/heatmaps/otu_relative_abundance_immunocompetent_clustered.pdf"),
-             variables = discrete_variables,
-             plot_height = 10,
-             plot_width = 100,
-             cluster_columns = T,
-             my_breaks = c(0, 0.001, 0.005,0.05, seq(.1,1,.1)),
-             legend_title = "Relative abundance %",
-             palette_choice = 'blue'
-)
-
-
-# Compromised
-make_heatmap(heatmap_otu_rel.m, 
-             subset(metadata.df, Project == "immunosuppressed"),
-             my_row_labels = row_labels.df,
-             filename = paste0("Result_figures/heatmaps/otu_relative_abundance_immunosuppressed.pdf"),
-             variables = discrete_variables,
-             plot_height = 10,
-             plot_width = 25,
-             cluster_columns = F,
-             my_breaks = c(0, 0.001, 0.005,0.05, seq(.1,1,.1)),
-             legend_title = "Relative abundance %",
-             palette_choice = 'blue'
-)
-
-make_heatmap(heatmap_otu_rel.m, 
-             subset(metadata.df, Project == "immunosuppressed"),
-             my_row_labels = row_labels.df,
-             filename = paste0("Result_figures/heatmaps/otu_relative_abundance_immunosuppressed_clustered.pdf"),
-             variables = discrete_variables,
-             plot_height = 10,
-             plot_width = 25,
-             cluster_columns = T,
-             my_breaks = c(0, 0.001, 0.005,0.05, seq(.1,1,.1)),
-             legend_title = "Relative abundance %",
-             palette_choice = 'blue'
-)
-
-
-
-# ------------------------------------
-# ------------------------------------
-# Genus, both cohorts
-make_heatmap(heatmap_genus_rel.m, 
-             metadata.df,
-             filename = paste0("Result_figures/heatmaps/genus_relative_abundance_both_cohorts.pdf"),
-             variables = discrete_variables,
-             plot_height = 10,
-             plot_width = 100,
-             cluster_columns = F,
-             my_breaks = c(0, 0.001, 0.005,0.05, seq(.1,1,.1)),
-             legend_title = "Relative abundance %",
-             palette_choice = 'blue'
-)
-
-make_heatmap(heatmap_genus_rel.m, 
-             metadata.df,
-             filename = paste0("Result_figures/heatmaps/genus_relative_abundance_both_cohorts_clustered.pdf"),
-             variables = discrete_variables,
-             plot_height = 10,
-             plot_width = 100,
-             cluster_columns = T,
-             my_breaks = c(0, 0.001, 0.005,0.05, seq(.1,1,.1)),
-             legend_title = "Relative abundance %",
-             palette_choice = 'blue'
-)
-
-# ------------------------------------
-# Genus separate cohorts
-discrete_variables <- c("Patient","Sampletype","Sampletype_pooled")
-# Competent
-make_heatmap(heatmap_genus_rel.m, 
-             subset(metadata.df, Project == "immunocompetent"),
-             filename = paste0("Result_figures/heatmaps/genus_relative_abundance_immunocompetent.pdf"),
-             variables = discrete_variables,
-             plot_height = 10,
-             plot_width = 100,
-             cluster_columns = F,
-             my_breaks = c(0, 0.001, 0.005,0.05, seq(.1,1,.1)),
-             legend_title = "Relative abundance %",
-             palette_choice = 'blue'
-)
-
-make_heatmap(heatmap_genus_rel.m, 
-             subset(metadata.df, Project == "immunocompetent"),
-             filename = paste0("Result_figures/heatmaps/genus_relative_abundance_immunocompetent_clustered.pdf"),
-             variables = discrete_variables,
-             plot_height = 10,
-             plot_width = 100,
-             cluster_columns = T,
-             my_breaks = c(0, 0.001, 0.005,0.05, seq(.1,1,.1)),
-             legend_title = "Relative abundance %",
-             palette_choice = 'blue'
-)
-
-
-# Compromised
-make_heatmap(heatmap_genus_rel.m, 
-             subset(metadata.df, Project == "immunosuppressed"),
-             filename = paste0("Result_figures/heatmaps/genus_relative_abundance_immunosuppressed.pdf"),
-             variables = discrete_variables,
-             plot_height = 10,
-             plot_width = 25,
-             cluster_columns = F,
-             my_breaks = c(0, 0.001, 0.005,0.05, seq(.1,1,.1)),
-             legend_title = "Relative abundance %",
-             palette_choice = 'blue'
-)
-
-make_heatmap(heatmap_genus_rel.m, 
-             subset(metadata.df, Project == "immunosuppressed"),
-             filename = paste0("Result_figures/heatmaps/genus_relative_abundance_immunosuppressed_clustered.pdf"),
-             variables = discrete_variables,
-             plot_height = 10,
-             plot_width = 25,
-             cluster_columns = T,
-             my_breaks = c(0, 0.001, 0.005,0.05, seq(.1,1,.1)),
-             legend_title = "Relative abundance %",
-             palette_choice = 'blue'
-)
-
-
-
-# ---------------------------------------------------------------------------------
-# Heatmaps for differentially abundant OTUs
-# Obviously assumes these results have been generated
-
-
-patient_deseq.df <- read.csv("Result_tables/DESeq_results/by_patient/patient__Sampletype_pooled_combined.csv", sep =",", header = T)
-lesion_cohort_deseq.df <- read.csv("Result_tables/DESeq_results/by_lesion_cohort/lesion_cohort_combined.csv", sep =",", header = T)
-
-patient_deseq_heatmap_otu_rel.m <- otu_rare_rel.m[unique(patient_deseq.df$OTU),]
-
-new_row_names <- unlist(lapply(rownames(patient_deseq_heatmap_otu_rel.m), function(x) {paste0(otu_taxonomy_map.df[otu_taxonomy_map.df$OTU.ID == x,]$Genus,"; ", x)}))
-row_labels.df <- data.frame("Row_label" = rownames(patient_deseq_heatmap_otu_rel.m), "Row_label_new" = new_row_names)
-
-discrete_variables <- c("Patient","Sampletype","Sampletype_pooled", "Project")
-
-make_heatmap(patient_deseq_heatmap_otu_rel.m, 
-             metadata.df,
-             my_row_labels = row_labels.df,
-             filename = paste0("Result_figures/heatmaps/patient_deseq_relative_abundance_both_cohorts_clustered.pdf"),
-             variables = discrete_variables,
-             plot_height = 15,
-             plot_width = 80,
-             cluster_columns = T,
-             cluster_rows = T,
-             my_breaks = c(0, 0.001, 0.005,0.05, seq(.1,1,.1)),
-             legend_title = "Relative abundance %",
-             palette_choice = 'blue'
-)
-
-
-make_heatmap(patient_deseq_heatmap_otu_rel.m, 
-             metadata.df,
-             my_row_labels = row_labels.df,
-             filename = paste0("Result_figures/heatmaps/patient_deseq_relative_both_cohorts_abundance.pdf"),
-             variables = discrete_variables,
-             plot_height = 15,
-             plot_width = 80,
-             cluster_columns = F,
-             cluster_rows = F,
-             my_breaks = c(0, 0.001, 0.005,0.05, seq(.1,1,.1)),
-             legend_title = "Relative abundance %",
-             palette_choice = 'blue'
-)
-
-
-discrete_variables <- c("Patient","Sampletype","Sampletype_pooled")
-# Immunosuppressed
-patient_deseq_heatmap_otu_rel_suppressed.m <- otu_rare_rel.m[patient_deseq.df[grepl("MST", patient_deseq.df$Variable),]$OTU,]
-patient_deseq_heatmap_otu_rel_competent.m <- otu_rare_rel.m[patient_deseq.df[!grepl("MST", patient_deseq.df$Variable),]$OTU,]
-
-new_row_names_suppressed <- unlist(lapply(rownames(patient_deseq_heatmap_otu_rel_suppressed.m), function(x) {paste0(otu_taxonomy_map.df[otu_taxonomy_map.df$OTU.ID == x,]$Genus,"; ", x)}))
-row_labels_suppressed.df <- data.frame("Row_label" = rownames(patient_deseq_heatmap_otu_rel_suppressed.m), "Row_label_new" = new_row_names_suppressed)
-new_row_names_competent <- unlist(lapply(rownames(patient_deseq_heatmap_otu_rel_competent.m), function(x) {paste0(otu_taxonomy_map.df[otu_taxonomy_map.df$OTU.ID == x,]$Genus,"; ", x)}))
-row_labels_competent.df <- data.frame("Row_label" = rownames(patient_deseq_heatmap_otu_rel_competent.m), "Row_label_new" = new_row_names_competent)
-
-
-make_heatmap(patient_deseq_heatmap_otu_rel_suppressed.m, 
-             subset(metadata.df, Project == "immunosuppressed"),
-             my_row_labels = row_labels_suppressed.df,
-             filename = paste0("Result_figures/heatmaps/patient_immunosuppressed_deseq_relative_abundance_clustered.pdf"),
-             variables = discrete_variables,
-             plot_height = 15,
-             plot_width = 25,
-             cluster_columns = T,
-             cluster_rows = T,
-             my_breaks = c(0, 0.001, 0.005,0.05, seq(.1,1,.1)),
-             legend_title = "Relative abundance %",
-             palette_choice = 'blue'
-)
-
-
-make_heatmap(patient_deseq_heatmap_otu_rel_competent.m, 
-             subset(metadata.df, Project == "immunocompetent"),
-             my_row_labels = row_labels_suppressed.df,
-             filename = paste0("Result_figures/heatmaps/patient_immunocompetent_deseq_relative_abundance_clustered.pdf"),
-             variables = discrete_variables,
-             plot_height = 8,
-             plot_width = 80,
-             cluster_columns = F,
-             cluster_rows = T,
-             my_breaks = c(0, 0.001, 0.005,0.05, seq(.1,1,.1)),
-             # my_breaks = c(0, .1, .4),
-             legend_title = "Relative abundance %",
-             palette_choice = 'blue'
-)
-
-
-
-# ---------------------------------------------------------------------------
-# Make heatmaps for top taxa, using mean abundance
-df2matrix <- function(mydataframe){
-  mymatrix <- mydataframe
-  rownames(mymatrix) <- mydataframe[,1]
-  mymatrix[,1] <- NULL
-  mymatrix <- as.matrix(mymatrix)
-  mymatrix
-}
-# Get the top 10 taxa per project and just show those in the plot
-genus_data.df <- read.csv("Result_tables/other/Genus_counts_abundances_and_metadata.csv",header = T)
-genus_data.df <- subset(genus_data.df, Sampletype_final_refined != "negative")
-immunocompetent_genus_data.df <- subset(genus_data.df, Project == "immunocompetent" & Snapshot_sample_5 == "yes")
-immunosuppressed_genus_data.df <- subset(genus_data.df, Project == "immunosuppressed")
-
-immunosuppressed_genus_taxa_summary.df <- generate_taxa_summary(mydata = immunosuppressed_genus_data.df,
-                                               taxa_column = "taxonomy_genus",
-                                               group_by_columns = c("Project", "Sampletype_final_refined"))
-
-immunosuppressed_genus_taxa_summary_filtered.df <- filter_summary_to_top_n(taxa_summary = immunosuppressed_genus_taxa_summary.df, 
-                                                          grouping_variables = c("Sampletype_final_refined"),
-                                                          abundance_column = "Mean_relative_abundance",
-                                                          my_top_n = 9)
-
-temp <- immunosuppressed_genus_taxa_summary.df[c("Sampletype_final_refined", "taxonomy_genus","Mean_relative_abundance")]
-temp <- temp[temp$taxonomy_genus %in% immunosuppressed_genus_taxa_summary_filtered.df$taxonomy_genus,]
-temp <- temp %>% spread(Sampletype_final_refined, Mean_relative_abundance,fill = 0)
-temp <- df2matrix(temp)
-
-
-temp_metadata.df <- unique(metadata.df[,c("Sampletype_final_refined", "Sampletype_final_refined_colour"), drop = F])
-rownames(temp_metadata.df) <- temp_metadata.df$Sampletype_final_refined
-temp_metadata.df$Sampletype_final_refined <- factor(temp_metadata.df$Sampletype_final_refined, levels = c("C", "C_P", "AK", "SCC_PL", "SCC"))
-
-make_heatmap(temp*100, 
-             mymetadata = temp_metadata.df,
-             filename = paste0("Result_figures/test.pdf"),
-             variables = c("Sampletype_final_refined"),
-             column_title = "",
-             annotation_name_size = 0,
-             plot_height = 5,
-             plot_width = 8,
-             cluster_columns = T,
-             cluster_rows = T,
-             column_title_size = 10,
-             row_title_size = 10,
-             legend_labels = c(c(0, 0.001, 0.005,0.05, seq(.1,.5,.1))*100, "> 60"),
-             my_breaks = c(0, 0.001, 0.005,0.05, seq(.1,.6,.1))*100,
-             legend_title = "Mean relative abundance %",
-             palette_choice = 'purple'
-)
+# heatmap_family_rel.m <- filter_heatmap_matrix(family_rel.m, row_max = 0.05, prevalence = 0.1)
+# heatmap_genus_rel.m <- filter_heatmap_matrix(genus_rel.m, row_max = 0.05, prevalence = 0.1)
+# heatmap_otu_rel.m <- filter_heatmap_matrix(otu_rel.m, row_max = 0.05, prevalence = 0.2)
+# 
+# new_row_names <- unlist(lapply(rownames(heatmap_otu_rel.m), function(x) {paste0(x, "; ", otu_taxonomy_map.df[otu_taxonomy_map.df$OTU.ID == x,]$Genus)}))
+# row_labels.df <- data.frame("Row_label" = rownames(heatmap_otu_rel.m), "Row_label_new" = new_row_names)
+# 
+# # ------------------------------------
+# # family, both cohorts
+# make_heatmap(heatmap_family_rel.m, 
+#              metadata.df,
+#              filename = paste0("Result_figures/heatmaps/family_relative_abundance_both_cohorts_clustered.pdf"),
+#              variables = discrete_variables,
+#              plot_height = 10,
+#              plot_width = 100,
+#              cluster_columns = T,
+#              my_breaks = c(0, 0.001, 0.005,0.05, seq(.1,1,.1)),
+#              legend_title = "Relative abundance %",
+#              palette_choice = 'blue'
+# )
+# 
+# # family, immunosuppressed
+# # discrete_variables <- c("Patient","Sampletype_final","Number_of_meds","Fitzpatrick_skin_type","Patient_group")
+# discrete_variables <- c("Patient","Sampletype_final")
+# make_heatmap(heatmap_family_rel.m, 
+#              subset(metadata.df, Project == "immunosuppressed"),
+#              filename = paste0("Result_figures/heatmaps/family_relative_abundance_immunosuppressed_clustered.pdf"),
+#              variables = discrete_variables,
+#              plot_height = 10,
+#              plot_width = 25,
+#              cluster_columns = T,
+#              my_breaks = c(0, 0.001, 0.005,0.05, seq(.1,1,.1)),
+#              legend_title = "Relative abundance %",
+#              palette_choice = 'purple'
+# )
+# # discrete_variables <- c("Sampletype_pooled")
+# make_heatmap(heatmap_family_rel.m, 
+#              subset(metadata.df, Project == "immunosuppressed"),
+#              filename = paste0("Result_figures/heatmaps/family_relative_abundance_immunosuppressed.pdf"),
+#              variables = discrete_variables,
+#              plot_height = 10,
+#              plot_width = 25,
+#              cluster_columns = F,
+#              my_breaks = c(0, 0.001, 0.005,0.05, seq(.1,1,.1)),
+#              legend_title = "Relative abundance %",
+#              palette_choice = 'purple'
+# )
+# 
+# 
+# 
+# # family, immunocompetent
+# discrete_variables <- c("Patient","Sampletype_final")
+# make_heatmap(heatmap_family_rel.m, 
+#              subset(metadata.df, Project == "immunocompetent"),
+#              filename = paste0("Result_figures/heatmaps/family_relative_abundance_immunocompetent_clustered.pdf"),
+#              variables = discrete_variables,
+#              plot_height = 10,
+#              plot_width = 20,
+#              cluster_columns = T,
+#              my_breaks = c(0, 0.001, 0.005,0.05, seq(.1,1,.1)),
+#              legend_title = "Relative abundance %",
+#              palette_choice = 'purple'
+# )
+# make_heatmap(heatmap_family_rel.m, 
+#              subset(metadata.df, Project == "immunocompetent"),
+#              filename = paste0("Result_figures/heatmaps/family_relative_abundance_immunocompetent.pdf"),
+#              variables = discrete_variables,
+#              plot_height = 10,
+#              plot_width = 20,
+#              cluster_columns = F,
+#              my_breaks = c(0, 0.001, 0.005,0.05, seq(.1,1,.1)),
+#              legend_title = "Relative abundance %",
+#              palette_choice = 'purple'
+# )
+# 
+# 
+# 
+# 
+# 
+# # ------------------------------------
+# # OTU, both cohorts
+# make_heatmap(heatmap_otu_rel.m, 
+#              metadata.df,
+#              my_row_labels = row_labels.df,
+#              filename = paste0("Result_figures/heatmaps/otu_relative_abundance_both_cohorts.pdf"),
+#              variables = discrete_variables,
+#              plot_height = 10,
+#              plot_width = 100,
+#              cluster_columns = F,
+#              my_breaks = c(0, 0.001, 0.005,0.05, seq(.1,1,.1)),
+#              legend_title = "Relative abundance %",
+#              palette_choice = 'blue'
+# )
+# 
+# make_heatmap(heatmap_otu_rel.m, 
+#              metadata.df,
+#              my_row_labels = row_labels.df,
+#              filename = paste0("Result_figures/heatmaps/otu_relative_abundance_both_cohorts_clustered.pdf"),
+#              variables = discrete_variables,
+#              plot_height = 10,
+#              plot_width = 100,
+#              cluster_columns = T,
+#              my_breaks = c(0, 0.001, 0.005,0.05, seq(.1,1,.1)),
+#              legend_title = "Relative abundance %",
+#              palette_choice = 'blue'
+# )
+# 
+# # ------------------------------------
+# # OTU separate cohorts
+# discrete_variables <- c("Patient","Sampletype","Sampletype_pooled")
+# # Competent
+# make_heatmap(heatmap_otu_rel.m, 
+#              subset(metadata.df, Project == "immunocompetent"),
+#              my_row_labels = row_labels.df,
+#              filename = paste0("Result_figures/heatmaps/otu_relative_abundance_immunocompetent.pdf"),
+#              variables = discrete_variables,
+#              plot_height = 10,
+#              plot_width = 100,
+#              cluster_columns = F,
+#              my_breaks = c(0, 0.001, 0.005,0.05, seq(.1,1,.1)),
+#              legend_title = "Relative abundance %",
+#              palette_choice = 'blue'
+# )
+# 
+# make_heatmap(heatmap_otu_rel.m, 
+#              subset(metadata.df, Project == "immunocompetent"),
+#              my_row_labels = row_labels.df,
+#              filename = paste0("Result_figures/heatmaps/otu_relative_abundance_immunocompetent_clustered.pdf"),
+#              variables = discrete_variables,
+#              plot_height = 10,
+#              plot_width = 100,
+#              cluster_columns = T,
+#              my_breaks = c(0, 0.001, 0.005,0.05, seq(.1,1,.1)),
+#              legend_title = "Relative abundance %",
+#              palette_choice = 'blue'
+# )
+# 
+# 
+# # Compromised
+# make_heatmap(heatmap_otu_rel.m, 
+#              subset(metadata.df, Project == "immunosuppressed"),
+#              my_row_labels = row_labels.df,
+#              filename = paste0("Result_figures/heatmaps/otu_relative_abundance_immunosuppressed.pdf"),
+#              variables = discrete_variables,
+#              plot_height = 10,
+#              plot_width = 25,
+#              cluster_columns = F,
+#              my_breaks = c(0, 0.001, 0.005,0.05, seq(.1,1,.1)),
+#              legend_title = "Relative abundance %",
+#              palette_choice = 'blue'
+# )
+# 
+# make_heatmap(heatmap_otu_rel.m, 
+#              subset(metadata.df, Project == "immunosuppressed"),
+#              my_row_labels = row_labels.df,
+#              filename = paste0("Result_figures/heatmaps/otu_relative_abundance_immunosuppressed_clustered.pdf"),
+#              variables = discrete_variables,
+#              plot_height = 10,
+#              plot_width = 25,
+#              cluster_columns = T,
+#              my_breaks = c(0, 0.001, 0.005,0.05, seq(.1,1,.1)),
+#              legend_title = "Relative abundance %",
+#              palette_choice = 'blue'
+# )
+# 
+# 
+# 
+# # ------------------------------------
+# # ------------------------------------
+# # Genus, both cohorts
+# make_heatmap(heatmap_genus_rel.m, 
+#              metadata.df,
+#              filename = paste0("Result_figures/heatmaps/genus_relative_abundance_both_cohorts.pdf"),
+#              variables = discrete_variables,
+#              plot_height = 10,
+#              plot_width = 100,
+#              cluster_columns = F,
+#              my_breaks = c(0, 0.001, 0.005,0.05, seq(.1,1,.1)),
+#              legend_title = "Relative abundance %",
+#              palette_choice = 'blue'
+# )
+# 
+# make_heatmap(heatmap_genus_rel.m, 
+#              metadata.df,
+#              filename = paste0("Result_figures/heatmaps/genus_relative_abundance_both_cohorts_clustered.pdf"),
+#              variables = discrete_variables,
+#              plot_height = 10,
+#              plot_width = 100,
+#              cluster_columns = T,
+#              my_breaks = c(0, 0.001, 0.005,0.05, seq(.1,1,.1)),
+#              legend_title = "Relative abundance %",
+#              palette_choice = 'blue'
+# )
+# 
+# # ------------------------------------
+# # Genus separate cohorts
+# discrete_variables <- c("Patient","Sampletype","Sampletype_pooled")
+# # Competent
+# make_heatmap(heatmap_genus_rel.m, 
+#              subset(metadata.df, Project == "immunocompetent"),
+#              filename = paste0("Result_figures/heatmaps/genus_relative_abundance_immunocompetent.pdf"),
+#              variables = discrete_variables,
+#              plot_height = 10,
+#              plot_width = 100,
+#              cluster_columns = F,
+#              my_breaks = c(0, 0.001, 0.005,0.05, seq(.1,1,.1)),
+#              legend_title = "Relative abundance %",
+#              palette_choice = 'blue'
+# )
+# 
+# make_heatmap(heatmap_genus_rel.m, 
+#              subset(metadata.df, Project == "immunocompetent"),
+#              filename = paste0("Result_figures/heatmaps/genus_relative_abundance_immunocompetent_clustered.pdf"),
+#              variables = discrete_variables,
+#              plot_height = 10,
+#              plot_width = 100,
+#              cluster_columns = T,
+#              my_breaks = c(0, 0.001, 0.005,0.05, seq(.1,1,.1)),
+#              legend_title = "Relative abundance %",
+#              palette_choice = 'blue'
+# )
+# 
+# 
+# # Compromised
+# make_heatmap(heatmap_genus_rel.m, 
+#              subset(metadata.df, Project == "immunosuppressed"),
+#              filename = paste0("Result_figures/heatmaps/genus_relative_abundance_immunosuppressed.pdf"),
+#              variables = discrete_variables,
+#              plot_height = 10,
+#              plot_width = 25,
+#              cluster_columns = F,
+#              my_breaks = c(0, 0.001, 0.005,0.05, seq(.1,1,.1)),
+#              legend_title = "Relative abundance %",
+#              palette_choice = 'blue'
+# )
+# 
+# make_heatmap(heatmap_genus_rel.m, 
+#              subset(metadata.df, Project == "immunosuppressed"),
+#              filename = paste0("Result_figures/heatmaps/genus_relative_abundance_immunosuppressed_clustered.pdf"),
+#              variables = discrete_variables,
+#              plot_height = 10,
+#              plot_width = 25,
+#              cluster_columns = T,
+#              my_breaks = c(0, 0.001, 0.005,0.05, seq(.1,1,.1)),
+#              legend_title = "Relative abundance %",
+#              palette_choice = 'blue'
+# )
+# 
+# 
+# 
+# # ---------------------------------------------------------------------------------
+# # Heatmaps for differentially abundant OTUs
+# # Obviously assumes these results have been generated
+# 
+# 
+# patient_deseq.df <- read.csv("Result_tables/DESeq_results/by_patient/patient__Sampletype_pooled_combined.csv", sep =",", header = T)
+# lesion_cohort_deseq.df <- read.csv("Result_tables/DESeq_results/by_lesion_cohort/lesion_cohort_combined.csv", sep =",", header = T)
+# 
+# patient_deseq_heatmap_otu_rel.m <- otu_rel.m[unique(patient_deseq.df$OTU),]
+# 
+# new_row_names <- unlist(lapply(rownames(patient_deseq_heatmap_otu_rel.m), function(x) {paste0(otu_taxonomy_map.df[otu_taxonomy_map.df$OTU.ID == x,]$Genus,"; ", x)}))
+# row_labels.df <- data.frame("Row_label" = rownames(patient_deseq_heatmap_otu_rel.m), "Row_label_new" = new_row_names)
+# 
+# discrete_variables <- c("Patient","Sampletype","Sampletype_pooled", "Project")
+# 
+# make_heatmap(patient_deseq_heatmap_otu_rel.m, 
+#              metadata.df,
+#              my_row_labels = row_labels.df,
+#              filename = paste0("Result_figures/heatmaps/patient_deseq_relative_abundance_both_cohorts_clustered.pdf"),
+#              variables = discrete_variables,
+#              plot_height = 15,
+#              plot_width = 80,
+#              cluster_columns = T,
+#              cluster_rows = T,
+#              my_breaks = c(0, 0.001, 0.005,0.05, seq(.1,1,.1)),
+#              legend_title = "Relative abundance %",
+#              palette_choice = 'blue'
+# )
+# 
+# 
+# make_heatmap(patient_deseq_heatmap_otu_rel.m, 
+#              metadata.df,
+#              my_row_labels = row_labels.df,
+#              filename = paste0("Result_figures/heatmaps/patient_deseq_relative_both_cohorts_abundance.pdf"),
+#              variables = discrete_variables,
+#              plot_height = 15,
+#              plot_width = 80,
+#              cluster_columns = F,
+#              cluster_rows = F,
+#              my_breaks = c(0, 0.001, 0.005,0.05, seq(.1,1,.1)),
+#              legend_title = "Relative abundance %",
+#              palette_choice = 'blue'
+# )
+# 
+# 
+# discrete_variables <- c("Patient","Sampletype","Sampletype_pooled")
+# # Immunosuppressed
+# patient_deseq_heatmap_otu_rel_suppressed.m <- otu_rel.m[patient_deseq.df[grepl("MST", patient_deseq.df$Variable),]$OTU,]
+# patient_deseq_heatmap_otu_rel_competent.m <- otu_rel.m[patient_deseq.df[!grepl("MST", patient_deseq.df$Variable),]$OTU,]
+# 
+# new_row_names_suppressed <- unlist(lapply(rownames(patient_deseq_heatmap_otu_rel_suppressed.m), function(x) {paste0(otu_taxonomy_map.df[otu_taxonomy_map.df$OTU.ID == x,]$Genus,"; ", x)}))
+# row_labels_suppressed.df <- data.frame("Row_label" = rownames(patient_deseq_heatmap_otu_rel_suppressed.m), "Row_label_new" = new_row_names_suppressed)
+# new_row_names_competent <- unlist(lapply(rownames(patient_deseq_heatmap_otu_rel_competent.m), function(x) {paste0(otu_taxonomy_map.df[otu_taxonomy_map.df$OTU.ID == x,]$Genus,"; ", x)}))
+# row_labels_competent.df <- data.frame("Row_label" = rownames(patient_deseq_heatmap_otu_rel_competent.m), "Row_label_new" = new_row_names_competent)
+# 
+# 
+# make_heatmap(patient_deseq_heatmap_otu_rel_suppressed.m, 
+#              subset(metadata.df, Project == "immunosuppressed"),
+#              my_row_labels = row_labels_suppressed.df,
+#              filename = paste0("Result_figures/heatmaps/patient_immunosuppressed_deseq_relative_abundance_clustered.pdf"),
+#              variables = discrete_variables,
+#              plot_height = 15,
+#              plot_width = 25,
+#              cluster_columns = T,
+#              cluster_rows = T,
+#              my_breaks = c(0, 0.001, 0.005,0.05, seq(.1,1,.1)),
+#              legend_title = "Relative abundance %",
+#              palette_choice = 'blue'
+# )
+# 
+# 
+# make_heatmap(patient_deseq_heatmap_otu_rel_competent.m, 
+#              subset(metadata.df, Project == "immunocompetent"),
+#              my_row_labels = row_labels_suppressed.df,
+#              filename = paste0("Result_figures/heatmaps/patient_immunocompetent_deseq_relative_abundance_clustered.pdf"),
+#              variables = discrete_variables,
+#              plot_height = 8,
+#              plot_width = 80,
+#              cluster_columns = F,
+#              cluster_rows = T,
+#              my_breaks = c(0, 0.001, 0.005,0.05, seq(.1,1,.1)),
+#              # my_breaks = c(0, .1, .4),
+#              legend_title = "Relative abundance %",
+#              palette_choice = 'blue'
+# )
+# 
+# 
+# 
+# # ---------------------------------------------------------------------------
+# # Make heatmaps for top taxa, using mean abundance
+# df2matrix <- function(mydataframe){
+#   mymatrix <- mydataframe
+#   rownames(mymatrix) <- mydataframe[,1]
+#   mymatrix[,1] <- NULL
+#   mymatrix <- as.matrix(mymatrix)
+#   mymatrix
+# }
+# # Get the top 10 taxa per project and just show those in the plot
+# genus_data.df <- read.csv("Result_tables/other/Genus_counts_abundances_and_metadata.csv",header = T)
+# genus_data.df <- subset(genus_data.df, Sampletype_final_refined != "negative")
+# immunocompetent_genus_data.df <- subset(genus_data.df, Project == "immunocompetent" & Snapshot_sample_5 == "yes")
+# immunosuppressed_genus_data.df <- subset(genus_data.df, Project == "immunosuppressed")
+# 
+# immunosuppressed_genus_taxa_summary.df <- generate_taxa_summary(mydata = immunosuppressed_genus_data.df,
+#                                                taxa_column = "taxonomy_genus",
+#                                                group_by_columns = c("Project", "Sampletype_final_refined"))
+# 
+# immunosuppressed_genus_taxa_summary_filtered.df <- filter_summary_to_top_n(taxa_summary = immunosuppressed_genus_taxa_summary.df, 
+#                                                           grouping_variables = c("Sampletype_final_refined"),
+#                                                           abundance_column = "Mean_relative_abundance",
+#                                                           my_top_n = 9)
+# 
+# temp <- immunosuppressed_genus_taxa_summary.df[c("Sampletype_final_refined", "taxonomy_genus","Mean_relative_abundance")]
+# temp <- temp[temp$taxonomy_genus %in% immunosuppressed_genus_taxa_summary_filtered.df$taxonomy_genus,]
+# temp <- temp %>% spread(Sampletype_final_refined, Mean_relative_abundance,fill = 0)
+# temp <- df2matrix(temp)
+# 
+# 
+# temp_metadata.df <- unique(metadata.df[,c("Sampletype_final_refined", "Sampletype_final_refined_colour"), drop = F])
+# rownames(temp_metadata.df) <- temp_metadata.df$Sampletype_final_refined
+# temp_metadata.df$Sampletype_final_refined <- factor(temp_metadata.df$Sampletype_final_refined, levels = c("C", "C_P", "AK", "SCC_PL", "SCC"))
+# 
+# make_heatmap(temp*100, 
+#              mymetadata = temp_metadata.df,
+#              filename = paste0("Result_figures/test.pdf"),
+#              variables = c("Sampletype_final_refined"),
+#              column_title = "",
+#              annotation_name_size = 0,
+#              plot_height = 5,
+#              plot_width = 8,
+#              cluster_columns = T,
+#              cluster_rows = T,
+#              column_title_size = 10,
+#              row_title_size = 10,
+#              legend_labels = c(c(0, 0.001, 0.005,0.05, seq(.1,.5,.1))*100, "> 60"),
+#              my_breaks = c(0, 0.001, 0.005,0.05, seq(.1,.6,.1))*100,
+#              legend_title = "Mean relative abundance %",
+#              palette_choice = 'purple'
+# )
