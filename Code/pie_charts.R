@@ -59,20 +59,20 @@ genus_relabeller_function <- function(my_labels){
 
 # Set the working directory
 setwd("/Users/julianzaugg/Desktop/ACE/major_projects/skin_microbiome_16S/")
+source("Code/helper_functions.R")
 
-# Just load the combined metadata and abundance tables for simplicity
+
+# Load the combined metadata and abundance table
 genus_data.df <- read.csv("Result_tables/combined_counts_abundances_and_metadata_tables/genus_counts_abundances_and_metadata.csv")
 
 # Make simpler taxonomy string(s)
 genus_data.df$Family_Genus <- genus_relabeller_function(as.character(genus_data.df$taxonomy_genus))
-genus_data_all.df <- genus_data.df
 
 # Filter to immunosuppressed or snapshot samples
 genus_data.df <- subset(genus_data.df, Project == "immunosuppressed" | Snapshot_sample_5 == "yes")
 
 immunosuppressed_genus_data.df <- subset(genus_data.df, Cohort == "immunosuppressed")
 immunocompetent_genus_data.df <- subset(genus_data.df, Cohort == "immunocompetent")
-immunocompetent_genus_data_all.df <- subset(genus_data_all.df, Cohort == "immunocompetent")
 
 # ------------------------------------------------------------------------------------------
 generate_taxa_summary_simple <- function(mydata, taxa_column, abundance_column= "Relative_abundance"){

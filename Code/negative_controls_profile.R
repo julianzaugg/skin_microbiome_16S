@@ -107,13 +107,13 @@ heatmap.m <- heatmap.m %>% spread(Sample, Mean_relative_abundance,fill = 0)
 heatmap.m <- df2matrix(heatmap.m)
 
 names(negative_genus_data.df)
-heatmap_metadata.df <- unique(negative_genus_data.df[c("Sample", "Lesion_type_refined","Patient","Job.ID", "Project","Length_of_immunosuppression_group_1", "Length_of_immunosuppression_group_2","Date_sampled","Transplant", grep("colour", names(negative_genus_data.df), value =T))])
+heatmap_metadata.df <- unique(negative_genus_data.df[c("Sample", "Lesion_type_refined","Patient","Job.ID", "Cohort","Length_of_immunosuppression_group_1", "Length_of_immunosuppression_group_2","Date_sampled","Transplant", grep("colour", names(negative_genus_data.df), value =T))])
 rownames(heatmap_metadata.df) <- heatmap_metadata.df$Sample
 
 make_heatmap(heatmap.m*100, 
              mymetadata = heatmap_metadata.df,
              filename = paste0("Result_figures/heatmaps/Negative_sample_genus_top_10_mean_relative_abundance_heatmap.pdf"),
-             variables = c("Project","Job.ID","Lesion_type_refined","Patient","Transplant", "Length_of_immunosuppression_group_1", "Length_of_immunosuppression_group_2"),
+             variables = c("Cohort","Job.ID","Lesion_type_refined","Patient","Transplant", "Length_of_immunosuppression_group_1", "Length_of_immunosuppression_group_2"),
              column_title = "",
              row_title = "Genus",
              plot_height = 10,
@@ -152,7 +152,7 @@ my_relabeller_function <- function(my_labels){
                   paste(phylostring[3], phylostring[6], sep = ";")
                 }))
 }
-heatmap_metadata.df$Project_Job.ID <- with(heatmap_metadata.df, paste0(Project, "__",Job.ID))
+heatmap_metadata.df$Cohort_Job.ID <- with(heatmap_metadata.df, paste0(Cohort, "__",Job.ID))
 
 generate_pca(temp, mymetadata = heatmap_metadata.df,
              plot_height = 6, plot_width = 6,
@@ -170,7 +170,7 @@ generate_pca(temp, mymetadata = heatmap_metadata.df,
              include_legend = T,
              label_ellipse = F, ellipse_label_size = .5,
              colour_palette = my_colour_palette_15,
-             variable_to_plot = "Project_Job.ID", legend_cols = 1,
+             variable_to_plot = "Cohort_Job.ID", legend_cols = 1,
              variable_colours_available = F,
              num_top_species = 3,
              plot_arrows = F,arrow_alpha = .2, arrow_colour = "grey20",arrow_scalar = 3,arrow_thickness = .5,

@@ -2,6 +2,7 @@
 # sPLS-DA selects the most discriminative OTUs/features that best characterise each group for a specific variable
 
 library(mixOmics)
+# BiocManager::install('mixOmics')
 library(reshape2)
 
 
@@ -19,15 +20,6 @@ filter_matrix_rows <- function(my_matrix, row_max){
 }
 
 
-matrix2df <- function(mymatrix, column_name){
-  out <- as.data.frame(mymatrix)
-  out_names <- colnames(out)
-  out$placeholder <- rownames(out)
-  rownames(out) <- NULL
-  names(out)[length(names(out))] <- column_name
-  out <- out[,c(column_name, out_names)]
-  return(out)
-}
 
 # ----------------------------------------------------------------------------------------------------------------
 # ----------------------------------------------------------------------------------------------------------------
@@ -36,6 +28,7 @@ matrix2df <- function(mymatrix, column_name){
 
 # Set the working directory
 setwd("/Users/julianzaugg/Desktop/ACE/major_projects/skin_microbiome_16S/")
+source("Code/helper_functions.R")
 
 # Load the OTU - taxonomy mapping file
 otu_taxonomy_map.df <- read.csv("Result_tables/other/otu_taxonomy_map.csv", header = T)
@@ -44,28 +37,14 @@ rownames(otu_taxonomy_map.df) <- otu_taxonomy_map.df$OTU.ID
 # Load the processed metadata
 metadata.df <- read.csv("Result_tables/other/processed_metadata.csv", sep =",", header = T)
 
-# Load count table at the OTU level. These are the counts for OTUs that were above our abundance thresholds
-otu_rare.m <- as.matrix(read.table("Result_tables/count_tables/OTU_counts_rarefied.csv", sep =",", header =T, row.names = 1))
-
 # Filter out features that do not have at # reads in at least one sample
-head(melt(sort(colSums(otu_rare.m))))
-otu_rare.m <- filter_matrix_rows(otu_rare.m,0)
-head(melt(sort(colSums(otu_rare.m))))
-
-# We are only interested in C,AK_PL,IEC_PL,SCC_PL,AK,IEC, NLC and SCC lesions. 
-# metadata.df <- metadata.df[metadata.df$Sampletype %in% c("C","AK_PL","IEC_PL","SCC_PL","AK","IEC","SCC", "NLC"),]
-metadata.df <- metadata.df[metadata.df$Sampletype %in% c("C","AK_PL","IEC_PL","SCC_PL","AK","IEC","SCC", "LC"),]
+head(melt(sort(colSums(otu.m))))
+otu.m <- filter_matrx_rows(otu.m,0)
+head(melt(sort(colSums(otu.m))))
+genus.m <- filter_matrix_rows(genus.m,0)
 
 # Filter to immunosuppressed or snapshot samples
-metadata.df <- subset(metadata.df, Project == "immunosuppressed" | Snapshot_sample == "yes")
-
-# Only keep columns (samples) in the metadata
-otu_rare.m <- otu_rare.m[,colnames(otu_rare.m) %in% as.character(metadata.df$Index)]
-
-# Since we likely removed samples from the count matrix
-# in the main script, remove them from the metadata.df here
-samples_removed <- metadata.df$Index[!metadata.df$Index %in% colnames(otu_rare.m)]
-metadata.df <- metadata.df[! metadata.df$Index %in% samples_removed,]
+metadata.df <- subset(metadata.df, Cohort == "immunosuppressed" | Snapshot_sample_5 == "yes")
 
 # Order the metadata.df by the index value
 metadata.df <- metadata.df[order(metadata.df$Index),]
@@ -73,10 +52,22 @@ metadata.df <- metadata.df[order(metadata.df$Index),]
 # Rownames should match the sample columns in the otu table
 rownames(metadata.df) <- metadata.df$Index
 
-# Order the otu_tables the same order as the metadata
-otu_rare.m <- otu_rare.m[,rownames(metadata.df)]
+# Load count tables. These are the counts for taxa that were above our abundance thresholds
+otu.m <- as.matrix(read.table("Result_tables/count_tables/OTU_counts.csv", sep =",", header =T, row.names = 1))
+genus.m <- as.matrix(read.table("Result_tables/count_tables/Genus_counts.csv", sep =",", header =T, row.names = 1))
 
+# Only keep columns (samples) in the metadata
+otu.m <- otu.m[,colnames(otu.m) %in% as.character(metadata.df$Index)]
+genus.m <- genus.m[,colnames(genus.m) %in% as.character(metadata.df$Index)]
 
+# Since we likely removed samples from the count matrix
+# in the main script, remove them from the metadata.df here
+# samples_removed <- metadata.df$Index[!metadata.df$Index %in% colnames(otu.m)]
+# metadata.df <- metadata.df[! metadata.df$Index %in% samples_removed,]
+
+# Order the tables the same order as the metadata
+otu.m <- otu.m[,rownames(metadata.df)]
+genus.m <- genus.m[,rownames(metadata.df)]
 
 # ---------------------------------------------------------------------------------------------------------
 # ---------------------------------------------------------------------------------------------------------
@@ -91,7 +82,7 @@ otu_rare.m <- otu_rare.m[,rownames(metadata.df)]
 # how reliable the results from such models will be.
 
 # Although patient is the main source of variability in the data, given so few samples for MST patients,
-# more reliable models will likely be obtained by not breaking groups down by patient.s
+# more reliable models will likely be obtained by not breaking groups down by patient.
 
 
 # Mixomics expects that the data matrix has samples as rows and predictors (features) as columns
@@ -136,8 +127,8 @@ run_mixomics <- function(my_otu_matrix, my_metadata, outcome_variable, prefix = 
                                    scale = TRUE, ncomp = 4,
                                    folds = 5, nrepeat = 10, cpus = 4)
   
-  tune.splsda.mydata$choice.ncomp #what does mixomics think is the best number of components?
-  tune.splsda.mydata$choice.keepX #what does mixomics think is the best number of OTUs?
+  tune.splsda.mydata$choice.ncomp # what does mixomics think is the best number of components?
+  tune.splsda.mydata$choice.keepX # what does mixomics think is the best number of OTUs?
   
   # Save the plot describing the classification error
   pdf(paste0("Result_figures/mixomics/",prefix, outcome_variable, "__plsda_tune.pdf"), width=10, height=6)
@@ -241,45 +232,53 @@ run_mixomics <- function(my_otu_matrix, my_metadata, outcome_variable, prefix = 
     splsda.loadings[,"taxonomy_genus"] <- otu_taxonomy_map.df[rownames(splsda.loadings),]$taxonomy_genus
     splsda.loadings[,"Genus"] <- otu_taxonomy_map.df[rownames(splsda.loadings),]$Genus
     splsda.loadings[,'abs_importance'] <- abs(splsda.loadings[,"importance"])
-    splsda.loadings <- matrix2df(splsda.loadings, "OTU.ID")
+    splsda.loadings <- m2df(splsda.loadings, "OTU.ID")
     write.csv(x = splsda.loadings, file = paste0("Result_tables/mixomics/",prefix, outcome_variable, "__", "comp_", comp, ".loadings.csv"), quote = F, row.names = F)
   }
 }
 
 
 # Compare variables in immunosuppressed cohort
-immunosuppressed_metadata.df <- metadata.df[metadata.df$Project == "immunosuppressed",]
-immunosuppressed_otu_rare.m <- otu_rare.m[,rownames(immunosuppressed_metadata.df)]
+immunosuppressed_metadata.df <- metadata.df[metadata.df$Cohort == "immunosuppressed",]
+immunosuppressed_otu.m <- otu.m[,rownames(immunosuppressed_metadata.df)]
+immunosuppressed_genus.m <- genus.m[,rownames(immunosuppressed_metadata.df)]
 
-immunocompetent_metadata.df <- metadata.df[metadata.df$Project == "immunocompetent",]
-immunocompetent_otu_rare.m <- otu_rare.m[,rownames(immunocompetent_metadata.df)]
+immunocompetent_metadata.df <- metadata.df[metadata.df$Cohort == "immunocompetent",]
+immunocompetent_otu.m <- otu.m[,rownames(immunocompetent_metadata.df)]
+immunocompetent_genus.m <- genus.m[,rownames(immunocompetent_metadata.df)]
 
 # Like DESeq, filter out features that do not have at # reads in at least one sample
-dim(immunosuppressed_otu_rare.m)
-immunosuppressed_otu_rare.m <- filter_matrix_rows(immunosuppressed_otu_rare.m,15)
-immunocompetent_otu_rare.m <- filter_matrix_rows(immunocompetent_otu_rare.m,15)
+dim(immunosuppressed_otu.m)
+immunosuppressed_otu.m <- filter_matrix_rows(immunosuppressed_otu.m,10)
+immunocompetent_otu.m <- filter_matrix_rows(immunocompetent_otu.m,10)
+immunosuppressed_genus.m <- filter_matrix_rows(immunosuppressed_genus.m,10)
+immunocompetent_genus.m <- filter_matrix_rows(immunocompetent_genus.m,10)
+
+# TODO 8/3/20
+# remove taxa by prevalence, at least 10% of all samples
+# What removes more, minimum read count or prevalence?
 
 # Could use sum instead
-# immunosuppressed_otu_rare.m <- immunosuppressed_otu_rare.m[which(apply(X = immunosuppressed_otu_rare.m, MARGIN = 1, FUN = sum) >= 30),]
-dim(immunosuppressed_otu_rare.m)
+# immunosuppressed_otu.m <- immunosuppressed_otu.m[which(apply(X = immunosuppressed_otu.m, MARGIN = 1, FUN = sum) >= 30),]
+dim(immunosuppressed_otu.m)
 
-# Sampletype_final
-run_mixomics(my_otu_matrix = immunosuppressed_otu_rare.m, 
+# Lesion_type_refined
+run_mixomics(my_otu_matrix = immunosuppressed_otu.m, 
              my_metadata = immunosuppressed_metadata.df, 
              prefix = "immunosuppressed_",
              use_shapes = T,
-             outcome_variable = "Sampletype_final",
-             my_levels = c("C", "LC","AK","SCC"))
+             outcome_variable = "Lesion_type_refined",
+             my_levels = c("C", "C_P", "AK","SCC_PL","SCC"))
 
-run_mixomics(my_otu_matrix = immunocompetent_otu_rare.m, 
+run_mixomics(my_otu_matrix = immunocompetent_otu.m, 
              my_metadata = immunocompetent_metadata.df, 
              prefix = "immunocompetent_",
              use_shapes = T,
-             outcome_variable = "Sampletype_final",
-             my_levels = c("LC","AK","SCC"))
+             outcome_variable = "Lesion_type_refined",
+             my_levels = c("C_P", "AK","SCC_PL","SCC"))
 
 # # Patient_group
-# run_mixomics(my_otu_matrix = immunosuppressed_otu_rare.m, 
+# run_mixomics(my_otu_matrix = immunosuppressed_otu.m, 
 #              my_metadata = immunosuppressed_metadata.df, 
 #              prefix = "immunosuppressed_",
 #              use_shapes = T,
@@ -287,7 +286,7 @@ run_mixomics(my_otu_matrix = immunocompetent_otu_rare.m,
 #              my_levels = c("Control","AK","SCC"))
 # 
 # # Number_of_meds
-# run_mixomics(my_otu_matrix = immunosuppressed_otu_rare.m, 
+# run_mixomics(my_otu_matrix = immunosuppressed_otu.m, 
 #              my_metadata = immunosuppressed_metadata.df, 
 #              prefix = "immunosuppressed_",
 #              use_shapes = T,
@@ -296,17 +295,17 @@ run_mixomics(my_otu_matrix = immunocompetent_otu_rare.m,
 
 
 # Compare cohorts
-otu_rare_filtered.m <- filter_matrix_rows(otu_rare.m,15)
+otu_rare_filtered.m <- filter_matrix_rows(otu.m,15)
 run_mixomics(my_otu_matrix = otu_rare_filtered.m,
              my_metadata = metadata.df,
              prefix = "both_cohorts_",
              use_shapes = T,
-             outcome_variable = "Project",
+             outcome_variable = "Cohort",
              my_levels = c("immunocompetent","immunosuppressed"))
 
 
 
-immunosuppressed_otu_rare.m <- immunosuppressed_otu_rare.m + 0.1
+immunosuppressed_otu.m <- immunosuppressed_otu.m + 0.1
 
 # Number of features to test/keep
 list.keepX = c(c(5:10), seq(15, 50, 5), seq(60, 100, 10))
@@ -316,7 +315,7 @@ list.keepX = c(c(5:10), seq(15, 50, 5), seq(60, 100, 10))
 outcome <- factor(immunosuppressed_metadata.df$Sampletype_pooled)
 
 
-tune.splsda.mydata <- tune.splsda(X=t(immunosuppressed_otu_rare.m), Y = outcome, 
+tune.splsda.mydata <- tune.splsda(X=t(immunosuppressed_otu.m), Y = outcome, 
                                  validation = 'Mfold', dist = 'max.dist', 
                                  measure = "BER", logratio = "CLR",
                                  progressBar = TRUE, test.keepX = list.keepX,
@@ -336,7 +335,7 @@ select.keepX <- tune.splsda.mydata$choice.keepX[1:ncomp] # optimal number of var
 
 #settings from tuning (check ncomp)
 # Final model. Use settings from tuning (ncomp and select.keepX)
-splsda.mydata <- splsda(X=t(immunosuppressed_otu_rare.m), Y = outcome, logratio = "CLR", keepX = select.keepX, scale = TRUE, ncomp = ncomp)
+splsda.mydata <- splsda(X=t(immunosuppressed_otu.m), Y = outcome, logratio = "CLR", keepX = select.keepX, scale = TRUE, ncomp = ncomp)
 
 #here is a plot with sample ids
 plotIndiv(splsda.mydata, comp = c(1,2), 
@@ -395,12 +394,12 @@ cim(splsda.mydata, comp=1, title ="Component 1", row.names = immunosuppressed_me
 # 
 # test_patient_meta.df <- metadata.df[metadata.df$Patient == "MST012",]
 # 
-# # test_patient_meta.df <- metadata.df[metadata.df$Project == "immunosuppressed",]
-# test_patient_otu_rare.m <- otu_rare.m[,rownames(test_patient_meta.df)]
-# dim(test_patient_otu_rare.m)
-# test_patient_otu_rare.m <- test_patient_otu_rare.m[which(apply(X = test_patient_otu_rare.m, MARGIN = 1, FUN = sum) >= 50),]
-# dim(test_patient_otu_rare.m)
-# test_patient_otu_rare.m <- test_patient_otu_rare.m + 0.1
+# # test_patient_meta.df <- metadata.df[metadata.df$Cohort == "immunosuppressed",]
+# test_patient_otu.m <- otu.m[,rownames(test_patient_meta.df)]
+# dim(test_patient_otu.m)
+# test_patient_otu.m <- test_patient_otu.m[which(apply(X = test_patient_otu.m, MARGIN = 1, FUN = sum) >= 50),]
+# dim(test_patient_otu.m)
+# test_patient_otu.m <- test_patient_otu.m + 0.1
 # 
 # for (patient in sort(unique(metadata.df$Patient))){
 #   if (!grepl("MST", patient)) {next}
@@ -412,17 +411,17 @@ cim(splsda.mydata, comp=1, title ="Component 1", row.names = immunosuppressed_me
 # 
 # 
 # test_patient_meta.df <- test_patient_meta.df[!test_patient_meta.df$Sampletype_pooled == "SCC",]
-# test_patient_otu_rare.m <- test_patient_otu_rare.m[,rownames(test_patient_meta.df)]
+# test_patient_otu.m <- test_patient_otu.m[,rownames(test_patient_meta.df)]
 # 
 # outcome <- factor(test_patient_meta.df$Sampletype_pooled)
 # outcome
 # 
 # list.keepX = c(c(5:10), seq(15, 50, 5), seq(60, 100, 10))
-# dim(test_patient_otu_rare.m)
+# dim(test_patient_otu.m)
 # length(outcome)
 # # This tests what number of OTUs and components to use to give us the best discriminatory power
 # # folds tells it how many samples to keep in each test group - this has to be less than the number of samples in the smallest group
-# tune.splsda.mydata <- tune.splsda(X=t(test_patient_otu_rare.m), 
+# tune.splsda.mydata <- tune.splsda(X=t(test_patient_otu.m), 
 #                                  Y = outcome, 
 #                                  ncomp = 2,
 #                                  # validation = 'Mfold',
@@ -442,7 +441,7 @@ cim(splsda.mydata, comp=1, title ="Component 1", row.names = immunosuppressed_me
 # error <- tune.splsda.mydata$error.rate # error rate per component for the keepX grid
 # ncomp <- tune.splsda.mydata$choice.ncomp$ncomp # optimal number of components based on t-tests
 # 
-# # temp <- pca(t(test_patient_otu_rare.m), ncomp =3, logratio = "CLR")
+# # temp <- pca(t(test_patient_otu.m), ncomp =3, logratio = "CLR")
 # # plot(temp$x)
 # # temp <- matrix2df(temp$x, "Sample")
 # 

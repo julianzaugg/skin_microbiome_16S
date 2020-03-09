@@ -185,7 +185,10 @@ dir.create(file.path("./Result_tables", "relative_abundance_tables"), showWarnin
 dir.create(file.path("./Result_tables", "stats_various"), showWarnings = FALSE)
 dir.create(file.path("./Result_tables", "contaminant_analysis"), showWarnings = FALSE)
 
-
+dir.create("./Result_tables/fastspar_inputs", showWarnings = FALSE,recursive = T)
+dir.create("./Result_tables/fastspar_inputs/per_patient", showWarnings = FALSE,recursive = T)
+dir.create("./Result_tables/fastspar_inputs/per_lesion_type_cohort", showWarnings = FALSE,recursive = T)
+# dir.create("./Result_tables/fastspar_inputs/SCC_SCC_PL_cohort", showWarnings = FALSE,recursive = T)
 dir.create(file.path("./Result_figures/correlation_analysis", "networks"), showWarnings = FALSE,recursive = T)
 dir.create(file.path("./Result_figures/correlation_analysis", "corrplots"), showWarnings = FALSE,recursive = T)
 dir.create(file.path("./Result_figures/correlation_analysis", "by_feature"), showWarnings = FALSE,recursive = T)
@@ -337,6 +340,8 @@ rownames(metadata.df) <- metadata.df$Index
 # Remove samples with no specified cohort
 metadata.df <- subset(metadata.df, !is.na(Cohort))
 
+
+# dim(subset(metadata.df, Cohort == "immunocompetent"))
 # Filter samples to those that are immunosuppressed, immunocompetent snapshot 5 samples or negative
 # this saves processing time later
 metadata.df <- metadata.df[which(metadata.df$Cohort == "immunosuppressed" | metadata.df$Snapshot_sample_5 == "yes" | metadata.df$Lesion_type == "negative"),]
@@ -394,6 +399,8 @@ metadata.df$Lesion_type_refined <- factor(metadata.df$Lesion_type_refined)
 # ------------------------------------------------------------------------------------------------------------
 # Retain copy of metadata prior to filtering samples
 metadata_unfiltered.df <- metadata.df
+# dim(subset(metadata_unfiltered.df, Cohort == "immunosuppressed" & Lesion_type != "negative"))
+# dim(subset(metadata_unfiltered.df, Cohort == "immunocompetent" & Lesion_type != "negative"))
 
 # Filter to samples those that are the following lesion types.
 metadata.df <- metadata.df[metadata.df$Lesion_type %in% c("C","AK_PL","IEC_PL","SCC_PL","AK","IEC","SCC", "negative", "NLC"),]
@@ -438,8 +445,12 @@ sample_ids_original <- grep("R[0-9].*|S[AB][0-9].*|S[0-9].*", names(project_otu_
 sample_ids <- grep("R[0-9].*|S[AB][0-9].*|S[0-9].*", names(project_otu_table.df), value = T)
 print(paste0("There are ", length(sample_ids_original), " samples in the data"))
 
+# sum(summary(subset(metadata.df, Cohort == "immunosuppressed" & Index %in% sample_ids)$Lesion_type))
+# summary(factor(metadata.df[sample_ids[sample_ids %in% subset(metadata.df, Cohort == "immunosuppressed")$Index],]$Lesion_type))
+
 # Remove the Internal_name column (no longer required at this point)
 metadata.df <- metadata.df %>% select(-Internal_name)
+length(unique(metadata.df$Swab_ID))
 
 # ------------------------------------------------------------------------------------------------------------------------------
 # ------------------------------------------------------------------------------------------------------------------------------
@@ -508,6 +519,11 @@ plate_control_samples.v <- grep("r[1-4]_", sample_ids, value = T)
 original_samples.v <- sample_ids[!sample_ids %in% c("OTU.ID",plate_control_samples.v,repeat_samples.v)]
 bases_original_samples.v <- gsub("_.*","",original_samples.v)
 
+# 226 IC (220 actual when accounting for only lesions of interest + negative and re-sequenced)
+# 273 IS (216 actual when accounting for only lesions of interest + negative and re-sequenced)
+summary(metadata.df$Cohort)
+summary(subset(metadata.df, Lesion_type != "negative")$Cohort)
+
 # Add the counts for 'b' samples to their 'original' counterpart
 temp.df <- project_otu_table.df # use separate temporary dataframe to save time when editing code
 temp_meta.df <- metadata.df
@@ -526,14 +542,6 @@ for (sample in original_samples.v){
     # print(paste(sample_base, sample, matching_repeat_sample, sum_base_prior, sum_repeat, sum_base_post))
   }
 }
-# metadata.df["SA5482_J607",]$R1_read_count_raw
-# temp_meta.df["SA5482_J607",]$R1_read_count_raw
-# subset(metadata.df, Sequencing_ID == "SA5482")
-# metadata.df["R1366_J1425",]$R1_read_count_raw
-# temp_meta.df["R1366_J1425",]$R1_read_count_raw
-# dim(temp_meta.df)
-# dim(metadata.df)
-# rownames(metadata.df)[!rownames(metadata.df) %in% rownames(temp_meta.df)] %in% repeat_samples.v
 
 # And now remove all the repeat 'b' samples from the project table and metadata
 temp.df <- temp.df[,!colnames(temp.df) %in% repeat_samples.v]
@@ -553,6 +561,12 @@ paste0("There are ", length(sample_ids), " samples in the data after consolidati
 # *Samples specified to be discarded have been removed and repeat samples consolidated
 project_otu_table_unfiltered.df <- project_otu_table.df
 
+# 226 IC (220 actual when accounting for only lesions of interest + negative and re-sequenced)
+# 273 IS (216 actual when accounting for only lesions of interest + negative and re-sequenced)
+summary(metadata.df$Cohort)
+summary(subset(metadata.df, Lesion_type != "negative")$Cohort)
+
+
 # ------------------------------------------------------------------------------------------
 ## Now ensure the metadata and the OTU table matches
 
@@ -566,9 +580,9 @@ if ( length(missing_samples.v) == 0) {
   print("Samples missing from OTU table")
 }
 # Are these missing samples in the filtered metadata? What about the unfiltered metadata?
-# summary(metadata.df[metadata.df$Index %in% missing_samples.v,]$Lesion_type)
-# summary(metadata_unfiltered.df[metadata_unfiltered.df$Index  %in% missing_samples.v,]$Lesion_type)
-# metadata_unfiltered.df[missing_samples.v,]
+summary(metadata.df[metadata.df$Index %in% missing_samples.v,]$Lesion_type)
+summary(metadata_unfiltered.df[metadata_unfiltered.df$Index  %in% missing_samples.v,]$Lesion_type)
+metadata_unfiltered.df[missing_samples.v,]
 
 # Also the reverse, are there samples in the metadata missing from the data (possibly filtered earlier)
 missing_samples_metadata.v <- as.character(metadata.df$Index[!metadata.df$Index %in% sample_ids])
@@ -614,6 +628,15 @@ project_otu_table.df <- project_otu_table.df[,c(sample_ids[sample_ids %in% rowna
 
 dim(project_otu_table.df)
 dim(metadata.df)
+dim(subset(metadata.df, Cohort == "immunosuppressed"))
+sum(summary(subset(metadata.df, Cohort == "immunosuppressed")$Lesion_type_refined))
+# 226 IC (220 actual when accounting for only lesions of interest + negative and re-sequenced)
+# 273 IS (216 actual when accounting for only lesions of interest + negative and re-sequenced)
+summary(metadata.df$Cohort)
+summary(subset(metadata.df, Lesion_type != "negative")$Cohort)
+
+
+# sample_ids <- grep("R[0-9].*|S[AB][0-9].*|S[0-9].*", names(project_otu_table.df), value = T)
 # summary(metadata.df$Lesion_type)
 # which(metadata.df$Cohort == "immunosuppressed" | metadata.df$Snapshot_sample_5 == "yes" | metadata.df$Lesion_type == "negative")
 # ------------------------------------------------------------------------------------------------
@@ -713,8 +736,45 @@ sample_ids <- grep("R[0-9].*|S[AB][0-9].*|S[0-9].*", names(project_otu_table.df)
 # top_unassigned.df <- head(project_otu_table.df[project_otu_table.df$Taxon == "Unassigned",], n = 100)
 # write.csv(top_unassigned.df, file = "Result_tables/other/unassigned_entries.csv", row.names = F)
 
-# ------------------------------------------------
-# ----------- Remove unwanted lineages -----------
+#  ---------------------------------------------------------------------------------------------------------------- 
+#  ------------------------------------------- Remove unwanted lineages ------------------------------------------- 
+
+#  ----------------------
+# Rough stats on the discarded features
+project_otu_table_discarded.df <- project_otu_table.df[!grepl(paste0("d__Bacteria|d__Archaea|",fungal_pattern), project_otu_table.df$Taxon) | project_otu_table.df$Phylum == "Unassigned" | grepl("o__Chloroplast", project_otu_table.df$Taxon),]
+
+# Abundance of discarded features in each sample based on unfiltered data
+temp <- melt(round(colSums(project_otu_table_discarded.df[sample_ids]) / colSums(project_otu_table_unfiltered.df[sample_ids]) * 100,4), value.name = "Relative_abundance")
+temp <- m2df(temp,column_name = "Index")
+temp <- merge(temp,metadata.df,by = "Index") %>% select(Index, Lesion_type_refined, Cohort, Relative_abundance)
+temp <- temp[order(temp$Relative_abundance,decreasing = T),]
+max(temp$Relative_abundance)
+min(temp$Relative_abundance)
+mean(temp$Relative_abundance)
+median(temp$Relative_abundance)
+
+# Read counts of discarded features in each sample based on unfiltered data
+temp <- melt(colSums(project_otu_table_discarded.df[sample_ids]), value.name = "Read_count")
+temp <- m2df(temp,column_name = "Index")
+temp <- merge(temp,metadata.df,by = "Index") %>% select(Index, Lesion_type_refined, Cohort, Read_count)
+temp <- temp[order(temp$Read_count,decreasing = T),]
+max(temp$Read_count)
+min(temp$Read_count)
+mean(temp$Read_count)
+median(temp$Read_count)
+length(project_otu_table_discarded.df$OTU.ID) / length(project_otu_table_unfiltered.df$OTU.ID) *100
+
+# Abundance of Unassigned features in each sample based on unfiltered data
+dim(project_otu_table_discarded.df[project_otu_table_discarded.df$Taxon == "Unassigned",])
+temp <- melt(round(colSums(project_otu_table_discarded.df[project_otu_table_discarded.df$Taxon == "Unassigned",sample_ids])/colSums(project_otu_table_unfiltered.df[sample_ids]) * 100,4), value.name = "Relative_abundance")
+temp <- m2df(temp,column_name = "Index")
+temp <- merge(temp,metadata.df,by = "Index") %>% select(Index, Lesion_type_refined, Cohort, Relative_abundance)
+temp <- temp[order(temp$Relative_abundance,decreasing = T),]
+max(temp$Relative_abundance)
+min(temp$Relative_abundance)
+mean(temp$Relative_abundance)
+median(temp$Relative_abundance)
+#  ----------------------
 
 # Remove OTUs that are Unassigned
 # project_otu_table.df <- project_otu_table.df[project_otu_table.df$Taxon != "Unassigned",]
@@ -727,6 +787,7 @@ fungal_pattern <- gsub("^", "p__", fungal_pattern)
 # Discard anything not Bacterial or Archaeal or fungal
 project_otu_table.df <- project_otu_table.df[grepl(paste0("d__Bacteria|d__Archaea|",fungal_pattern), project_otu_table.df$Taxon),]
 
+
 # Discard anything that is Unassigned at the Phylum level
 project_otu_table.df <- project_otu_table.df[!project_otu_table.df$Phylum == "Unassigned",]
 
@@ -734,7 +795,8 @@ project_otu_table.df <- project_otu_table.df[!project_otu_table.df$Phylum == "Un
 project_otu_table.df <- project_otu_table.df[!grepl("o__Chloroplast", project_otu_table.df$Taxon,ignore.case = T),]
 # dim(project_otu_table.df)
 # dim(project_otu_table_unfiltered.df)
-# ------------------------------------------------
+#  ----------------------------------------------------------------------------------------------------------------
+#  ----------------------------------------------------------------------------------------------------------------
 
 # Remove old Taxon column
 project_otu_table.df$Taxon <- NULL
@@ -1106,6 +1168,192 @@ file.out = paste0("Result_other/sequences/contaminate_features.fasta"))
 otu_rel_decontaminated.m <- otu_rel.m[!rownames(otu_rel.m) %in% unique(c(contaminating_features)),]
 otu_decontaminated.m <- otu.m[!rownames(otu.m) %in% unique(c(contaminating_features)),]
 
+# ------------------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------------------
+# Create contaminant count and abundance tables and write to file
+otu_contaminates.m <- otu.m[rownames(otu.m) %in% unique(c(contaminating_features)),]
+otu_rel_contaminates.m <- otu_rel.m[rownames(otu_rel.m) %in% unique(c(contaminating_features)),]
+
+write.table(otu_contaminates.m, file = "Result_tables/count_tables/Contaminates_OTU_counts.csv", sep = ",", quote = F, col.names = T, row.names = F)
+write.table(otu_rel_contaminates.m, file = "Result_tables/relative_abundance_tables/Contaminates_OTU_relative_abundances.csv", sep = ",", quote = F, col.names = T, row.names = F)
+
+# Generate and write the final counts and abundances for each taxonomy level to file
+# Do this for all samples, regardless of cohort
+otu_contaminates.df <- m2df(otu_contaminates.m, "OTU.ID")
+otu_rel_contaminates.df <- m2df(otu_rel_contaminates.m, "OTU.ID")
+# Merge the otu counts back with the taxonomy data
+otu_metadata_merged.df <- merge(otu_contaminates.df, otu_taxonomy_map.df, by.x = "OTU.ID", by.y = "OTU.ID")
+otu_rel_metadata_merged.df <- merge(otu_rel_contaminates.df, otu_taxonomy_map.df, by.x = "OTU.ID", by.y = "OTU.ID")
+
+
+
+# We use the 'full' taxonomy strings, e.g. taxonomy_genus, so that "Unassigned" or "Uncultured" from different lineages are kept separate!
+for (tax_string_level in c("taxonomy_species", "taxonomy_genus", "taxonomy_family", "taxonomy_class", "taxonomy_order", "taxonomy_phylum")){
+  # Collapse the dataframe by summing the counts for each unique taxonomy string within each sample
+  otu_taxa_level.df <- otu_metadata_merged.df[c(tax_string_level, sample_ids)] %>% 
+    group_by_(tax_string_level) %>% # Group the dataframe by the taxonomy string 
+    # Summarise each group by applying the the 'sum' function to the counts of each member of the group, 
+    # i.e. duplicate entries for each taxa level are collapsed into a single entry and their counts summed together
+    dplyr::summarise_all(funs(sum)) %>%  
+    as.data.frame() # convert back to dataframe
+  
+  # Now create the relative abundance matrix at the current taxa level
+  otu_taxa_level_rel.m <- df2matrix(otu_rel_metadata_merged.df[c(tax_string_level, sample_ids)] %>% 
+    group_by_(tax_string_level) %>%
+    dplyr::summarise_all(funs(sum)) %>%  
+    as.data.frame())
+  
+  if (grepl("phylum", tax_string_level)){
+    otu_phylum_rel.df <- m2df(otu_taxa_level_rel.m, tax_string_level)
+    otu_phylum_rel.df[is.nan.data.frame(otu_phylum_rel.df)] <- 0
+    otu_phylum.df <- otu_taxa_level.df
+  } 
+  else if (grepl("class", tax_string_level)){
+    otu_class_rel.df <- m2df(otu_taxa_level_rel.m, tax_string_level)
+    otu_class_rel.df[is.nan.data.frame(otu_class_rel.df)] <- 0
+    otu_class.df <- otu_taxa_level.df
+  }
+  else if (grepl("order", tax_string_level)){
+    otu_order_rel.df <- m2df(otu_taxa_level_rel.m, tax_string_level)
+    otu_order_rel.df[is.nan.data.frame(otu_order_rel.df)] <- 0
+    otu_order.df <- otu_taxa_level.df
+  }
+  else if (grepl("family", tax_string_level)){
+    otu_family_rel.df <- m2df(otu_taxa_level_rel.m, tax_string_level)
+    otu_family_rel.df[is.nan.data.frame(otu_family_rel.df)] <- 0
+    otu_family.df <- otu_taxa_level.df
+  }
+  else if (grepl("genus", tax_string_level)){
+    otu_genus_rel.df <- m2df(otu_taxa_level_rel.m, tax_string_level)
+    otu_genus_rel.df[is.nan.data.frame(otu_genus_rel.df)] <- 0
+    otu_genus.df <- otu_taxa_level.df
+  }
+  else if (grepl("species", tax_string_level)){
+    otu_species_rel.df <- m2df(otu_taxa_level_rel.m, tax_string_level)
+    otu_species_rel.df[is.nan.data.frame(otu_species_rel.df)] <- 0
+    otu_species.df <- otu_taxa_level.df
+  }
+}
+
+write.table(otu_species.df, file = "Result_tables/count_tables/Contaminants_Specie_counts.csv", sep = ",", quote = F, col.names = T, row.names = F)
+write.table(otu_species_rel.df, file = "Result_tables/relative_abundance_tables/Contaminants_Specie_relative_abundances.csv", sep = ",", quote = F, col.names = T, row.names = F)
+
+write.table(otu_genus.df, file = "Result_tables/count_tables/Contaminants_Genus_counts.csv", sep = ",", quote = F, col.names = T, row.names = F)
+write.table(otu_genus_rel.df, file = "Result_tables/relative_abundance_tables/Contaminants_Genus_relative_abundances.csv", sep = ",", quote = F, col.names = T, row.names = F)
+
+write.table(otu_family.df, file = "Result_tables/count_tables/Contaminants_Family_counts.csv", sep = ",", quote = F, col.names = T, row.names = F)
+write.table(otu_family_rel.df, file = "Result_tables/relative_abundance_tables/Contaminants_Family_relative_abundances.csv", sep = ",", quote = F, col.names = T, row.names = F)
+
+write.table(otu_order.df, file = "Result_tables/count_tables/Contaminants_Order_counts.csv", sep = ",", quote = F, col.names = T, row.names = F)
+write.table(otu_order_rel.df, file = "Result_tables/relative_abundance_tables/Contaminants_Order_relative_abundances.csv", sep = ",", quote = F, col.names = T, row.names = F)
+
+write.table(otu_class.df, file = "Result_tables/count_tables/Contaminants_Class_counts.csv", sep = ",", quote = F, col.names = T, row.names = F)
+write.table(otu_class_rel.df, file = "Result_tables/relative_abundance_tables/Contaminants_Class_relative_abundances.csv", sep = ",", quote = F, col.names = T, row.names = F)
+
+write.table(otu_phylum.df, file = "Result_tables/count_tables/Contaminants_Phylum_counts.csv", sep = ",", quote = F, col.names = T, row.names = F)
+write.table(otu_phylum_rel.df, file = "Result_tables/relative_abundance_tables/Contaminants_Phylum_relative_abundances.csv", sep = ",", quote = F, col.names = T, row.names = F)
+
+
+# ----------------------------------------
+# Generate the combined datasets
+otu_combined <- create_combined_dataframe_no_rare(counts.df = otu_contaminates.df, 
+                                                  abundances.df = otu_rel_contaminates.df,
+                                                  mylevel = "OTU.ID",
+                                                  mymetadata = metadata.df,
+                                                  otu_map.df = reduced_tax_map)
+
+species_combined <- create_combined_dataframe_no_rare(counts.df = otu_species.df, 
+                                                      abundances.df = otu_species_rel.df,
+                                                      mylevel = "Species",
+                                                      mymetadata = metadata.df,
+                                                      otu_map.df = reduced_tax_map)
+
+genus_combined <- create_combined_dataframe_no_rare(counts.df = otu_genus.df, 
+                                                    abundances.df = otu_genus_rel.df,
+                                                    mylevel = "Genus",
+                                                    mymetadata = metadata.df,
+                                                    otu_map.df = reduced_tax_map)
+
+family_combined <- create_combined_dataframe_no_rare(counts.df = otu_family.df, 
+                                                     abundances.df = otu_family_rel.df,
+                                                     mylevel = "Family",
+                                                     mymetadata = metadata.df,
+                                                     otu_map.df = reduced_tax_map)
+
+order_combined <- create_combined_dataframe_no_rare(counts.df = otu_order.df, 
+                                                    abundances.df = otu_order_rel.df,
+                                                    mylevel = "Order",
+                                                    mymetadata = metadata.df,
+                                                    otu_map.df = reduced_tax_map)
+
+class_combined <- create_combined_dataframe_no_rare(counts.df = otu_class.df, 
+                                                    abundances.df = otu_class_rel.df,
+                                                    mylevel = "Class",
+                                                    mymetadata = metadata.df,
+                                                    otu_map.df = reduced_tax_map)
+
+phylum_combined <- create_combined_dataframe_no_rare(counts.df = otu_phylum.df, 
+                                                     abundances.df = otu_phylum_rel.df,
+                                                     mylevel = "Phylum",
+                                                     mymetadata = metadata.df,
+                                                     otu_map.df = reduced_tax_map)
+
+write.table(otu_combined, file = "Result_tables/combined_counts_abundances_and_metadata_tables/Contaminants_OTU_counts_abundances_and_metadata.csv", sep = ",", quote = F, col.names = T, row.names = F)
+write.table(species_combined, file = "Result_tables/combined_counts_abundances_and_metadata_tables/Contaminants_Specie_counts_abundances_and_metadata.csv", sep = ",", quote = F, col.names = T, row.names = F)
+write.table(genus_combined, file = "Result_tables/combined_counts_abundances_and_metadata_tables/Contaminants_Genus_counts_abundances_and_metadata.csv", sep = ",", quote = F, col.names = T, row.names = F)
+write.table(family_combined, file = "Result_tables/combined_counts_abundances_and_metadata_tables/Contaminants_Family_counts_abundances_and_metadata.csv", sep = ",", quote = F, col.names = T, row.names = F)
+write.table(order_combined, file = "Result_tables/combined_counts_abundances_and_metadata_tables/Contaminants_Order_counts_abundances_and_metadata.csv", sep = ",", quote = F, col.names = T, row.names = F)
+write.table(class_combined, file = "Result_tables/combined_counts_abundances_and_metadata_tables/Contaminants_Class_counts_abundances_and_metadata.csv", sep = ",", quote = F, col.names = T, row.names = F)
+write.table(phylum_combined, file = "Result_tables/combined_counts_abundances_and_metadata_tables/Contaminants_Phylum_counts_abundances_and_metadata.csv", sep = ",", quote = F, col.names = T, row.names = F)
+
+
+genus_contaminant_taxa_summary.df <- genus_combined %>% group_by(taxonomy_genus) %>%
+  dplyr::summarise(
+    Median_relative_abundance = round(median(Relative_abundance), 5),
+    Mean_relative_abundance = round(mean(Relative_abundance), 5)) %>% 
+  as.data.frame()
+genus_contaminant_taxa_summary_top_20.df <- genus_contaminant_taxa_summary.df %>% 
+  dplyr::arrange(dplyr::desc(Mean_relative_abundance)) %>% 
+  dplyr::top_n(20, Mean_relative_abundance)  %>% 
+  as.data.frame()
+write.csv(genus_contaminant_taxa_summary_top_20.df, "Result_tables/abundance_analysis_tables/Contaminant_top_20.csv", quote = F, row.names = F)
+
+genus_contaminant_taxa_summary.df <- genus_combined %>%
+  group_by(Cohort, taxonomy_genus) %>%
+  dplyr::summarise(
+    Median_relative_abundance = round(median(Relative_abundance), 5),
+    Mean_relative_abundance = round(mean(Relative_abundance), 5)) %>%
+  as.data.frame()
+genus_contaminant_taxa_summary_cohort_top_20.df <- genus_contaminant_taxa_summary.df %>% 
+  group_by(Cohort) %>% 
+  dplyr::arrange(dplyr::desc(Mean_relative_abundance)) %>% 
+  dplyr::top_n(20, Mean_relative_abundance)  %>% 
+  dplyr::arrange(Cohort) %>% 
+  as.data.frame()
+write.csv(genus_contaminant_taxa_summary_cohort_top_20.df, "Result_tables/abundance_analysis_tables/Contaminant_Cohort_top_20.csv", quote = F, row.names = F)
+
+genus_contaminant_taxa_summary.df <- genus_combined %>%
+  group_by(Lesion_type_refined, taxonomy_genus) %>%
+  dplyr::summarise(
+    Median_relative_abundance = round(median(Relative_abundance), 5),
+    Mean_relative_abundance = round(mean(Relative_abundance), 5)) %>%
+  as.data.frame()
+genus_contaminant_taxa_summary_lesion_type_top_20.df <- genus_contaminant_taxa_summary.df %>% 
+  group_by(Lesion_type_refined) %>% 
+  dplyr::arrange(dplyr::desc(Mean_relative_abundance)) %>% 
+  dplyr::top_n(20, Mean_relative_abundance)  %>% 
+  dplyr::arrange(Lesion_type_refined) %>% 
+  as.data.frame()
+write.csv(genus_contaminant_taxa_summary_lesion_type_top_20.df, "Result_tables/abundance_analysis_tables/Contaminant_Lesion_type_refined_top_20.csv", quote = F, row.names = F)
+
+
+# ------------------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------------------
+
+
+
+
+
 # ----------------------------------------
 # Remove contaminants from data for each cohort
 immunosuppressed_otu.m <- immunosuppressed_otu.m[!rownames(immunosuppressed_otu.m) %in% unique(c(contaminating_features_immunosuppressed)),]
@@ -1191,6 +1439,8 @@ sample_ids <- colnames(otu.m)
 # Check how many OTUs would be removed if we filtered any whose abundance is less than 0.05% (0.0005) in all samples
 filter_percentage = 0.0005
 otu_rel_low_abundance_otus.m <- otu_rel.m[apply(otu_rel.m[,sample_ids],1,function(z) all(z < filter_percentage)),]
+# otu_unfiltered_rel.m
+# otu_rel_low_abundance_otus.m <- otu_unfiltered_rel.m[apply(otu_unfiltered_rel.m[,sample_ids],1,function(z) all(z < filter_percentage)),]
 
 otu_rel_low_abundance_otus.df <- as.data.frame(otu_rel_low_abundance_otus.m)
 percent_removed_before_taxa_filtered <- round(dim(otu_rel_low_abundance_otus.m)[1]/length(rownames(otu_unfiltered.m)) * 100,2)
@@ -1226,6 +1476,11 @@ otu_prior_to_removing_low_read_count_samples_rel.m <- otu_rel.m
 # ggplot(temp, aes(x = Sample, y = Count)) + geom_bar(stat = "identity")
 
 # Discard samples with less than # reads.
+# otu.m <- otu_prior_to_removing_low_read_count_samples.m
+# dim(metadata.df[metadata.df$Cohort == "immunosuppressed",])
+# summary(metadata.df[colnames(otu.m[,colSums(otu.m) >= 2000]),]$Cohort)
+# summary(metadata.df[colnames(otu.m[,colSums(otu.m) < 2000]),]$Cohort)
+# dim(metadata.df)
 dim(otu.m)
 otu.m <- otu.m[,colSums(otu.m) >= 2000]
 dim(otu.m)
@@ -1245,6 +1500,7 @@ sample_ids <- colnames(otu.m)
 
 # Project table with just unassigned features
 unassigned_project_otu_table_unfiltered.df <- project_otu_table_unfiltered.df[project_otu_table_unfiltered.df$Domain == "Unassigned",]
+rownames(unassigned_project_otu_table_unfiltered.df) <- unassigned_project_otu_table_unfiltered.df$OTU.ID
 
 # Convert to dataframe
 unassigned_otu_unfiltered_rel.df <- m2df(otu_unfiltered_rel.m[as.character(unassigned_project_otu_table_unfiltered.df$OTU.ID),,drop =F],
@@ -1262,6 +1518,18 @@ if (max(unassigned_otu_unfiltered_rel.df$Relative_abundance) != 0){
     top_n(n = 10, wt = Relative_abundance) %>% 
     mutate(Relative_abundance = round(Relative_abundance*100,3)) %>%
     as.data.frame() 
+  
+  temp <- melt(round(colSums(unassigned_project_otu_table_unfiltered.df[unique(most_abundant_unassigned.df$OTU.ID),sample_ids])/colSums(project_otu_table_unfiltered.df[,sample_ids]) * 100,4), value.name = "Relative_abundance")
+  length(unique(most_abundant_unassigned.df$OTU.ID)) / length(project_otu_table_unfiltered.df$OTU.ID) *100
+  # temp <- melt(round(colSums(unassigned_project_otu_table_unfiltered.df[,sample_ids])/colSums(project_otu_table_unfiltered.df[,sample_ids]) * 100,4), value.name = "Relative_abundance")
+  temp <- m2df(temp,column_name = "Index")
+  temp <- merge(temp,metadata.df,by = "Index") %>% select(Index, Lesion_type_refined, Cohort, Relative_abundance)
+  temp <- temp[order(temp$Relative_abundance,decreasing = T),]
+  max(temp$Relative_abundance)
+  min(temp$Relative_abundance)
+  mean(temp$Relative_abundance)
+  median(temp$Relative_abundance)
+  
   
   # Get corresponding representative sequence
   most_abundant_unassigned.df$RepSeq <- unlist(lapply(most_abundant_unassigned.df$OTU.ID, 
@@ -1333,7 +1601,10 @@ ggsave(plot = myplot, filename = "./Result_figures/exploratory_analysis/sample_r
 # Generate a rarefied OTU count matrix
 # In the paper from 2018, a rarefaction maximum of 20,000 was used
 otu_rare_count.m <- t(rrarefy(x = t(otu.m), sample=30000))
-
+# colSums(otu.m - otu_rare_count.m)
+# temp <- subset(metadata_unfiltered.df, Cohort == "immunosuppressed")
+# temp <- temp[!grepl("b_", rownames(temp)),]
+# summary(colnames(project_otu_table_unfiltered.df) %in% temp$Index)
 # (optional) only use rrarefied capped counts
 otu.m <- otu_rare_count.m
 
@@ -1533,7 +1804,7 @@ stats.df[,"Mammal_proportion_original"] <- stats.df[,"Mammal_read_count_original
 
 # Proportion of reads that are fungal
 # stats.df[,"Fungal_read_count_original"] <- colSums(project_otu_table_unfiltered.df[grepl("Fungi", project_otu_table_unfiltered.df$taxonomy_species),samples_passing_QC])
-stats.df[,"Fungal_read_count_original"] <- colSums(project_otu_table_unfiltered.df[grepl("Fungi", project_otu_table_unfiltered.df$taxonomy_species),samples_in_unfiltered])
+stats.df[,"Fungal_read_count_original"] <- colSums(project_otu_table_unfiltered.df[grepl(fungal_pattern, project_otu_table_unfiltered.df$taxonomy_species),samples_in_unfiltered])
 stats.df[,"Fungal_proportion_original"] <- stats.df[,"Fungal_read_count_original"] / stats.df[,"Original_read_counts"]
 
 # Proportion of reads that are fungal
@@ -1581,7 +1852,8 @@ stats.df[,"Fungal_proportion_after_filtering"] <- stats.df[,"Fungal_read_count_a
 # Read counts and proportions filtered + rarefied data
 temp <- otu_taxonomy_map.df[otu_taxonomy_map.df$OTU.ID %in% rownames(otu_rare_count.m),]
 bacterial_otus_filtered_rarefied <- temp[temp$Domain == "d__Bacteria",]$OTU.ID
-fungal_otus_filtered_rarefied <- temp[grepl("Fungi", temp$taxonomy_species),]$OTU.ID
+# fungal_otus_filtered_rarefied <- temp[grepl("Fungi", temp$taxonomy_species),]$OTU.ID
+fungal_otus_filtered_rarefied <- temp[grepl(fungal_pattern, temp$taxonomy_species),]$OTU.ID
 
 # Proportion of reads in the filtered data that are bacterial
 stats.df[samples_passing_QC,"Bacterial_read_count_after_filtering_rarefied"] <- colSums(otu_rare_count.m[which(rownames(otu_rare_count.m) %in% bacterial_otus_filtered_rarefied),samples_passing_QC])
@@ -1728,24 +2000,24 @@ write.table(otu_class_rel.df, file = "Result_tables/relative_abundance_tables/Cl
 write.table(otu_phylum.df, file = "Result_tables/count_tables/Phylum_counts.csv", sep = ",", quote = F, col.names = T, row.names = F)
 write.table(otu_phylum_rel.df, file = "Result_tables/relative_abundance_tables/Phylum_relative_abundances.csv", sep = ",", quote = F, col.names = T, row.names = F)
 
-# Rarefied (capped)
-write.table(otu_species_rare.df, file = "Result_tables/count_tables/Specie_counts_rarefied.csv", sep = ",", quote = F, col.names = T, row.names = F)
-write.table(otu_species_rel_rare.df, file = "Result_tables/relative_abundance_tables/Specie_relative_abundances_rarefied.csv", sep = ",", quote = F, col.names = T, row.names = F)
-
-write.table(otu_genus_rare.df, file = "Result_tables/count_tables/Genus_counts_rarefied.csv", sep = ",", quote = F, col.names = T, row.names = F)
-write.table(otu_genus_rel_rare.df, file = "Result_tables/relative_abundance_tables/Genus_relative_abundances_rarefied.csv", sep = ",", quote = F, col.names = T, row.names = F)
-
-write.table(otu_family_rare.df, file = "Result_tables/count_tables/Family_counts_rarefied.csv", sep = ",", quote = F, col.names = T, row.names = F)
-write.table(otu_family_rel_rare.df, file = "Result_tables/relative_abundance_tables/Family_relative_abundances_rarefied.csv", sep = ",", quote = F, col.names = T, row.names = F)
-
-write.table(otu_order_rare.df, file = "Result_tables/count_tables/Order_counts_rarefied.csv", sep = ",", quote = F, col.names = T, row.names = F)
-write.table(otu_order_rel_rare.df, file = "Result_tables/relative_abundance_tables/Order_relative_abundances_rarefied.csv", sep = ",", quote = F, col.names = T, row.names = F)
-
-write.table(otu_class_rare.df, file = "Result_tables/count_tables/Class_counts_rarefied.csv", sep = ",", quote = F, col.names = T, row.names = F)
-write.table(otu_class_rel_rare.df, file = "Result_tables/relative_abundance_tables/Class_relative_abundances_rarefied.csv", sep = ",", quote = F, col.names = T, row.names = F)
-
-write.table(otu_phylum_rare.df, file = "Result_tables/count_tables/Phylum_counts_rarefied.csv", sep = ",", quote = F, col.names = T, row.names = F)
-write.table(otu_phylum_rel_rare.df, file = "Result_tables/relative_abundance_tables/Phylum_relative_abundances_rarefied.csv", sep = ",", quote = F, col.names = T, row.names = F)
+# Rarefied (capped), not required if not using or using capped data as main table(s)
+# write.table(otu_species_rare.df, file = "Result_tables/count_tables/Specie_counts_rarefied.csv", sep = ",", quote = F, col.names = T, row.names = F)
+# write.table(otu_species_rel_rare.df, file = "Result_tables/relative_abundance_tables/Specie_relative_abundances_rarefied.csv", sep = ",", quote = F, col.names = T, row.names = F)
+# 
+# write.table(otu_genus_rare.df, file = "Result_tables/count_tables/Genus_counts_rarefied.csv", sep = ",", quote = F, col.names = T, row.names = F)
+# write.table(otu_genus_rel_rare.df, file = "Result_tables/relative_abundance_tables/Genus_relative_abundances_rarefied.csv", sep = ",", quote = F, col.names = T, row.names = F)
+# 
+# write.table(otu_family_rare.df, file = "Result_tables/count_tables/Family_counts_rarefied.csv", sep = ",", quote = F, col.names = T, row.names = F)
+# write.table(otu_family_rel_rare.df, file = "Result_tables/relative_abundance_tables/Family_relative_abundances_rarefied.csv", sep = ",", quote = F, col.names = T, row.names = F)
+# 
+# write.table(otu_order_rare.df, file = "Result_tables/count_tables/Order_counts_rarefied.csv", sep = ",", quote = F, col.names = T, row.names = F)
+# write.table(otu_order_rel_rare.df, file = "Result_tables/relative_abundance_tables/Order_relative_abundances_rarefied.csv", sep = ",", quote = F, col.names = T, row.names = F)
+# 
+# write.table(otu_class_rare.df, file = "Result_tables/count_tables/Class_counts_rarefied.csv", sep = ",", quote = F, col.names = T, row.names = F)
+# write.table(otu_class_rel_rare.df, file = "Result_tables/relative_abundance_tables/Class_relative_abundances_rarefied.csv", sep = ",", quote = F, col.names = T, row.names = F)
+# 
+# write.table(otu_phylum_rare.df, file = "Result_tables/count_tables/Phylum_counts_rarefied.csv", sep = ",", quote = F, col.names = T, row.names = F)
+# write.table(otu_phylum_rel_rare.df, file = "Result_tables/relative_abundance_tables/Phylum_relative_abundances_rarefied.csv", sep = ",", quote = F, col.names = T, row.names = F)
 
 # ------------------------------------------------------------------------------------------------------------------------------
 # Finally create and save a dataframe, separately for each Phylum, Class, Order, Family, Genus, Species and OTU,
