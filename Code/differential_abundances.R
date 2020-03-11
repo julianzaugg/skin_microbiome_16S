@@ -248,7 +248,7 @@ compare_groups_deseq_within_group <- function(mydata.m, mymetadata.df, myvariabl
 #                                                                             assign_taxonomy = T)
 # write.csv(x =otu_group_comparison_within_patient.df,file ="Result_tables/DESeq_results/OTU_within_patient_deseq.csv",quote = F, row.names =F)
 # 
-# genus_group_comparison_within_patient.df <- compare_groups_deseq_within_group(mydata.m = genus.m, 
+# genus_group_comparison_within_patient.df <- compare_groups_deseq_within_group(mydata.m = genus.m,
 #                                                                               mymetadata.df = metadata.df,
 #                                                                               myvariables = c("Lesion_type_refined"),
 #                                                                               within_group_variable = "Patient",
@@ -263,23 +263,23 @@ compare_groups_deseq_within_group <- function(mydata.m, mymetadata.df, myvariabl
 #                                                                            assign_taxonomy = T)
 # write.csv(x =otu_group_comparison_within_cohort.df,file ="Result_tables/DESeq_results/OTU_within_cohort_deseq.csv",quote = F, row.names =F)
 # 
-# genus_group_comparison_within_cohort.df <- compare_groups_deseq_within_group(mydata.m = genus.m, 
+# genus_group_comparison_within_cohort.df <- compare_groups_deseq_within_group(mydata.m = genus.m,
 #                                                                              mymetadata.df = metadata.df,
 #                                                                              myvariables = c("Lesion_type_refined"),
 #                                                                              within_group_variable = "Cohort",
 #                                                                              assign_taxonomy = F)
 # write.csv(x =genus_group_comparison_within_cohort.df,file ="Result_tables/DESeq_results/Genus_within_cohort_deseq.csv",quote = F, row.names =F)
 # 
-# Comparing the same lesion types between cohorts. Always compare suppressed vs competent, e.g. suppressed AK vs competent AK
-# The trick is to group by the lesion type and then only compare groups within the Cohort variable
+# # Comparing the same lesion types between cohorts. Always compare suppressed vs competent, e.g. suppressed AK vs competent AK
+# # The trick is to group by the lesion type and then only compare groups within the Cohort variable
 # otu_cohort_comparison_within_lesion.df <- compare_groups_deseq_within_group(mydata.m = otu.m,
 #                                                                             mymetadata.df = metadata.df,
 #                                                                             myvariables = c("Cohort"),
 #                                                                             within_group_variable = "Lesion_type_refined",
 #                                                                             assign_taxonomy = T)
 # write.csv(x =otu_cohort_comparison_within_lesion.df,file ="Result_tables/DESeq_results/OTU_cohort_within_lesion_deseq.csv",quote = F, row.names =F)
-#
-# genus_cohort_comparison_within_lesion.df <- compare_groups_deseq_within_group(mydata.m = genus.m, 
+# 
+# genus_cohort_comparison_within_lesion.df <- compare_groups_deseq_within_group(mydata.m = genus.m,
 #                                                                               mymetadata.df = metadata.df,
 #                                                                               myvariables = c("Cohort"),
 #                                                                               within_group_variable = "Lesion_type_refined",

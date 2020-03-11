@@ -892,6 +892,7 @@ psotu2veg <- function(physeq) {
 calculate_alpha_diversity_significance <- function(mydata, variable){
   # Assumes there are Shannon, Chao1 and Simpson columns
   # This is run assuming unpaired data.
+  # This performs pairwise comparison between groups
   results.df <- data.frame("Variable" = character(),
                            "Group_1" = character(),
                            "Group_2" = character(),
@@ -900,20 +901,22 @@ calculate_alpha_diversity_significance <- function(mydata, variable){
                            "Shannon_MannW_pvalue" = character(),
                            "Simpson_MannW_pvalue" = character(),
                            "Chao1_MannW_pvalue" = character(),
-                           "Shannon_KrusW_pvalue" = character(),
-                           "Simpson_KrusW_pvalue" = character(),
-                           "Chao1_KrusW_pvalue" = character(),
+                           # "Shannon_KrusW_pvalue" = character(),
+                           # "Simpson_KrusW_pvalue" = character(),
+                           # "Chao1_KrusW_pvalue" = character(),
                            "Shannon_MannW_padj" = character(),
                            "Simpson_MannW_padj" = character(),
                            "Chao1_MannW_padj" = character(),
-                           "Shannon_KrusW_padj" = character(),
-                           "Simpson_KrusW_padj" = character(),
-                           "Chao1_KrusW_padj" = character())
+                           # "Shannon_KrusW_padj" = character(),
+                           # "Simpson_KrusW_padj" = character(),
+                           # "Chao1_KrusW_padj" = character(),
+                           )
   if (length(unique(mydata[,variable])) < 2){
     print(paste0("Less than two groups for variable :", variable))
     return()
   }
   group_combinations <- combn(as.character(unique(mydata[,variable])), 2)
+  
   
   for (i in 1:ncol(group_combinations)) {
     group_1 <- group_combinations[1,i]
@@ -946,16 +949,16 @@ calculate_alpha_diversity_significance <- function(mydata, variable){
                                                "N_samples_group_2" = N_samples_group_2,
                                                "Shannon_MannW_pvalue" = round(wilcox_shannon_test$p.value,6),
                                                "Shannon_MannW_padj" = NA,
-                                               "Shannon_KrusW_pvalue" = round(kruskal_shannon_test$p.value,6),
-                                               "Shannon_KrusW_padj" = NA,
+                                               # "Shannon_KrusW_pvalue" = round(kruskal_shannon_test$p.value,6),
+                                               # "Shannon_KrusW_padj" = NA,
                                                "Chao1_MannW_padj" = NA,
                                                "Chao1_MannW_pvalue" = round(wilcox_chao1_test$p.value,6),
-                                               "Chao1_KrusW_pvalue" = round(kruskal_chao1_test$p.value,6),
-                                               "Chao1_KrusW_padj" = NA,
+                                               # "Chao1_KrusW_pvalue" = round(kruskal_chao1_test$p.value,6),
+                                               # "Chao1_KrusW_padj" = NA,
                                                "Simpson_MannW_pvalue" = round(wilcox_simpson_test$p.value,6),
                                                "Simpson_MannW_padj" = NA,
-                                               "Simpson_KrusW_pvalue" = round(kruskal_simpson_test$p.value,6),
-                                               "Simpson_KrusW_padj" = NA
+                                               # "Simpson_KrusW_pvalue" = round(kruskal_simpson_test$p.value,6),
+                                               # "Simpson_KrusW_padj" = NA
                                                ))
   }
   
@@ -966,6 +969,51 @@ calculate_alpha_diversity_significance <- function(mydata, variable){
   results.df$Simpson_KrusW_padj <- round(p.adjust(results.df$Simpson_KrusW_pvalue,method = "BH"),6)
   results.df$Chao1_KrusW_padj <- round(p.adjust(results.df$Chao1_KrusW_pvalue,method = "BH"),6)
   results.df
+}
+
+calculate_alpha_diversity_significance_multiple <- function(mydata, variable){
+  n_groups = length(as.character(unique(mydata[,variable])))
+  if (any(is.na(mydata[,variable]))){
+    return()
+  }
+  if (n_groups > 2){
+    kw_shannon <- kruskal.test(Shannon~get(variable), data = mydata)
+    kw_simpson <- kruskal.test(Simpson~get(variable), data = mydata)
+    kw_chao1 <- kruskal.test(Shannon~get(variable), data = mydata)
+    dunn_shannon <- dunnTest(x = Shannon~get(variable), data = mydata, method = "bh", alpha = 0.05)
+    dunn_simpson <- dunnTest(x = Simpson~get(variable), data = mydata, method = "bh", alpha = 0.05)
+    dunn_chao1 <- dunnTest(x = Chao1~get(variable), data = mydata, method = "bh", alpha = 0.05)
+    
+    dunn_shannon <- separate(dunn_shannon$res, Comparison, into = c("Group_1", "Group_2"), sep = " - ")[,c("Group_1","Group_2","P.unadj","P.adj")]
+    names(dunn_shannon) <- c("Group_1","Group_2","Shannon_Dunn_pvalue","Shannon_Dunn_padj")
+    
+    dunn_simpson <- separate(dunn_simpson$res, Comparison, into = c("Group_1", "Group_2"), sep = " - ")[,c("Group_1","Group_2","P.unadj","P.adj")]
+    names(dunn_simpson) <- c("Group_1","Group_2","Simpson_Dunn_pvalue","Simpson_Dunn_padj")
+    
+    dunn_chao1 <- separate(dunn_chao1$res, Comparison, into = c("Group_1", "Group_2"), sep = " - ")[,c("Group_1","Group_2","P.unadj","P.adj")]
+    names(dunn_chao1) <- c("Group_1","Group_2","Chao1_Dunn_pvalue","Chao1_Dunn_padj")
+    
+    multiple_group_comparison.df <- merge(merge(x = dunn_shannon, y = dunn_simpson, by = c("Group_1", "Group_2")), y = dunn_chao1,  by = c("Group_1", "Group_2"))
+    multiple_group_comparison.df$Shannon_KrusW_pvalue <- kw_shannon$p.value
+    multiple_group_comparison.df$Simpson_KrusW_pvalue <- kw_simpson$p.value
+    multiple_group_comparison.df$Chao1_KrusW_pvalue <- kw_chao1$p.value
+    multiple_group_comparison.df$Variable = variable
+    return(multiple_group_comparison.df)
+  }
+  multiple_group_comparison.df <- data.frame("Variable" = character(),
+                                             "Group_1" = character(),
+             "Group_2" = character(),
+             "Shannon_Dunn_pvalue" = character(),
+             "Shannon_Dunn_padj" = character(),
+             "Simpson_Dunn_pvalue" = character(),
+             "Simpson_Dunn_padj" = character(),
+             "Chao1_Dunn_pvalue" = character(),
+             "Chao1_Dunn_padj" = character(),
+             "Shannon_KrusW_pvalue" = character(),
+             "Simpson_KrusW_pvalue" = character(),
+             "Chao1_KrusW_pvalue" = character())
+  return(multiple_group_comparison.df)
+  
 }
 
 

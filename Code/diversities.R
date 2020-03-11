@@ -29,6 +29,8 @@ library(dplyr)
 # library(FSA)
 library(phyloseq)
 # library(nlme)
+library(FSA)
+# install.packages("FSA")
 
 
 common_theme <- theme(
@@ -847,14 +849,38 @@ for (myvar in c("Lesion_type_refined", "Length_of_immunosuppression_group_1", "L
 # -----------------------------------------------------------------------------------------------------------------
 # Publication figures
 
+# multiple_groups_dunn_test <- NULL
+# for (variable in variables_of_interest){
+#   n_groups = length(unique(shannon_simpson_sample_summary_table[,variable]))
+#   if (any(is.na(shannon_simpson_sample_summary_table[,variable]))){
+#     next
+#   }
+#   if (n_groups > 2){
+#     results <- dunnTest(Shannon_diversity~get(variable), data = shannon_simpson_sample_summary_table, method = "bh",alpha = 0.05)
+#     results_groups_sep <- separate(results$res,Comparison, into = c("Group1", "Group2"), sep = " - ")
+#     multiple_groups_dunn_test <- rbind(multiple_groups_dunn_test, data.frame("Variable" = variable, results_groups_sep, "Index" = "Shannon"))
+#     
+#     results <- dunnTest(Simpson_diversity~get(variable), data = shannon_simpson_sample_summary_table, method = "bh",alpha = 0.05)
+#     results_groups_sep <- separate(results$res,Comparison, into = c("Group1", "Group2"), sep = " - ")
+#     multiple_groups_dunn_test <- rbind(multiple_groups_dunn_test, data.frame("Variable" = variable, results_groups_sep, "Index" = "Simpson"))
+#     
+#   }
+# }
+# multiple_groups_dunn_test <- multiple_groups_dunn_test[order(multiple_groups_dunn_test$Index, multiple_groups_dunn_test$P.adj),]
+# multiple_groups_dunn_test
+
 # immunosuppressed, all
 source("Code/helper_functions.R")
+immunosuppressed_otu_rare_alpha_dunn_significances.df <- calculate_alpha_diversity_significance_multiple(immunosuppressed_genus_rare_alpha.df,variable = "Lesion_type_refined")
+
 immunosuppressed_otu_shannon_boxplot <- generate_significance_boxplots(mydata.df = immunosuppressed_otu_rare_alpha.df,
                                                                         variable_column = "Lesion_type_refined",
                                                                         value_column = "Shannon",
                                                                         variable_colours_available = T,
-                                                                        significances.df = immunosuppressed_otu_alpha_diversity_significances.df,
-                                                                        p_value_column = "Shannon_MannW_padj",
+                                                                        # significances.df = immunosuppressed_otu_alpha_diversity_significances.df,
+                                                                        # p_value_column = "Shannon_MannW_padj",
+                                                                       significances.df = immunosuppressed_otu_rare_alpha_dunn_significances.df,
+                                                                       p_value_column = "Shannon_Dunn_padj",
                                                                         sig_threshold = 0.05,
                                                                         fill_palette = NULL,
                                                                         sig_line_scaling_percentage = .07,

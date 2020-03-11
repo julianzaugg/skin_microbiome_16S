@@ -69,8 +69,8 @@ discrete_variables <- c("Lesion_type_refined","Gender","Patient", "Cohort", "Len
 otu_taxonomy_map.df <- read.csv("Result_tables/other/otu_taxonomy_map.csv", header = T)
 
 # Load the counts
-otu.m <- as.matrix(read.csv("Result_tables/count_tables/OTU_counts_rarefied.csv", header =T, row.names = 1))
-genus.m <-  as.matrix(read.csv("Result_tables/count_tables/Genus_counts_rarefied.csv", header =T, row.names = 1))
+otu.m <- as.matrix(read.csv("Result_tables/count_tables/OTU_counts.csv", header =T, row.names = 1))
+genus.m <-  as.matrix(read.csv("Result_tables/count_tables/Genus_counts.csv", header =T, row.names = 1))
 # genus.m <-  as.matrix(read.csv("Result_tables/count_tables/Genus_counts.csv", header =T, row.names = 1))
 dim(metadata.df)
 dim(genus.m)
@@ -202,7 +202,7 @@ genus_relabeller_function <- function(my_labels){
 # ----------------
 # Generate PCA plots. If CLR transformed values with euclidean distances, these will be the same as
 # the values calculated from betadisper...maybe not important
-temp <- betadiver(t(otu_clr.m),method = "e")
+# temp <- betadiver(t(otu_clr.m),method = "e")
 
 # Generate ordination objects
 
@@ -662,8 +662,8 @@ for (cohort in unique(metadata.df$Cohort)){
 make_publication_plot <- function(){
   source("Code/helper_functions.R")
   graphics.off()
-  svg(filename = "Paper_drafts/figures_results_for_publication/lesion_type_patient_genus_PCA_for_publication.svg",width = 8,height = 7)
-  # pdf(file = "Paper_drafts/figures_results_for_publication/lesion_type_patient_genus_PCA_for_publication.pdf",width = 8,height = 7)
+  svg(filename = "Result_figures/ordination_plots/lesion_type_patient_genus_PCA_for_publication.svg",width = 8,height = 7)
+  # pdf(file = "Result_figures/ordination_plots/lesion_type_patient_genus_PCA_for_publication.pdf",width = 8,height = 7)
   # par(mfrow = c(2,2))
   # par(mfrow = c(2,2),
   #     mar = c(1,10,5,1))
@@ -679,7 +679,7 @@ make_publication_plot <- function(){
                legend_title = "Lesion type",
                legend_cex = .5,
                plot_title = "",
-               limits = c(-5,5,-5,8),
+               limits = c(-5,4,-5,8),
                plot_spiders = F,
                plot_ellipses = F,
                plot_hulls = F,
@@ -707,12 +707,12 @@ make_publication_plot <- function(){
   par(mar = c(1,4,3,1))
   generate_pca(immunocompetent_genus_pca, mymetadata = subset(metadata.df, Cohort == "immunocompetent"),
                plot_height = 5, plot_width = 5,
-               legend_x = -6, legend_y = 5,
+               legend_x = -4, legend_y = 4,
                point_size = .7, point_line_thickness = 0.3,point_alpha =.9,
                legend_title = "Lesion type",
                legend_cex = .5,
                plot_title = "",
-               limits = c(-6,3,-4,5),
+               limits = c(-4,7,-6,4),
                plot_spiders = F,
                plot_ellipses = F,
                plot_hulls = F,
@@ -743,7 +743,7 @@ make_publication_plot <- function(){
                legend_title = "Patient",
                legend_cex = .5,
                plot_title = "",
-               limits = c(-4,5,-5,8),
+               limits = c(-4,4,-5,8),
                plot_spiders = F,
                plot_ellipses = T,
                plot_hulls = F,
@@ -771,12 +771,12 @@ make_publication_plot <- function(){
   par(mar = c(4,4,0,1))
   generate_pca(immunocompetent_genus_pca, mymetadata = subset(metadata.df, Cohort == "immunocompetent"),
                plot_height = 5, plot_width = 5,
-               legend_x = -6, legend_y = 5,
+               legend_x = -4, legend_y = 4,
                point_size = .7, point_line_thickness = 0.3,point_alpha =.9,
                legend_title = "Patient",
                legend_cex = .5,
                plot_title = "",
-               limits = c(-6,3,-4,6),
+               limits = c(-4,7,-6,4),
                plot_spiders = F,
                plot_ellipses = T,
                plot_hulls = F,
