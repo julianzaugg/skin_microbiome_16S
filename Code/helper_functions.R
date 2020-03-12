@@ -906,7 +906,7 @@ calculate_alpha_diversity_significance <- function(mydata, variable){
                            # "Chao1_KrusW_pvalue" = character(),
                            "Shannon_MannW_padj" = character(),
                            "Simpson_MannW_padj" = character(),
-                           "Chao1_MannW_padj" = character(),
+                           "Chao1_MannW_padj" = character()
                            # "Shannon_KrusW_padj" = character(),
                            # "Simpson_KrusW_padj" = character(),
                            # "Chao1_KrusW_padj" = character(),
@@ -956,7 +956,7 @@ calculate_alpha_diversity_significance <- function(mydata, variable){
                                                # "Chao1_KrusW_pvalue" = round(kruskal_chao1_test$p.value,6),
                                                # "Chao1_KrusW_padj" = NA,
                                                "Simpson_MannW_pvalue" = round(wilcox_simpson_test$p.value,6),
-                                               "Simpson_MannW_padj" = NA,
+                                               "Simpson_MannW_padj" = NA
                                                # "Simpson_KrusW_pvalue" = round(kruskal_simpson_test$p.value,6),
                                                # "Simpson_KrusW_padj" = NA
                                                ))
@@ -965,13 +965,14 @@ calculate_alpha_diversity_significance <- function(mydata, variable){
   results.df$Shannon_MannW_padj <- round(p.adjust(results.df$Shannon_MannW_pvalue,method = "BH"),6)
   results.df$Simpson_MannW_padj <- round(p.adjust(results.df$Simpson_MannW_pvalue,method = "BH"),6)
   results.df$Chao1_MannW_padj <- round(p.adjust(results.df$Chao1_MannW_pvalue,method = "BH"),6)
-  results.df$Shannon_KrusW_padj <- round(p.adjust(results.df$Shannon_KrusW_pvalue,method = "BH"),6)
-  results.df$Simpson_KrusW_padj <- round(p.adjust(results.df$Simpson_KrusW_pvalue,method = "BH"),6)
-  results.df$Chao1_KrusW_padj <- round(p.adjust(results.df$Chao1_KrusW_pvalue,method = "BH"),6)
+  # results.df$Shannon_KrusW_padj <- round(p.adjust(results.df$Shannon_KrusW_pvalue,method = "BH"),6)
+  # results.df$Simpson_KrusW_padj <- round(p.adjust(results.df$Simpson_KrusW_pvalue,method = "BH"),6)
+  # results.df$Chao1_KrusW_padj <- round(p.adjust(results.df$Chao1_KrusW_pvalue,method = "BH"),6)
   results.df
 }
 
 calculate_alpha_diversity_significance_multiple <- function(mydata, variable){
+  # Assumes there are Shannon, Chao1 and Simpson columns
   n_groups = length(as.character(unique(mydata[,variable])))
   if (any(is.na(mydata[,variable]))){
     return()
@@ -1714,7 +1715,8 @@ generate_significance_boxplots <- function(mydata.df, # Main dataframe
                                            sig_vjust = 0.03, # amount to vertically adjust the significance annotations
                                            sig_tip_length = 0.01, # length of tips on significance lines
                                            sig_linetype = 1, # linetype of significance lines
-                                           sig_colour = "grey20" # colour of significance lines
+                                           sig_colour = "grey20", # colour of significance lines
+                                           sig_line_starting_scale = 1.05
 ){
   # Requires ggplot and ggsignif packages
   
@@ -1806,7 +1808,7 @@ generate_significance_boxplots <- function(mydata.df, # Main dataframe
   # sig_subset.df <- sig_subset.df[order(sig_subset.df$level_index_group_1),]
   # sig_subset.df <- sig_subset.df[order(sig_subset.df$level_index_group_2),]
   sig_subset.df <- sig_subset.df[order(sig_subset.df$level_distance),]
-  scale <- 1.05 # starting scale
+  scale <- sig_line_starting_scale # starting scale
   for (row in 1:nrow(sig_subset.df)){
     sig_subset.df[row, "y_position"] <- max(sig_subset.df[, "y_max"]) * scale
     scale <- scale + sig_line_scaling_percentage # increase scale value
