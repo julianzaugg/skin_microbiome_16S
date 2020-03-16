@@ -634,7 +634,7 @@ make_heatmap <- function(myheatmap_matrix,
                          plot_width =10,
                          column_title_size = 10,
                          row_title_size = 10,
-                         annotation_name_size = 10,
+                         annotation_bar_name_size = 10,
                          variables = NULL, # Annotations
                          cluster_columns = T,
                          cluster_rows = T,
@@ -658,6 +658,13 @@ make_heatmap <- function(myheatmap_matrix,
                          my_cell_fun = NULL,
                          show_legend = T,
                          show_top_annotation = T,
+                         row_name_size = 6,
+                         col_name_size = 6,
+                         col_annotation_label_size = 6,
+                         col_annotation_title_size = 6,
+                         col_annotation_legend_grid_height = .2,
+                         col_annotation_legend_grid_width = .2,
+                         grid_thickness = 1,
                          ...){
   # print(list(...))
   argList<-list(...) # argument list for checking unspecified optional parameters
@@ -669,12 +676,15 @@ make_heatmap <- function(myheatmap_matrix,
   internal_metadata.df <- mymetadata
   # Order/filter the heatmap matrix to order/entries of metadata
   internal_heatmap_matrix.m <- internal_heatmap_matrix.m[,rownames(internal_metadata.df),drop = F]
-  # Order the heatmap matrix by the variables
-  internal_heatmap_matrix.m <- internal_heatmap_matrix.m[,do.call(order, internal_metadata.df[,variables,drop=F]),drop =F]
-  # Order the metadata by the variables
-  internal_metadata.df <- internal_metadata.df[do.call(order, internal_metadata.df[,variables,drop=F]),,drop=F]
-  # Create metadata just containing the variables
-  metadata_just_variables <- internal_metadata.df[,variables, drop = F]
+  
+  if (!is.null(variables)){
+    # Order the heatmap matrix by the variables
+    internal_heatmap_matrix.m <- internal_heatmap_matrix.m[,do.call(order, internal_metadata.df[,variables,drop=F]),drop =F]
+    # Order the metadata by the variables
+    internal_metadata.df <- internal_metadata.df[do.call(order, internal_metadata.df[,variables,drop=F]),,drop=F]
+    # Create metadata just containing the variables
+    metadata_just_variables <- internal_metadata.df[,variables, drop = F]    
+  }
   # Check that rownames match colnames
   if (!all(rownames(internal_metadata.df) == colnames(internal_heatmap_matrix.m))){
     stop("Row names in metadata do not match column names in matrix")
@@ -712,22 +722,34 @@ make_heatmap <- function(myheatmap_matrix,
   
   # Appearance of the column annotations
   #HeatmapAnnotation
-  ha <- columnAnnotation(df = metadata_just_variables,
-                          # which = "column",
-                          col = colour_lists,
-                          gp = gpar(col = "black",lwd =.2),
-                          gap = unit(.1,"cm"),
-                          show_annotation_name = T,
-                          # annotation_legend_param, # ?color_mapping_legend for options
-                          show_legend = show_legend,
-                          simple_anno_size = simple_anno_size,
-                          annotation_name_gp = gpar(fontsize = annotation_name_size))
-  
+  if (show_top_annotation == T){
+    if(is.null(variables)){
+      print("No variables specified, cannot add annotations")
+      show_top_annotation <- F
+    } else{
+      ha <- columnAnnotation(df = metadata_just_variables,
+                             # which = "column",
+                             col = colour_lists,
+                             gp = gpar(col = "black",lwd =.2),
+                             gap = unit(.1,"cm"),
+                             show_annotation_name = T,
+                             # annotation_legend_param, # ?color_mapping_legend for options
+                             show_legend = show_legend,
+                             simple_anno_size = simple_anno_size,
+                             annotation_legend_param = list(labels_gp = gpar(fontsize = col_annotation_label_size),
+                                                            title_gp = gpar(fontsize = col_annotation_title_size),
+                                                            grid_height = unit(col_annotation_legend_grid_height,"cm"),
+                                                            grid_width = unit(col_annotation_legend_grid_width,"cm")),
+                             annotation_name_gp = gpar(fontsize = annotation_bar_name_size))      
+    }
+    # HeatmapAnnotation(annotation_)
+    # ?color_mapping_legend
+    
+  }
   # TODO - add option for row annotation
-  
   if (is.null(my_palette)){
     if (is.null(palette_choice)) {palette_choice <- "blue"}
-    if (!palette_choice %in% c("blue", "purple","red")) { palette_choice <- "blue"}
+    if (!palette_choice %in% c("blue", "purple","red","dark_bluered","bluered")) { palette_choice <- "blue"}
     if (palette_choice == "blue"){
       my_palette <- colorRampPalette(c("white", "#ffffcc","#cce1b8", "#91cabc", "#61b4c1","#335fa5","#28387a", "#071447"))
     } 
@@ -735,7 +757,11 @@ make_heatmap <- function(myheatmap_matrix,
       my_palette <- colorRampPalette(c("white", "#f9cdac","#f3aca2", "#ee8b97", "#e96a8d","#db5087","#b8428c", "#973490", "#742796","#5e1f88", "#4d1a70", "#3d1459","#2d0f41"))
     } else if (palette_choice == "red"){
       my_palette <- colorRampPalette(c("white", "#fded86","#fde86e", "#f9d063", "#f5b857","#f0a04b","#eb8a40", "#e77235","#e35b2c", "#c74e29","#9d4429","#753c2c","#4c3430"))
-    } 
+    } else if (palette_choice == "dark_bluered"){
+      my_palette <- colorRampPalette(c("#08306B","#FFD92F","#67001F"))
+    } else if (palette_choice == "bluered"){
+      my_palette <- colorRampPalette(c("#17468a","#ffdd47","#99113a"))
+    }
   } else{
     my_palette <- colorRampPalette(my_palette)
   }
@@ -743,7 +769,6 @@ make_heatmap <- function(myheatmap_matrix,
   if (!is.null(my_breaks)){
     internal_breaks <- my_breaks
     col_fun <- circlize::colorRamp2(breaks = internal_breaks, colors = my_palette(length(internal_breaks)))
-    
   } else{
     internal_breaks <- seq(min(internal_heatmap_matrix.m), max(internal_heatmap_matrix.m), length.out = 6)
     col_fun <- circlize::colorRamp2(breaks = internal_breaks, colors = my_palette(length(internal_breaks)))
@@ -764,7 +789,6 @@ make_heatmap <- function(myheatmap_matrix,
     my_row_labels.v <- my_row_labels.v[order(my_row_labels.v)]    
   }
   
-  
   # if show values and no function provided
   if (show_cell_values == T & is.null(my_cell_fun)){ 
     my_cell_fun <- function(j, i, x, y, width, height, fill) {
@@ -776,6 +800,39 @@ make_heatmap <- function(myheatmap_matrix,
       }
     }
   }
+  
+  # Legend appearance
+  if (is.null(legend_labels)){
+    my_labels <- internal_breaks
+  } else{
+    my_labels <- legend_labels
+  }
+  if (discrete_legend == TRUE){
+    hm_legend <- Legend(
+      labels = rev(my_labels),
+      at = internal_breaks,
+      labels_gp = gpar(fontsize = 6),
+      legend_gp = gpar(fill = rev(col_fun(internal_breaks))), # For discrete
+      title_position = "leftcenter-rot",
+      title_gp = gpar(fontsize = 6,fontface = "bold"),
+      title = legend_title,
+      direction = "vertical",
+      border = "black"
+    )
+  } else{
+    hm_legend <- Legend(
+      col_fun = col_fun, # For continuous
+      labels = my_labels,
+      at = internal_breaks,
+      labels_gp = gpar(fontsize = 6),
+      title_position = "leftcenter-rot",
+      title_gp = gpar(fontsize = 6,fontface = "bold"),
+      title = legend_title,
+      direction = "vertical",
+      border = "black"
+    )
+  }
+  
   hm <- Heatmap(matrix = internal_heatmap_matrix.m,
                 
                 # top_annotation = ha,
@@ -786,6 +843,7 @@ make_heatmap <- function(myheatmap_matrix,
                 
                 # Sizing
                 show_heatmap_legend = F,
+                heatmap_legend_param = list(hm_legend),
                 row_names_max_width = unit(35,"cm"),
                 row_labels = my_row_labels.v,
                 column_labels = my_col_labels.v,
@@ -816,55 +874,24 @@ make_heatmap <- function(myheatmap_matrix,
                 
                 # Borders
                 border = F,
-                rect_gp = gpar(col = "white", lwd = 1),
+                rect_gp = gpar(col = "white", lwd = grid_thickness),
                 
                 # Text appearance
-                row_names_gp = gpar(fontsize = 6),
-                column_names_gp = gpar(fontsize = 6),
+                row_names_gp = gpar(fontsize = row_name_size),
+                column_names_gp = gpar(fontsize = col_name_size),
                 cell_fun = my_cell_fun,
                 ...
   )
+
   if (show_top_annotation == T){
     hm <- ha %v% hm
   }
-  
-  # Legend appearance
-  if (is.null(legend_labels)){
-    my_labels <- internal_breaks
-  } else{
-    my_labels <- legend_labels
-  }
-  if (discrete_legend == TRUE){
-    hm_legend <- Legend(
-      labels = rev(my_labels),
-      at = internal_breaks,
-      labels_gp = gpar(fontsize = 6),
-      legend_gp = gpar(fill = rev(col_fun(internal_breaks))), # For discrete
-      title_position = "leftcenter-rot",
-      title_gp = gpar(fontsize = 6),
-      title = legend_title,
-      direction = "vertical",
-      border = "black"
-    )
-  } else{
-    hm_legend <- Legend(
-      col_fun = col_fun, # For continuous
-      labels = my_labels,
-      at = internal_breaks,
-      labels_gp = gpar(fontsize = 6),
-      title_position = "leftcenter-rot",
-      title_gp = gpar(fontsize = 6),
-      title = legend_title,
-      direction = "vertical",
-      border = "black",
-    )
-  }
-  
   if (!is.null(filename)){
     pdf(filename,height=plot_height,width=plot_width)
-    draw(hm, annotation_legend_list = c(hm_legend))
+    draw(hm, annotation_legend_list = c(hm_legend),merge_legends =T)
     dev.off()    
   }
+  draw(hm, annotation_legend_list = c(hm_legend),merge_legends =T)
   return(list("heatmap" = hm, "legend" = hm_legend))
   
 }
@@ -971,6 +998,7 @@ calculate_alpha_diversity_significance <- function(mydata, variable){
   results.df
 }
 
+library(FSA)
 calculate_alpha_diversity_significance_multiple <- function(mydata, variable){
   # Assumes there are Shannon, Chao1 and Simpson columns
   n_groups = length(as.character(unique(mydata[,variable])))

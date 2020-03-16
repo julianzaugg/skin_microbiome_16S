@@ -19,6 +19,16 @@ filter_matrix_rows <- function(my_matrix, row_max){
   return(my_matrix[apply(my_matrix,1,max) >= row_max,])
 }
 
+# For each rowname (OTU), get the corresponding taxonomy_species
+# Assumes "OTU.ID" and "taxonomy_species" columns in the provided map dataframe
+assign_taxonomy_to_otu <- function(otutable, taxon_map){
+  taxonomies <- c()
+  for (otuid in rownames(otutable)){
+    taxonomies <- c(taxonomies, as.character(taxon_map[taxon_map$OTU.ID == otuid,]$taxonomy_species))
+  }
+  return(taxonomies)
+}
+
 
 
 # ----------------------------------------------------------------------------------------------------------------
@@ -92,7 +102,12 @@ genus.m <- genus.m[,rownames(metadata.df)]
 
 # ------------------------------------------------------------------------
 # ------------------------------------------------------------------------
-run_mixomics <- function(my_otu_matrix, my_metadata, outcome_variable, prefix = "", my_levels = NULL, variable_colours_available = T, use_shapes = T){
+run_mixomics <- function(my_otu_matrix, my_metadata, outcome_variable, 
+                         prefix = "", 
+                         my_levels = NULL, 
+                         variable_colours_available = T, 
+                         use_shapes = T,
+                         assign_taxonomy = T){
   
   # Assign internal data
   internal_otu_matrix.m <- my_otu_matrix
@@ -125,7 +140,7 @@ run_mixomics <- function(my_otu_matrix, my_metadata, outcome_variable, prefix = 
                                    measure = "BER", logratio = "CLR",
                                    progressBar = TRUE, test.keepX = list.keepX,
                                    scale = TRUE, ncomp = 4,
-                                   folds = 5, nrepeat = 10, cpus = 4)
+                                   folds = 5, nrepeat = 10, cpus = 2)
   
   tune.splsda.mydata$choice.ncomp # what does mixomics think is the best number of components?
   tune.splsda.mydata$choice.keepX # what does mixomics think is the best number of OTUs?
@@ -138,7 +153,7 @@ run_mixomics <- function(my_otu_matrix, my_metadata, outcome_variable, prefix = 
   error <- tune.splsda.mydata$error.rate # error rate per component for the keepX grid
   ncomp <- tune.splsda.mydata$choice.ncomp$ncomp # optimal number of components based on t-tests
   
-  print(tune.splsda.mydata$choice.ncomp)
+  # print(tune.splsda.mydata$choice.ncomp)
   
   # if ncomp = 1, change to 2
   if (ncomp == 1){
@@ -229,10 +244,17 @@ run_mixomics <- function(my_otu_matrix, my_metadata, outcome_variable, prefix = 
                            legend = T,
                            legend.color = variable_colours)
     dev.off()
-    splsda.loadings[,"taxonomy_genus"] <- otu_taxonomy_map.df[rownames(splsda.loadings),]$taxonomy_genus
-    splsda.loadings[,"Genus"] <- otu_taxonomy_map.df[rownames(splsda.loadings),]$Genus
+    
     splsda.loadings[,'abs_importance'] <- abs(splsda.loadings[,"importance"])
-    splsda.loadings <- m2df(splsda.loadings, "OTU.ID")
+    if (assign_taxonomy == T){
+      splsda.loadings[,"Genus"] <- otu_taxonomy_map.df[rownames(splsda.loadings),]$Genus
+      splsda.loadings[,"Taxonomy"] <- assign_taxonomy_to_otu(splsda.loadings, otu_taxonomy_map.df)   
+      splsda.loadings <- m2df(splsda.loadings, "OTU.ID")
+    } else{
+      splsda.loadings <- m2df(splsda.loadings, "Taxonomy")
+    }
+    # splsda.loadings[,"taxonomy_genus"] <- otu_taxonomy_map.df[rownames(splsda.loadings),]$taxonomy_genus
+    # splsda.loadings[,"Genus"] <- otu_taxonomy_map.df[rownames(splsda.loadings),]$Genus
     write.csv(x = splsda.loadings, file = paste0("Result_tables/mixomics/",prefix, outcome_variable, "__", "comp_", comp, ".loadings.csv"), quote = F, row.names = F)
   }
 }
@@ -249,10 +271,10 @@ immunocompetent_genus.m <- genus.m[,rownames(immunocompetent_metadata.df)]
 
 # Like DESeq, filter out features that do not have at # reads in at least one sample
 dim(immunosuppressed_otu.m)
-immunosuppressed_otu.m <- filter_matrix_rows(immunosuppressed_otu.m,10)
-immunocompetent_otu.m <- filter_matrix_rows(immunocompetent_otu.m,10)
-immunosuppressed_genus.m <- filter_matrix_rows(immunosuppressed_genus.m,10)
-immunocompetent_genus.m <- filter_matrix_rows(immunocompetent_genus.m,10)
+immunosuppressed_otu.m <- filter_matrix_rows(immunosuppressed_otu.m,15)
+immunocompetent_otu.m <- filter_matrix_rows(immunocompetent_otu.m,15)
+immunosuppressed_genus.m <- filter_matrix_rows(immunosuppressed_genus.m,15)
+immunocompetent_genus.m <- filter_matrix_rows(immunocompetent_genus.m,15)
 
 # TODO 8/3/20
 # remove taxa by prevalence, at least 10% of all samples
@@ -265,18 +287,48 @@ dim(immunosuppressed_otu.m)
 # Lesion_type_refined
 run_mixomics(my_otu_matrix = immunosuppressed_otu.m, 
              my_metadata = immunosuppressed_metadata.df, 
-             prefix = "immunosuppressed_",
+             prefix = "immunosuppressed_otu_",
              use_shapes = T,
              outcome_variable = "Lesion_type_refined",
+             assign_taxonomy = T,
+             my_levels = c("C", "C_P", "AK","SCC_PL","SCC"))
+
+run_mixomics(my_otu_matrix = immunosuppressed_genus.m, 
+             my_metadata = immunosuppressed_metadata.df, 
+             prefix = "immunosuppressed_genus_",
+             use_shapes = T,
+             outcome_variable = "Lesion_type_refined",
+             assign_taxonomy = F,
              my_levels = c("C", "C_P", "AK","SCC_PL","SCC"))
 
 run_mixomics(my_otu_matrix = immunocompetent_otu.m, 
              my_metadata = immunocompetent_metadata.df, 
-             prefix = "immunocompetent_",
+             prefix = "immunocompetent_otu_",
              use_shapes = T,
              outcome_variable = "Lesion_type_refined",
+             assign_taxonomy = T,
              my_levels = c("C_P", "AK","SCC_PL","SCC"))
 
+run_mixomics(my_otu_matrix = immunocompetent_genus.m, 
+             my_metadata = immunocompetent_metadata.df, 
+             prefix = "immunocompetent_genus_",
+             use_shapes = T,
+             outcome_variable = "Lesion_type_refined",
+             assign_taxonomy = F,
+             my_levels = c("C_P", "AK","SCC_PL","SCC"))
+
+
+# ------------------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------------------
+# Publication figures
+# Heatmap showing differentiating genera (mixomics)
+# Heatmap showing differentiating features (mixomics), , renamed to show genus,species
+
+
+
+# ------------------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------------------
 # # Patient_group
 # run_mixomics(my_otu_matrix = immunosuppressed_otu.m, 
 #              my_metadata = immunosuppressed_metadata.df, 
