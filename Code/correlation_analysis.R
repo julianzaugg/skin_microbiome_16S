@@ -41,11 +41,17 @@ genus.m <-  as.matrix(read.table("Result_tables/count_tables/Genus_counts.csv", 
 otu_data.df <- read.csv("Result_tables/combined_counts_abundances_and_metadata_tables/OTU_counts_abundances_and_metadata.csv", header = T)
 genus_data.df <- read.csv("Result_tables/combined_counts_abundances_and_metadata_tables/Genus_counts_abundances_and_metadata.csv", header = T)
 
+# Load mixomics results
+mixomics_immunosuppressed_genus_Lesion_type_refined_comp1.df <- read.csv("Result_tables/mixomics/immunosuppressed_genus_Lesion_type_refined__comp_1.loadings.csv", header = T)
+mixomics_immunosuppressed_genus_Lesion_type_refined_comp2.df <- read.csv("Result_tables/mixomics/immunosuppressed_genus_Lesion_type_refined__comp_2.loadings.csv", header = T)
+mixomics_immunosuppressed_genus_Lesion_type_refined.df <- rbind(mixomics_immunosuppressed_genus_Lesion_type_refined_comp1.df,mixomics_immunosuppressed_genus_Lesion_type_refined_comp2.df)
+mixomics_immunosuppressed_genus_Lesion_type_refined.df$taxonomy_genus <- NULL
+names(mixomics_immunosuppressed_genus_Lesion_type_refined.df)[1] <- "taxonomy_genus"
+mixomics_immunosuppressed_genus_Lesion_type_refined.df <- mixomics_immunosuppressed_genus_Lesion_type_refined.df[,c("taxonomy_genus", "GroupContrib", "importance", "abs_importance")]
+
+
+# Location of all FastSpar results
 fastspar_results_base <- "/Users/julianzaugg/Desktop/ACE/major_projects/skin_microbiome_16S/External_results/fastspar/all_results"
-
-test_data <- head(genus.m[,1:100], 300)
-
-# correlation_results <- calculate_correlation_matrix(test_data, method = "pearson", adjust = "BH")
 
 genus_relabeller_function <- function(my_labels){
   unlist(lapply(my_labels, 
@@ -61,12 +67,13 @@ genus_relabeller_function <- function(my_labels){
 # generate correlation network
 # If otu, change node names to taxonomy
 
+# features that were associated (spls-da) with lesion type, and significant (p <0.05) and correlation > 0.1
 genus_test_fastspar_cor.m <- as.matrix(read.table("External_results/fastspar/all_results/immunosuppressed_SCC_genus_correlation.tsv",
                                                           sep ="\t",header = T,row.names = 1,comment.char = "", check.names = F))
 genus_test_fastspar_pval.m <- as.matrix(read.table("External_results/fastspar/all_results/immunosuppressed_SCC_genus_pvalues.tsv",
                                                   sep ="\t",header = T,row.names = 1,comment.char = "", check.names = F))
 
-
+# Genus , lesion and importance
 
 correlation_network.l <- generate_correlation_network(cor_matrix = genus_test_fastspar_cor.m,
                                                       p_matrix = genus_test_fastspar_pval.m,

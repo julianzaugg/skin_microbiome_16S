@@ -620,7 +620,7 @@ calculate_PC_abundance_correlations <- function(pca_object, mydata.df, taxa_colu
 
 # Function to create heatmap
 make_heatmap <- function(myheatmap_matrix,
-                         mymetadata,
+                         mymetadata = NULL,
                          filename= NULL,
                          #...,
                          # Dataframe with two columns. First must match row entry, second the new label
@@ -674,78 +674,82 @@ make_heatmap <- function(myheatmap_matrix,
   # Assign internal objects
   internal_heatmap_matrix.m <- myheatmap_matrix
   internal_metadata.df <- mymetadata
-  # Order/filter the heatmap matrix to order/entries of metadata
-  internal_heatmap_matrix.m <- internal_heatmap_matrix.m[,rownames(internal_metadata.df),drop = F]
   
-  if (!is.null(variables)){
-    # Order the heatmap matrix by the variables
-    internal_heatmap_matrix.m <- internal_heatmap_matrix.m[,do.call(order, internal_metadata.df[,variables,drop=F]),drop =F]
-    # Order the metadata by the variables
-    internal_metadata.df <- internal_metadata.df[do.call(order, internal_metadata.df[,variables,drop=F]),,drop=F]
-    # Create metadata just containing the variables
-    metadata_just_variables <- internal_metadata.df[,variables, drop = F]    
-  }
-  # Check that rownames match colnames
-  if (!all(rownames(internal_metadata.df) == colnames(internal_heatmap_matrix.m))){
-    stop("Row names in metadata do not match column names in matrix")
-  }
-  
-  # Create annotations
-  colour_lists <- list()
-  for (myvar in variables){
-    var_colour_name <- paste0(myvar, "_colour")
-    # Assumes there is a colour column for each variable in the metadata
-    # If there is no colour column, create one and assign from palette
-    # internal_colour_palette_10_distinct <- c("#8eec45","#0265e8","#f6a800","#bf6549","#486900","#c655a0","#00d1b6","#ff4431","#aeb85c","#7e7fc8")
-    # internal_colour_palette_10_distinct <- my_colour_palette_20_distinct
-    if (is.null(my_annotation_palette)){
-      internal_colour_palette <- my_colour_palette_206_distinct
-    } else{
-      internal_colour_palette <- my_annotation_palette
+  if (!is.null(internal_metadata.df)){
+    # Order/filter the heatmap matrix to order/entries of metadata
+    internal_heatmap_matrix.m <- internal_heatmap_matrix.m[,rownames(internal_metadata.df),drop = F]
+    
+    if (!is.null(variables)){
+      # Order the heatmap matrix by the variables
+      internal_heatmap_matrix.m <- internal_heatmap_matrix.m[,do.call(order, internal_metadata.df[,variables,drop=F]),drop =F]
+      # Order the metadata by the variables
+      internal_metadata.df <- internal_metadata.df[do.call(order, internal_metadata.df[,variables,drop=F]),,drop=F]
+      # Create metadata just containing the variables
+      metadata_just_variables <- internal_metadata.df[,variables, drop = F]    
     }
-    if (!var_colour_name %in% names(internal_metadata.df)){
-      myvar_values <- factor(as.character(sort(unique(internal_metadata.df[,myvar]))))
-      myvar_colours <- setNames(internal_colour_palette[1:length(myvar_values)], myvar_values)
-      all_variable_colours <- as.character(lapply(as.character(internal_metadata.df[,myvar]), function(x) myvar_colours[x]))
-      internal_metadata.df[,paste0(myvar,"_colour")] <- all_variable_colours
+    # Check that rownames match colnames
+    if (!all(rownames(internal_metadata.df) == colnames(internal_heatmap_matrix.m))){
+      stop("Row names in metadata do not match column names in matrix")
     }
     
-    metadata_subset <- unique(internal_metadata.df[,c(myvar, var_colour_name)])
-    # Order by the variable column
-    metadata_subset <- metadata_subset[order(metadata_subset[,myvar]),]
-    # Factorise the variable column
-    metadata_subset[,myvar] <- factor(metadata_subset[,myvar])
-    metadata_subset <- metadata_subset[!is.na(metadata_subset[,myvar]),]
-    named_colour_list <- setNames(as.character(metadata_subset[, var_colour_name]), as.character(metadata_subset[,myvar]))
-    colour_lists[[myvar]] <- named_colour_list
+    # Create annotations
+    colour_lists <- list()
+    for (myvar in variables){
+      var_colour_name <- paste0(myvar, "_colour")
+      # Assumes there is a colour column for each variable in the metadata
+      # If there is no colour column, create one and assign from palette
+      # internal_colour_palette_10_distinct <- c("#8eec45","#0265e8","#f6a800","#bf6549","#486900","#c655a0","#00d1b6","#ff4431","#aeb85c","#7e7fc8")
+      # internal_colour_palette_10_distinct <- my_colour_palette_20_distinct
+      if (is.null(my_annotation_palette)){
+        internal_colour_palette <- my_colour_palette_206_distinct
+      } else{
+        internal_colour_palette <- my_annotation_palette
+      }
+      if (!var_colour_name %in% names(internal_metadata.df)){
+        myvar_values <- factor(as.character(sort(unique(internal_metadata.df[,myvar]))))
+        myvar_colours <- setNames(internal_colour_palette[1:length(myvar_values)], myvar_values)
+        all_variable_colours <- as.character(lapply(as.character(internal_metadata.df[,myvar]), function(x) myvar_colours[x]))
+        internal_metadata.df[,paste0(myvar,"_colour")] <- all_variable_colours
+      }
+      
+      metadata_subset <- unique(internal_metadata.df[,c(myvar, var_colour_name)])
+      # Order by the variable column
+      metadata_subset <- metadata_subset[order(metadata_subset[,myvar]),]
+      # Factorise the variable column
+      metadata_subset[,myvar] <- factor(metadata_subset[,myvar])
+      metadata_subset <- metadata_subset[!is.na(metadata_subset[,myvar]),]
+      named_colour_list <- setNames(as.character(metadata_subset[, var_colour_name]), as.character(metadata_subset[,myvar]))
+      colour_lists[[myvar]] <- named_colour_list
+    }
+    
+    # Appearance of the column annotations
+    #HeatmapAnnotation
+    if (show_top_annotation == T){
+      if(is.null(variables)){
+        print("No variables specified, cannot add annotations")
+        show_top_annotation <- F
+      } else{
+        ha <- columnAnnotation(df = metadata_just_variables,
+                               # which = "column",
+                               col = colour_lists,
+                               gp = gpar(col = "black",lwd =.2),
+                               gap = unit(.1,"cm"),
+                               show_annotation_name = T,
+                               # annotation_legend_param, # ?color_mapping_legend for options
+                               show_legend = show_legend,
+                               simple_anno_size = simple_anno_size,
+                               annotation_legend_param = list(labels_gp = gpar(fontsize = col_annotation_label_size),
+                                                              title_gp = gpar(fontsize = col_annotation_title_size),
+                                                              grid_height = unit(col_annotation_legend_grid_height,"cm"),
+                                                              grid_width = unit(col_annotation_legend_grid_width,"cm")),
+                               annotation_name_gp = gpar(fontsize = annotation_bar_name_size))      
+      }
+      # HeatmapAnnotation(annotation_)
+      # ?color_mapping_legend
+      
+    }
   }
   
-  # Appearance of the column annotations
-  #HeatmapAnnotation
-  if (show_top_annotation == T){
-    if(is.null(variables)){
-      print("No variables specified, cannot add annotations")
-      show_top_annotation <- F
-    } else{
-      ha <- columnAnnotation(df = metadata_just_variables,
-                             # which = "column",
-                             col = colour_lists,
-                             gp = gpar(col = "black",lwd =.2),
-                             gap = unit(.1,"cm"),
-                             show_annotation_name = T,
-                             # annotation_legend_param, # ?color_mapping_legend for options
-                             show_legend = show_legend,
-                             simple_anno_size = simple_anno_size,
-                             annotation_legend_param = list(labels_gp = gpar(fontsize = col_annotation_label_size),
-                                                            title_gp = gpar(fontsize = col_annotation_title_size),
-                                                            grid_height = unit(col_annotation_legend_grid_height,"cm"),
-                                                            grid_width = unit(col_annotation_legend_grid_width,"cm")),
-                             annotation_name_gp = gpar(fontsize = annotation_bar_name_size))      
-    }
-    # HeatmapAnnotation(annotation_)
-    # ?color_mapping_legend
-    
-  }
   # TODO - add option for row annotation
   if (is.null(my_palette)){
     if (is.null(palette_choice)) {palette_choice <- "blue"}
@@ -883,7 +887,7 @@ make_heatmap <- function(myheatmap_matrix,
                 ...
   )
 
-  if (show_top_annotation == T){
+  if (show_top_annotation == T & exists("ha")){
     hm <- ha %v% hm
   }
   if (!is.null(filename)){
@@ -1770,7 +1774,7 @@ generate_significance_boxplots <- function(mydata.df, # Main dataframe
   }
   
   # Subset significances to the entries for variable of interest variable
-  sig_subset.df <- subset(significances.df, Variable == variable_column) %>% select(Variable, Group_1, Group_2,p_value_column)
+  sig_subset.df <- subset(significances.df, Variable == variable_column) %>% dplyr::select(Variable, Group_1, Group_2,p_value_column)
   
   # Filter to siginificant values
   sig_subset.df <- sig_subset.df[which(sig_subset.df[,p_value_column] < sig_threshold),]
@@ -1842,6 +1846,9 @@ generate_significance_boxplots <- function(mydata.df, # Main dataframe
     scale <- scale + sig_line_scaling_percentage # increase scale value
   }
   
+  sig_subset.df$Group_1 <- factor(sig_subset.df$Group_1, levels = levels(mydata.df[,variable_column]))
+  sig_subset.df$Group_2 <- factor(sig_subset.df$Group_2, levels = levels(mydata.df[,variable_column]))
+
   myplot <- myplot + ggsignif::geom_signif(data = sig_subset.df,
                                            manual = T,
                                            inherit.aes = F,

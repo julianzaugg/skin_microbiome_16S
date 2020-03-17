@@ -276,54 +276,67 @@ immunocompetent_otu.m <- filter_matrix_rows(immunocompetent_otu.m,15)
 immunosuppressed_genus.m <- filter_matrix_rows(immunosuppressed_genus.m,15)
 immunocompetent_genus.m <- filter_matrix_rows(immunocompetent_genus.m,15)
 
-# TODO 8/3/20
-# remove taxa by prevalence, at least 10% of all samples
-# What removes more, minimum read count or prevalence?
-
 # Could use sum instead
 # immunosuppressed_otu.m <- immunosuppressed_otu.m[which(apply(X = immunosuppressed_otu.m, MARGIN = 1, FUN = sum) >= 30),]
-dim(immunosuppressed_otu.m)
 
 # Lesion_type_refined
-run_mixomics(my_otu_matrix = immunosuppressed_otu.m, 
-             my_metadata = immunosuppressed_metadata.df, 
-             prefix = "immunosuppressed_otu_",
-             use_shapes = T,
-             outcome_variable = "Lesion_type_refined",
-             assign_taxonomy = T,
-             my_levels = c("C", "C_P", "AK","SCC_PL","SCC"))
-
-run_mixomics(my_otu_matrix = immunosuppressed_genus.m, 
-             my_metadata = immunosuppressed_metadata.df, 
-             prefix = "immunosuppressed_genus_",
-             use_shapes = T,
-             outcome_variable = "Lesion_type_refined",
-             assign_taxonomy = F,
-             my_levels = c("C", "C_P", "AK","SCC_PL","SCC"))
-
-run_mixomics(my_otu_matrix = immunocompetent_otu.m, 
-             my_metadata = immunocompetent_metadata.df, 
-             prefix = "immunocompetent_otu_",
-             use_shapes = T,
-             outcome_variable = "Lesion_type_refined",
-             assign_taxonomy = T,
-             my_levels = c("C_P", "AK","SCC_PL","SCC"))
-
-run_mixomics(my_otu_matrix = immunocompetent_genus.m, 
-             my_metadata = immunocompetent_metadata.df, 
-             prefix = "immunocompetent_genus_",
-             use_shapes = T,
-             outcome_variable = "Lesion_type_refined",
-             assign_taxonomy = F,
-             my_levels = c("C_P", "AK","SCC_PL","SCC"))
+# run_mixomics(my_otu_matrix = immunosuppressed_otu.m, 
+#              my_metadata = immunosuppressed_metadata.df, 
+#              prefix = "immunosuppressed_otu_",
+#              use_shapes = T,
+#              outcome_variable = "Lesion_type_refined",
+#              assign_taxonomy = T,
+#              my_levels = c("C", "C_P", "AK","SCC_PL","SCC"))
+# run_mixomics(my_otu_matrix = immunosuppressed_genus.m, 
+#              my_metadata = immunosuppressed_metadata.df, 
+#              prefix = "immunosuppressed_genus_",
+#              use_shapes = T,
+#              outcome_variable = "Lesion_type_refined",
+#              assign_taxonomy = F,
+#              my_levels = c("C", "C_P", "AK","SCC_PL","SCC"))
+# run_mixomics(my_otu_matrix = immunocompetent_otu.m, 
+#              my_metadata = immunocompetent_metadata.df, 
+#              prefix = "immunocompetent_otu_",
+#              use_shapes = T,
+#              outcome_variable = "Lesion_type_refined",
+#              assign_taxonomy = T,
+#              my_levels = c("C_P", "AK","SCC_PL","SCC"))
+# run_mixomics(my_otu_matrix = immunocompetent_genus.m, 
+#              my_metadata = immunocompetent_metadata.df, 
+#              prefix = "immunocompetent_genus_",
+#              use_shapes = T,
+#              outcome_variable = "Lesion_type_refined",
+#              assign_taxonomy = F,
+#              my_levels = c("C_P", "AK","SCC_PL","SCC"))
 
 
-# ------------------------------------------------------------------------------------------
-# ------------------------------------------------------------------------------------------
+# ---------------------------------------------------------------------------------------------------------------------------------------
+# ---------------------------------------------------------------------------------------------------------------------------------------
+# ---------------------------------------------------------------------------------------------------------------------------------------
 # Publication figures
 # Heatmap showing differentiating genera (mixomics)
 # Heatmap showing differentiating features (mixomics), , renamed to show genus,species
 
+
+# ---------------------------------------------------------------------------------------------------------------------------------------
+# Dot plots 
+# Load mixomics results
+mixomics_immunosuppressed_genus_Lesion_type_refined_comp1.df <- read.csv("Result_tables/mixomics/immunosuppressed_genus_Lesion_type_refined__comp_1.loadings.csv", header = T)
+mixomics_immunosuppressed_genus_Lesion_type_refined_comp2.df <- read.csv("Result_tables/mixomics/immunosuppressed_genus_Lesion_type_refined__comp_2.loadings.csv", header = T)
+mixomics_immunosuppressed_genus_Lesion_type_refined.df <- rbind(mixomics_immunosuppressed_genus_Lesion_type_refined_comp1.df,mixomics_immunosuppressed_genus_Lesion_type_refined_comp2.df)
+mixomics_immunosuppressed_genus_Lesion_type_refined.df$taxonomy_genus <- NULL
+names(mixomics_immunosuppressed_genus_Lesion_type_refined.df)[1] <- "taxonomy_genus"
+# names(mixomics_immunosuppressed_genus_Lesion_type_refined.df)[names(mixomics_immunosuppressed_genus_Lesion_type_refined.df) == "GroupContrib"] <- "Lesion_type_refined"
+mixomics_immunosuppressed_genus_Lesion_type_refined.df <- mixomics_immunosuppressed_genus_Lesion_type_refined.df[,c("taxonomy_genus", "GroupContrib", "importance", "abs_importance")]
+
+# TODO  Lesion vs taxa, dotsize = importance, colour = Associated group
+mixomics_immunosuppressed_genus_Lesion_type_refined.df <- subset(mixomics_immunosuppressed_genus_Lesion_type_refined.df, GroupContrib %in% c("C_P", "SCC"))
+mixomics_immunosuppressed_genus_Lesion_type_refined.df$GroupContrib <- factor(mixomics_immunosuppressed_genus_Lesion_type_refined.df$GroupContrib, levels = c("C", "C_P", "AK", "SCC_PL", "SCC"))
+mixomics_immunosuppressed_genus_Lesion_type_refined.df <- mixomics_immunosuppressed_genus_Lesion_type_refined.df[order(mixomics_immunosuppressed_genus_Lesion_type_refined.df$abs_importance),]
+mixomics_immunosuppressed_genus_Lesion_type_refined.df$taxonomy_genus <- factor(mixomics_immunosuppressed_genus_Lesion_type_refined.df$taxonomy_genus, levels = unique(mixomics_immunosuppressed_genus_Lesion_type_refined.df$taxonomy_genus))
+ggplot(mixomics_immunosuppressed_genus_Lesion_type_refined.df, aes(x = GroupContrib, y = taxonomy_genus)) +
+  geom_point(aes(size = abs_importance, colour = GroupContrib)) +
+  theme_classic()
 
 
 # ------------------------------------------------------------------------------------------

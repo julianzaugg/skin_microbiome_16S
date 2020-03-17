@@ -277,17 +277,19 @@ compare_groups_deseq_within_group <- function(mydata.m, mymetadata.df, myvariabl
 # write.csv(x =genus_cohort_comparison_within_lesion.df,file ="Result_tables/DESeq_results/Genus_cohort_within_lesion_deseq.csv",quote = F, row.names =F)
 
 
-# ----------------------------------------------------------------
+# ------------------------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------------------------
 # Publication figures
 
 genus_relabeller_function <- function(my_labels){
   unlist(lapply(my_labels, 
                 function(x) {
                   phylostring <- unlist(strsplit(x, split = ";"))
-                  # paste(phylostring[2],phylostring[3], phylostring[6], sep = ";")
-                  paste(phylostring[3], phylostring[6], sep = ";")
+                  paste(phylostring[3], phylostring[5], phylostring[6], sep = ";")
                 }))
 }
+
 species_relabeller_function <- function(my_labels){
   unlist(lapply(my_labels, 
                 function(x) {
@@ -307,6 +309,15 @@ immunocompetent_metadata.df <- metadata.df[metadata.df$Cohort == "immunocompeten
 otu_rel.m <- as.matrix(read.csv("Result_tables/relative_abundance_tables/OTU_relative_abundances.csv",row.names = 1))
 genus_rel.m <- as.matrix(read.csv("Result_tables/relative_abundance_tables/Genus_relative_abundances.csv",row.names = 1))
 
+# Load combined data
+otu_data.df <- read.csv("Result_tables/combined_counts_abundances_and_metadata_tables/OTU_counts_abundances_and_metadata.csv", header = T)
+genus_data.df <- read.csv("Result_tables/combined_counts_abundances_and_metadata_tables/Genus_counts_abundances_and_metadata.csv", header = T)
+otu_data.df <- subset(otu_data.df, Cohort == "immunosuppressed" | Snapshot_sample_5 == "yes")
+genus_data.df <- subset(genus_data.df, Cohort == "immunosuppressed" | Snapshot_sample_5 == "yes")
+
+otu_data.df$Lesion_type_refined <- factor(otu_data.df$Lesion_type_refined, levels = c("C", "C_P", "AK", "SCC_PL", "SCC"))
+genus_data.df$Lesion_type_refined <- factor(genus_data.df$Lesion_type_refined, levels = c("C", "C_P", "AK", "SCC_PL", "SCC"))
+
 # Load DESeq results
 otu_within_cohort_deseq_results <- read.csv("Result_tables/DESeq_results/OTU_within_cohort_deseq.csv", header =T)
 genus_within_cohort_deseq_results <- read.csv("Result_tables/DESeq_results/Genus_within_cohort_deseq.csv", header =T)
@@ -317,7 +328,146 @@ genus_within_patient_deseq_results <- read.csv("Result_tables/DESeq_results/Genu
 otu_cohort_within_lesion_deseq_results <- read.csv("Result_tables/DESeq_results/OTU_cohort_within_lesion_deseq.csv", header =T)
 genus_cohort_within_lesion_deseq_results <- read.csv("Result_tables/DESeq_results/Genus_cohort_within_lesion_deseq.csv", header =T)
 
+# ------------------------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------------------------
+make_publication_plot <- function(taxa, 
+                                  sample_data.df,
+                                  significances_IS.df,
+                                  significances_IC.df,
+                                  taxonomy_level,
+                                  taxa_title = NULL,
+                                  relabeller_function = NULL,
+                                  p_value_column = "padj",
+                                  value_column = "Read_count_logged",
+                                  ymin_break = 0, ymax_break = 100, ybreak = 10,ymax_limit = 140, ...){
+  
+  significances_subset_immunosuppressed.df <- significances_IS.df[grepl(taxa,significances_IS.df$Taxonomy),]
+  significances_subset_immunocompetent.df <- significances_IC.df[grepl(taxa,significances_IC.df$Taxonomy),]
+  
+  data_subset_immunosuppressed.df <- subset(sample_data.df, Cohort == "immunosuppressed")
+  data_subset_immunosuppressed.df <- data_subset_immunosuppressed.df[grepl(taxa,data_subset_immunosuppressed.df[,taxonomy_level]),]
+  
+  data_subset_immunocompetent.df <- subset(sample_data.df, Cohort == "immunocompetent")
+  data_subset_immunocompetent.df <- data_subset_immunocompetent.df[grepl(taxa,data_subset_immunocompetent.df[,taxonomy_level]),]
+  
+  data_subset_immunosuppressed.df$Relative_abundance <- data_subset_immunosuppressed.df$Relative_abundance * 100
+  data_subset_immunocompetent.df$Relative_abundance <- data_subset_immunocompetent.df$Relative_abundance * 100
+  
+  if (is.null(taxa_title)){
+    if (!is.null(relabeller_function)){
+      taxa_title <- relabeller_function(as.character(unique(data_subset_immunosuppressed.df[,taxonomy_level])[[1]]))
+    } else{
+      taxa_title <- unique(data_subset_immunosuppressed.df[,taxonomy_level])[[1]]  
+    }
+  }
+  
+  IS_plot <-  generate_significance_boxplots(mydata.df = data_subset_immunosuppressed.df,
+                                             variable_column = "Lesion_type_refined",
+                                             value_column = value_column,
+                                             variable_colours_available = T,
+                                             significances.df = significances_subset_immunosuppressed.df,
+                                             p_value_column = p_value_column,
+                                             sig_threshold = 0.05, ...) +
+    labs(title = "Immunosuppressed") +
+    xlab("Lesion type") + 
+    ylab(gsub("_", " ", value_column)) + 
+    scale_y_continuous(breaks = seq(ymin_break,ymax_break,ybreak), limits = c(0,ymax_limit)) +
+    theme(plot.title = element_text(size = 8),
+          plot.subtitle = element_text(size = 5,hjust = .5),
+          plot.margin = unit(c(0, 0, 0, 0), "cm")) 
+    # theme( axis.line = element_blank())
+    # geom_segment(aes(x=-Inf,xend=Inf,y=-Inf,yend=-Inf),size = .5) + # Added to match trimmed y axis 
+    # geom_segment(aes(x=0,xend=0,y=-Inf,yend=ymax_break + ymax_break*.1),size = .5) + # Added to trim y axis 
+    # theme(axis.title.y = element_text(hjust = 0.3)) # Added to adjust when trimming y axis 
+  
+  IC_plot <- generate_significance_boxplots(mydata.df = data_subset_immunocompetent.df,
+                                            variable_column = "Lesion_type_refined",
+                                            value_column = value_column,
+                                            variable_colours_available = T,
+                                            significances.df = significances_subset_immunocompetent.df,
+                                            p_value_column = p_value_column,
+                                            sig_threshold = 0.05,...) +
+    labs(title = "Immunocompetent") +
+    xlab("Lesion type") + 
+    ylab("") +
+    # scale_y_continuous( breaks = seq(0,1,.1), limits = c(0,1.4)) +
+    scale_y_continuous(breaks = seq(ymin_break,ymax_break,ybreak), limits = c(0,ymax_limit)) +
+    theme(plot.title = element_text(size = 8),
+          plot.subtitle = element_text(size = 5,hjust = .5),
+          plot.margin = unit(c(0, 0, 0, 0), "cm")) 
+    # theme(axis.line = element_blank()) +
+    # geom_segment(aes(x=-Inf,xend=Inf,y=-Inf,yend=-Inf),size = .5) + # Added to match trimmed y axis 
+    # geom_segment(aes(x=0,xend=0,y=-Inf,yend=ymax_break+ymax_break*.1),size = .5)  # Added to trim y axis 
+  
+  title <- ggdraw() + 
+    draw_label(
+      taxa_title,
+      fontface = 'bold',
+      x = .5,
+      hjust = 0.5,
+      size = 6
+    ) 
+  grid_plot <- plot_grid(plotlist = list(IS_plot, NULL, IC_plot),ncol = 3,nrow=1, rel_widths = c(1,-.01,1),align = "hv")
+  plot_grid(title, grid_plot,ncol = 1, rel_heights = c(0.1, 1))
+  
+}
 
+
+
+# -------- Boxplots for differentially abundant features (deseq). Show read counts for each sample.
+# ------ Within Cohort
+# ---- Immunosuppressed
+
+# otus_to_plot.v <- rownames(scc.results.order.df)[which(scc.results.order.df[,'padj'] < 0.1)]
+# scc_sig_otus_counts.df = data.frame()
+# for (otuid in otus_to_plot.v) {
+#   scc_counts.df <- plotCounts(pdds, gene = otuid, intgroup = "sample_type", returnData = T, normalized = T)
+#   scc_counts.df[,'OTU'] <- otuid
+#   scc_counts.df[,'clr'] <- otu_clr.m[otuid, rownames(scc_counts.df)]
+#   scc_sig_otus_counts.df <- rbind(scc_sig_otus_counts.df, scc_counts.df)
+# }
+
+
+# ------------------------------------------------------------------------------------------------
+# -------- Boxplots for differentially abundant genera (deseq). Show read counts for each sample.
+# -------- see unique(genus_within_cohort_deseq_results$Taxonomy)
+# ------ Within Cohort
+# ---- Immunosuppressed
+
+deseq_subset.df <- genus_within_cohort_deseq_results[genus_within_cohort_deseq_results$Cohort == "immunosuppressed",]
+deseq_subset2.df <- genus_within_cohort_deseq_results[genus_within_cohort_deseq_results$Cohort == "immunocompetent",]
+
+# Subset data main data
+genus_data_subset.df <- subset(genus_data.df, taxonomy_genus %in% deseq_subset.df$Taxonomy)
+genus_data_subset.df <- genus_data_subset.df[genus_data_subset.df$Cohort == "immunosuppressed",]
+
+source("Code/helper_functions.R")
+myplot <- make_publication_plot(taxa = "g__Staphylococcus",
+                                significances_IS.df = deseq_subset.df,
+                                significances_IC.df = deseq_subset2.df,
+                                taxonomy_level = "taxonomy_genus",
+                                sample_data.df = genus_data.df,
+                                relabeller_function = genus_relabeller_function,
+                                p_value_column = "padj",
+                                value_column = "Relative_abundance",
+                                ymin_break = 0, ymax_break = 100,ybreak = 10,ymax_limit = 150,sig_vjust = 0.5)
+                                # ymin_break = 0, ymax_break = 1000,ybreak = 2,ymax_limit = 8,sig_vjust = 0.5)
+myplot
+ggsave(plot = myplot, filename = "Result_figures/DESeq_plots/g__Staphylococcus_boxplot.pdf",width = 15,height = 12,units = "cm")
+
+
+myplot <- make_publication_plot(taxa = "g__Pseudomonas",
+                                significances_IS.df = deseq_subset.df,
+                                significances_IC.df = deseq_subset2.df,
+                                taxonomy_level = "taxonomy_genus",
+                                sample_data.df = genus_data.df,
+                                relabeller_function = genus_relabeller_function,
+                                p_value_column = "padj",
+                                value_column = "Relative_abundance",
+                                ymin_break = 0, ymax_break = 40,ybreak = 5,ymax_limit = 40, sig_line_starting_scale = 1.7,sig_line_scaling_percentage = 0.2)
+myplot
+ggsave(plot = myplot, filename = "Result_figures/DESeq_plots/g__Pseudomonas_boxplot.pdf",width = 15,height = 12,units = "cm")
+# ------------------------------------------------------------------------------------------------
 # ------------------------------------------------------------------------------------------------
 # -------- Heatmap showing differentially abundant taxa (deseq)
 # ------ Within Cohort
@@ -452,7 +602,7 @@ myhm <- make_heatmap(heatmap.m*100,
                      row_title = "Feature",
                      my_row_labels = my_row_names.df,
                      plot_height = 3.2,
-                     plot_width = 20,
+                     plot_width = 40,
                      cluster_columns = T,
                      cluster_rows = T,
                      show_column_dend = T,

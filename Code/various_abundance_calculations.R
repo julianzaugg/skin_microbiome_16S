@@ -96,6 +96,9 @@ family_data.df <- read.csv("Result_tables/combined_counts_abundances_and_metadat
 # class_data.df <- read.csv("Result_tables/other/class_counts_abundances_and_metadata.csv")
 # phylum_data.df <- read.csv("Result_tables/other/phylum_counts_abundances_and_metadata.csv")
 
+# Load abundances
+genus_rel.m <- as.matrix(read.csv("Result_tables/relative_abundance_tables/Genus_relative_abundances.csv",row.names = 1))
+
 # First, filter out non-snapshot samples from immunocompetent (this may have been done in main processing script)
 species_data.df <- subset(species_data.df, Cohort == "immunosuppressed" | Snapshot_sample_5 == "yes")
 genus_data.df <- subset(genus_data.df, Cohort == "immunosuppressed" | Snapshot_sample_5 == "yes")
@@ -107,6 +110,13 @@ genus_data.df$Lesion_type_refined <- factor(genus_data.df$Lesion_type_refined, l
 family_data.df$Lesion_type_refined <- factor(family_data.df$Lesion_type_refined, levels = c("C", "C_P", "AK","SCC_PL","SCC"))
 
 
+# Create cohort specific data sets
+immunosuppressed_metadata.df <- metadata.df[metadata.df$Cohort == "immunosuppressed",]
+immunocompetent_metadata.df <- metadata.df[metadata.df$Cohort == "immunocompetent",]
+
+immunosuppressed_genus_data.df <- subset(genus_data.df, Cohort == "immunosuppressed")
+immunosuppressed_species_data.df <- subset(species_data.df, Cohort == "immunosuppressed")
+immunocompetent_genus_data.df <- subset(genus_data.df, Cohort == "immunocompetent")
 # --------------------------------------------------------------------------------------------
 # FUNCTIONS
 
@@ -327,10 +337,7 @@ for (taxa in as.character(unique(lesion_type_genus_summary_top.df$taxonomy_genus
 
 # ---------------------------------------------------------------------------------------------
 # Lesion type, immunosuppressed
-immunosuppressed_genus_data.df <- subset(genus_data.df, Cohort == "immunosuppressed")
-immunosuppressed_species_data.df <- subset(species_data.df, Cohort == "immunosuppressed")
-
-immunosuppressed_lesion_type_species_summary.df <- generate_taxa_summary(species_data.df,
+immunosuppressed_lesion_type_species_summary.df <- generate_taxa_summary(immunosuppressed_species_data.df,
                                                         taxa_column = "taxonomy_species", 
                                                         group_by_columns = c("Lesion_type_refined"))
 
@@ -422,7 +429,7 @@ for (taxa in as.character(unique(immunosuppressed_lesion_type_genus_summary_top.
 # ---------------------------------------------------------------------------------------------
 # Lesion type, immunocompetent
 
-immunocompetent_genus_data.df <- subset(genus_data.df, Cohort == "immunocompetent")
+
 immunocompetent_lesion_type_genus_summary.df <- generate_taxa_summary(immunocompetent_genus_data.df,
                                                                       taxa_column = "taxonomy_genus", 
                                                                       group_by_columns = c("Lesion_type_refined"))
@@ -514,6 +521,7 @@ make_publication_plot <- function(taxa,
                                   taxonomy_level,
                                   taxa_title = NULL,
                                   relabeller_function = NULL,
+                                  p_value_column = "Dunn_padj",
                                   ymin_break = 0, ymax_break = 100, ybreak = 10,ymax_limit = 140, ...){
   # FIXME - allow providing significance table and abundance table
   significances_subset_immunosuppressed.df <- significances_IS.df[grepl(taxa,significances_IS.df$Taxonomy),]
@@ -546,7 +554,7 @@ make_publication_plot <- function(taxa,
                                              value_column = "Relative_abundance",
                                              variable_colours_available = T,
                                              significances.df = significances_subset_immunosuppressed.df,
-                                             p_value_column = "Dunn_padj",
+                                             p_value_column = p_value_column,
                                              sig_threshold = 0.05, ...) +
     labs(title = "Immunosuppressed") +
     xlab("Lesion type") + 
@@ -561,7 +569,7 @@ make_publication_plot <- function(taxa,
                                             value_column = "Relative_abundance",
                                             variable_colours_available = T,
                                             significances.df = significances_subset_immunocompetent.df,
-                                            p_value_column = "Dunn_padj",
+                                            p_value_column = p_value_column,
                                             sig_threshold = 0.05,...) +
     labs(title = "Immunocompetent") +
     xlab("Lesion type") + 
@@ -704,7 +712,99 @@ ggsave(plot = myplot, filename = "Result_figures/abundance_analysis_plots/boxplo
 # ---------------------------------------------------------------------------------------------
 # ---------------------------------------------------------------------------------------------
 # ---------------------------------------------------------------------------------------------
+# Heatmap, top # genera per lesion_type in each cohort
 
+# ------- immunosuppressed
+
+# Summarise
+immunosuppressed_lesion_type_genus_summary.df <- generate_taxa_summary(immunosuppressed_genus_data.df,
+                                                                       taxa_column = "taxonomy_genus", 
+                                                                       group_by_columns = c("Lesion_type_refined"))
+# Get top taxa
+immunosuppressed_lesion_type_genus_summary_top.df <- filter_summary_to_top_n(taxa_summary = immunosuppressed_lesion_type_genus_summary.df, 
+                                                                             grouping_variables = c("Lesion_type_refined"), 
+                                                                             abundance_column = "Mean_relative_abundance", 
+                                                                             my_top_n = 10)
+
+# Make matrix
+heatmap.m <- genus_rel.m[as.character(unique(immunosuppressed_lesion_type_genus_summary_top.df$taxonomy_genus)),]
+heatmap.m <- heatmap.m[,colnames(heatmap.m) %in% immunosuppressed_metadata.df$Index]
+
+myhm <- make_heatmap(heatmap.m*100, 
+                     mymetadata = immunosuppressed_metadata.df, 
+                     variables = c("Lesion_type_refined"),
+                     my_row_labels = data.frame(rownames(heatmap.m), genus_relabeller_function(rownames(heatmap.m))),
+                     column_title = "Sample",
+                     row_title = "Genus",
+                     plot_height = 4,
+                     plot_width = 25,
+                     cluster_columns = F,
+                     cluster_rows = T,
+                     show_column_dend = T,
+                     show_row_dend = F,
+                     column_title_size = 10,
+                     row_title_size = 10,
+                     annotation_bar_name_size = 6,
+                     show_cell_values = F,
+                     # my_annotation_palette = my_colour_palette_15,
+                     # my_palette = c("#08306B","#FFD92F","#67001F"),
+                     legend_labels = c(c(0, 0.001, 0.005,0.05, seq(.1,.5,.1))*100, ">= 60"),
+                     my_breaks = c(0, 0.001, 0.005,0.05, seq(.1,.6,.1))*100,
+                     discrete_legend = T,
+                     legend_title = "Relative abundance %",
+                     palette_choice = 'bluered',
+                     row_dend_width = unit(3, "cm"),
+                     simple_anno_size = unit(.25, "cm"),
+                     show_top_annotation = T,
+                     filename = paste0("Result_figures/abundance_analysis_plots/lesion_type_immunosuppressed_top_10_genus_heatmap.pdf"))
+
+# Summarise
+immunocompetent_lesion_type_genus_summary.df <- generate_taxa_summary(immunocompetent_genus_data.df,
+                                                                       taxa_column = "taxonomy_genus", 
+                                                                       group_by_columns = c("Lesion_type_refined"))
+# Get top taxa
+immunocompetent_lesion_type_genus_summary_top.df <- filter_summary_to_top_n(taxa_summary = immunocompetent_lesion_type_genus_summary.df, 
+                                                                             grouping_variables = c("Lesion_type_refined"), 
+                                                                             abundance_column = "Mean_relative_abundance", 
+                                                                             my_top_n = 10)
+
+# Make matrix
+heatmap.m <- genus_rel.m[as.character(unique(immunocompetent_lesion_type_genus_summary_top.df$taxonomy_genus)),]
+heatmap.m <- heatmap.m[,colnames(heatmap.m) %in% immunocompetent_metadata.df$Index]
+
+myhm <- make_heatmap(heatmap.m*100, 
+                     mymetadata = immunocompetent_metadata.df, 
+                     variables = c("Lesion_type_refined"),
+                     my_row_labels = data.frame(rownames(heatmap.m), genus_relabeller_function(rownames(heatmap.m))),
+                     column_title = "Sample",
+                     row_title = "Genus",
+                     plot_height = 3,
+                     plot_width = 25,
+                     cluster_columns = F,
+                     cluster_rows = T,
+                     show_column_dend = T,
+                     show_row_dend = F,
+                     column_title_size = 10,
+                     row_title_size = 10,
+                     annotation_bar_name_size = 6,
+                     show_cell_values = F,
+                     # my_annotation_palette = my_colour_palette_15,
+                     # my_palette = c("#08306B","#FFD92F","#67001F"),
+                     legend_labels = c(c(0, 0.001, 0.005,0.05, seq(.1,.5,.1))*100, ">= 60"),
+                     my_breaks = c(0, 0.001, 0.005,0.05, seq(.1,.6,.1))*100,
+                     discrete_legend = T,
+                     legend_title = "Relative abundance %",
+                     palette_choice = 'bluered',
+                     row_dend_width = unit(3, "cm"),
+                     simple_anno_size = unit(.25, "cm"),
+                     show_top_annotation = T,
+                     filename = paste0("Result_figures/abundance_analysis_plots/lesion_type_immunocompetent_top_10_genus_heatmap.pdf"))
+
+
+
+
+
+# ---------------------------------------------------------------------------------------------
 # Heatmap, genera across both cohorts that were in the top 20 and were signfiicantly differentally abundant according to dunn
 temp <- genus_data.df[genus_data.df$taxonomy_genus %in% as.character(unique(immunosuppressed_lesion_type_genus_summary_top_significances_filtered.df$Taxonomy, immunosuppressed_lesion_type_genus_summary_top_significances_filtered.df$Taxonomy)),]
 temp <- dcast(temp, taxonomy_genus~Sample, value.var = "Relative_abundance",fill = 0)
