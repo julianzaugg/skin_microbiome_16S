@@ -15,6 +15,9 @@ detachAllPackages <- function() {
   
 }
 detachAllPackages()
+# lapply(names(sessionInfo()$loadedOnly), require, character.only = TRUE)
+# invisible(lapply(paste0('package:', names(sessionInfo()$otherPkgs)), detach, character.only=TRUE, unload=TRUE, force=TRUE))
+
 library(reshape2)
 library(dplyr)
 
@@ -31,6 +34,7 @@ filter_count_matrix <- function(mymatrix, row_min = 0, prevalence = 0){
 }
 
 setwd("/Users/julianzaugg/Desktop/ACE/major_projects/skin_microbiome_16S")
+source("Code/helper_functions.R")
 
 # Load metadata
 metadata.df <- read.csv("Result_tables/other/processed_metadata.csv", header =T)
@@ -38,6 +42,8 @@ metadata.df <- read.csv("Result_tables/other/processed_metadata.csv", header =T)
 # Load count tables
 otu.df <- read.csv("Result_tables/count_tables/Otu_counts.csv", header =T)
 genus.df <- read.csv("Result_tables/count_tables/Genus_counts.csv", header =T)
+
+# data.patient <- data.patient[which(apply(X = data.patient, MARGIN = 1, FUN = sum) >= 200),]
 
 otu_data.df <- read.csv("Result_tables/combined_counts_abundances_and_metadata_tables/OTU_counts_abundances_and_metadata.csv",header = T)
 genus_data.df <- read.csv("Result_tables/combined_counts_abundances_and_metadata_tables/Genus_counts_abundances_and_metadata.csv",header = T)
@@ -76,11 +82,13 @@ for (patient in unique(metadata.df$Patient)){
     print(paste0("Patient ", patient, " has less than 2 samples, skipping"))
     next()
   }
-  otu_patient_data.df <- otu_filtered.df[,c("OTU.ID", patient_samples)]
-  genus_patient_data.df <- genus_filtered.df[,c("taxonomy_genus", patient_samples)]
+  otu_patient_data.df <- otu.df[,c("OTU.ID", patient_samples)]
+  genus_patient_data.df <- genus.df[,c("taxonomy_genus", patient_samples)]
 
-  otu_patient_data.df <- otu_patient_data.df[otu_patient_data.df$OTU.ID %in% rownames(filter_count_matrix(df2matrix(otu_patient_data.df),row_min = 1)),]
-  genus_patient_data.df <- genus_patient_data.df[genus_patient_data.df$taxonomy_genus %in% rownames(filter_count_matrix(df2matrix(genus_patient_data.df),row_min = 1)),]
+  otu_subset_data.df <- otu_subset_data.df[otu_subset_data.df$OTU.ID %in% rownames(df2matrix(otu_subset_data.df)[which(apply(df2matrix(otu_subset_data.df), 1, sum) >= 150),]),]
+  genus_subset_data.df <- genus_subset_data.df[genus_subset_data.df$taxonomy_genus %in% rownames(df2matrix(genus_subset_data.df)[which(apply(df2matrix(genus_subset_data.df), 1, sum) >= 150),]),]
+  # otu_patient_data.df <- otu_patient_data.df[otu_patient_data.df$OTU.ID %in% rownames(filter_count_matrix(df2matrix(otu_patient_data.df),row_min = 1)),]
+  # genus_patient_data.df <- genus_patient_data.df[genus_patient_data.df$taxonomy_genus %in% rownames(filter_count_matrix(df2matrix(genus_patient_data.df),row_min = 1)),]
   
   names(otu_patient_data.df)[1] <- "#OTU ID"
   names(genus_patient_data.df)[1] <- "#OTU ID"
@@ -97,11 +105,13 @@ for (cohort in as.character(unique(metadata.df$Cohort))){
       print(paste0("Cohort ", cohort, " +", " lesion ", lesion, " has less than 2 samples, skipping"))
       next()
     }
-    otu_subset_data.df <- otu_filtered.df[,c("OTU.ID", sample_list)]
-    genus_subset_data.df <- genus_filtered.df[,c("taxonomy_genus", sample_list)]
+    otu_subset_data.df <- otu.df[,c("OTU.ID", sample_list)]
+    genus_subset_data.df <- genus.df[,c("taxonomy_genus", sample_list)]
     
-    otu_subset_data.df <- otu_subset_data.df[otu_subset_data.df$OTU.ID %in% rownames(filter_count_matrix(df2matrix(otu_subset_data.df),row_min = 1)),]
-    genus_subset_data.df <- genus_subset_data.df[genus_subset_data.df$taxonomy_genus %in% rownames(filter_count_matrix(df2matrix(genus_subset_data.df),row_min = 1)),]
+    # otu_subset_data.df <- otu_subset_data.df[otu_subset_data.df$OTU.ID %in% rownames(filter_count_matrix(df2matrix(otu_subset_data.df),row_min = 1)),]
+    # genus_subset_data.df <- genus_subset_data.df[genus_subset_data.df$taxonomy_genus %in% rownames(filter_count_matrix(df2matrix(genus_subset_data.df),row_min = 1)),]
+    otu_subset_data.df <- otu_subset_data.df[otu_subset_data.df$OTU.ID %in% rownames(df2matrix(otu_subset_data.df)[which(apply(df2matrix(otu_subset_data.df), 1, sum) >= 150),]),]
+    genus_subset_data.df <- genus_subset_data.df[genus_subset_data.df$taxonomy_genus %in% rownames(df2matrix(genus_subset_data.df)[which(apply(df2matrix(genus_subset_data.df), 1, sum) >= 150),]),]
     
     names(otu_subset_data.df)[1] <- "#OTU ID"
     names(genus_subset_data.df)[1] <- "#OTU ID"
@@ -110,3 +120,28 @@ for (cohort in as.character(unique(metadata.df$Cohort))){
     write.table(x = genus_subset_data.df, file = paste0("Result_tables/fastspar_inputs/per_lesion_type_cohort/", cohort, "_", lesion, "__genus_counts_fastspar.tsv"), sep = "\t", quote = F, row.names = F)
   }
 }
+
+
+# For each SCC and SCC_PL samples in each cohort
+for (cohort in as.character(unique(metadata.df$Cohort))){
+    sample_list <- as.character(subset(metadata.df, Cohort == cohort & Lesion_type_refined %in% c("SCC", "SCC_PL"))$Index)
+    if (length(sample_list) < 2){
+      print(paste0("Cohort ", cohort, " has less than 2 samples, skipping"))
+      next()
+    }
+    otu_subset_data.df <- otu.df[,c("OTU.ID", sample_list)]
+    genus_subset_data.df <- genus.df[,c("taxonomy_genus", sample_list)]
+    
+    # Filter to features/taxa where there are at least 150 reads across all samples
+    otu_subset_data.df <- otu_subset_data.df[otu_subset_data.df$OTU.ID %in% rownames(df2matrix(otu_subset_data.df)[which(apply(df2matrix(otu_subset_data.df), 1, sum) >= 150),]),]
+    genus_subset_data.df <- genus_subset_data.df[genus_subset_data.df$taxonomy_genus %in% rownames(df2matrix(genus_subset_data.df)[which(apply(df2matrix(genus_subset_data.df), 1, sum) >= 150),]),]
+    # otu_subset_data.df <- otu_subset_data.df[otu_subset_data.df$OTU.ID %in% rownames(filter_count_matrix(df2matrix(otu_subset_data.df),row_min = 1,prevalence = .2)),]
+    # genus_subset_data.df <- genus_subset_data.df[genus_subset_data.df$taxonomy_genus %in% rownames(filter_count_matrix(df2matrix(genus_subset_data.df),row_min = 1)),]
+    
+    names(otu_subset_data.df)[1] <- "#OTU ID"
+    names(genus_subset_data.df)[1] <- "#OTU ID"
+    
+    write.table(x = otu_subset_data.df, file = paste0("Result_tables/fastspar_inputs/SCC_SCCPL_per_cohort/", cohort, "_SCC_SCCPL__otu_counts_fastspar.tsv"), sep = "\t", quote = F, row.names = F)
+    write.table(x = genus_subset_data.df, file = paste0("Result_tables/fastspar_inputs/SCC_SCCPL_per_cohort/", cohort, "_SCC_SCCPL__genus_counts_fastspar.tsv"), sep = "\t", quote = F, row.names = F)
+}
+

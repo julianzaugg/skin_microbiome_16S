@@ -188,7 +188,8 @@ dir.create(file.path("./Result_tables", "contaminant_analysis"), showWarnings = 
 dir.create("./Result_tables/fastspar_inputs", showWarnings = FALSE,recursive = T)
 dir.create("./Result_tables/fastspar_inputs/per_patient", showWarnings = FALSE,recursive = T)
 dir.create("./Result_tables/fastspar_inputs/per_lesion_type_cohort", showWarnings = FALSE,recursive = T)
-# dir.create("./Result_tables/fastspar_inputs/SCC_SCC_PL_cohort", showWarnings = FALSE,recursive = T)
+dir.create("./Result_tables/fastspar_inputs/SCC_SCCPL_per_cohort", showWarnings = FALSE,recursive = T)
+
 dir.create(file.path("./Result_figures/correlation_analysis", "networks"), showWarnings = FALSE,recursive = T)
 dir.create(file.path("./Result_figures/correlation_analysis", "corrplots"), showWarnings = FALSE,recursive = T)
 dir.create(file.path("./Result_figures/correlation_analysis", "by_feature"), showWarnings = FALSE,recursive = T)
