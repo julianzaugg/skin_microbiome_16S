@@ -1476,12 +1476,7 @@ generate_correlation_network <- function(cor_matrix, p_matrix = NULL, p_value_th
   }
   
   cor.m <- as.matrix(cor_matrix)
-  
-  if (!is.null(relabeller_function)){
-    colnames(cor.m) <- relabeller_function(colnames(cor.m))
-    rownames(cor.m) <- relabeller_function(rownames(cor.m))
-  }
-  
+
   if (!is.null(p_matrix)){
     cor_pval.m <- as.matrix(p_matrix)  
     if (!is.null(relabeller_function)){
@@ -1523,6 +1518,14 @@ generate_correlation_network <- function(cor_matrix, p_matrix = NULL, p_value_th
     graph.df <- graph.df[!paste0(graph.df$Variable_1, "-", graph.df$Variable_2) %in% paste0(edges_to_remove.df[,2], "-", edges_to_remove.df[,1]),]
   }
   
+  if (!is.null(relabeller_function)){
+    graph.df$Variable_1 <- relabeller_function(graph.df$Variable_1)
+    graph.df$Variable_2 <- relabeller_function(graph.df$Variable_2)
+    # colnames(cor.m) <- relabeller_function(colnames(cor.m))
+    # rownames(cor.m) <- relabeller_function(rownames(cor.m))
+  }
+  
+  
   # Generate graph object and remove looped edges and isolated nodes
   graph.df <- as_tbl_graph(graph.df) %>%
     # Remove loops
@@ -1536,6 +1539,7 @@ generate_correlation_network <- function(cor_matrix, p_matrix = NULL, p_value_th
   
   # Build plot
   set_graph_style(plot_margin = margin(1,1,1,1))
+  
   correlation_graph_plot <- ggraph(graph.df, layout = network_layout)
   if (edgetype == "link"){
     correlation_graph_plot <- correlation_graph_plot + 

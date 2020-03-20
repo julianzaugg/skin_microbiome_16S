@@ -85,8 +85,8 @@ for (patient in unique(metadata.df$Patient)){
   otu_patient_data.df <- otu.df[,c("OTU.ID", patient_samples)]
   genus_patient_data.df <- genus.df[,c("taxonomy_genus", patient_samples)]
 
-  otu_subset_data.df <- otu_subset_data.df[otu_subset_data.df$OTU.ID %in% rownames(df2matrix(otu_subset_data.df)[which(apply(df2matrix(otu_subset_data.df), 1, sum) >= 150),]),]
-  genus_subset_data.df <- genus_subset_data.df[genus_subset_data.df$taxonomy_genus %in% rownames(df2matrix(genus_subset_data.df)[which(apply(df2matrix(genus_subset_data.df), 1, sum) >= 150),]),]
+  otu_patient_data.df <- otu_patient_data.df[otu_patient_data.df$OTU.ID %in% rownames(df2matrix(otu_patient_data.df)[which(apply(df2matrix(otu_patient_data.df), 1, sum) >= 150),]),]
+  genus_patient_data.df <- genus_patient_data.df[genus_patient_data.df$taxonomy_genus %in% rownames(df2matrix(genus_patient_data.df)[which(apply(df2matrix(genus_patient_data.df), 1, sum) >= 150),]),]
   # otu_patient_data.df <- otu_patient_data.df[otu_patient_data.df$OTU.ID %in% rownames(filter_count_matrix(df2matrix(otu_patient_data.df),row_min = 1)),]
   # genus_patient_data.df <- genus_patient_data.df[genus_patient_data.df$taxonomy_genus %in% rownames(filter_count_matrix(df2matrix(genus_patient_data.df),row_min = 1)),]
   
