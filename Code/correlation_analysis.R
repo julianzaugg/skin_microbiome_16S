@@ -18,7 +18,7 @@ detachAllPackages()
 
 library(ggraph)
 library(tidygraph)
-
+library(svglite)
 
 genus_relabeller_function <- function(my_labels){
   unlist(lapply(my_labels, 
@@ -29,6 +29,178 @@ genus_relabeller_function <- function(my_labels){
                   paste(phylostring[3], phylostring[5], phylostring[6], sep = ";")
                 }))
 }
+
+species_relabeller_function <- function(my_labels){
+  unlist(lapply(my_labels, 
+                function(x) {
+                  phylostring <- unlist(strsplit(x, split = ";"))
+                  paste(phylostring[3],phylostring[5],phylostring[6], phylostring[7], sep = ";")
+                  # paste(phylostring[3], phylostring[7], sep = ";")
+                }))
+}
+
+feature_relabeller_function <- function(my_labels, include_feature_ID = F){
+  unlist(lapply(my_labels,
+                function(x) {
+                  phylostring <- unlist(strsplit(as.character(otu_taxonomy_map.df[x,]$taxonomy_species),split = ";"))
+                  if (include_feature_ID == T){
+                    paste0(x, ":\n", paste(phylostring[3],phylostring[6], phylostring[7], sep = ";"))
+                  } else{
+                    paste(phylostring[3],phylostring[6], phylostring[7], sep = ";")
+                  }
+                  
+                  
+                }))
+}
+
+
+# Create graphs with node shapes matching taxa.
+# Size of node should be importance values from splsDA.
+# Node colour should be associated lesion (SCC / SCC_PL)
+# line thickness should be p-values
+# Remove entries not associated with anything according to splsda
+# Should be noted that nodes with the same name will overlap, can be a useful
+#   way to show whether multiple features with the same name (higher collapsed taxa level)
+#   have different (+/-) correlations
+# FIXME handle nodes with the same name. Need unique, though option to rename in plot!
+
+generate_correlation_network2 <- function(myedges.df,
+                                          mynodes.df, 
+                                          node_label_column,
+                                          node_shape_column,
+                                          node_size_column,
+                                          node_colour_column,
+                                          edge_colour_column,
+                                          edge_width_column,
+                                          edge_width_name = "-log10(Pval)",
+                                          label_size = 1,
+                                          plot_height = 10,
+                                          plot_width = 10,
+                                          variable_colours_available = T,
+                                          network_layout = "fr",
+                                          filename = NULL,
+                                          file_type = "pdf"){
+  # myedges.df - "from" "to" and relavent edge metadata
+  # mynodes.df - "name" (of node) and relavent node metadata
+  # 
+  # myedges.df = network_data$edges.df
+  # mynodes.df = network_data$nodes.df
+  # node_label_column = "name"
+  # node_shape_column = "Association"
+  # node_size_column = "Importance"
+  # node_colour_column = "Association"
+  # edge_colour_column = "Correlation"
+  # edge_width_column = "P_value"
+  # filename = "Result_figures/correlation_analysis/networks/test_correlation_graph2.pdf"
+  # file_type = "pdf"
+  # plot_height = 7
+  # plot_width = 7
+  
+  internal_nodes.df <- mynodes.df
+  internal_edges.df <- myedges.df
+  
+  # Filter nodes by column values
+  internal_nodes.df <- internal_nodes.df[complete.cases(internal_nodes.df),]
+  
+  # Filter edges to match
+  internal_edges.df <- internal_edges.df[unique(which(internal_edges.df$from %in% internal_nodes.df$name & 
+                                                        internal_edges.df$to %in% internal_nodes.df$name)),]
+  
+  # Remove bidirectional links
+  internal_edges.df$ordered_label <- apply(internal_edges.df, 1, function(x) {paste0(sort(c(as.character(x[1]), as.character(x[2]))),collapse = ":")})
+  internal_edges.df <- internal_edges.df[!duplicated(internal_edges.df$ordered_label),]
+  
+  # Create graph from node and edge dataframes
+  mygraph <- tbl_graph(nodes = internal_nodes.df, edges = internal_edges.df,directed = F)
+  mygraph <- mygraph %>%
+    # Remove loops
+    activate(edges) %>%
+    filter(!edge_is_loop()) %>%
+    # Remove isolated nodes
+    activate(nodes) %>%
+    filter(!node_is_isolated())
+  
+  if (!is.null(node_shape_column)){
+    # node_shapes <- setNames(rep(c(25,24,23,22,21),
+    #                             length(unique(internal_nodes.df[,node_shape_column])))[1:length(unique(internal_nodes.df[,node_shape_column]))],
+    #                         unique(internal_nodes.df[,node_shape_column]))
+    node_shapes <- setNames(rep(c(19,18,17,16,15),
+                                length(unique(internal_nodes.df[,node_shape_column])))[1:length(unique(internal_nodes.df[,node_shape_column]))],
+                            unique(internal_nodes.df[,node_shape_column]))
+  } else{
+    node_shapes <- setNames(rep(c(21),length(unique(internal_nodes.df[,node_shape_column])))[1:length(unique(internal_nodes.df[,node_shape_column]))],unique(internal_nodes.df[,node_shape_column]))  
+  }
+
+  my_palette <- colorRampPalette(c("#17468a","#ffdd47","#99113a"))
+  
+  # node_values <- levels(mydata.df[[variable_column]])
+  if (variable_colours_available == T){
+    color_col_name <- paste0(node_colour_column, "_colour")
+    node_colours <- setNames(as.character(unique(internal_nodes.df[[color_col_name]])), as.character(unique(internal_nodes.df[[node_colour_column]])))
+  } else{
+    # my_colour_palette_30_distinct
+    internal_colour_palette <- c("#009348","#f579fe","#4fe16e","#b40085","#4d7e00","#4742b4",
+                                   "#f0c031","#016dd9","#d45200","#7499ff","#ef4d2d","#01c9c8",
+                                   "#f8394b","#88d7a6","#d20063","#c8cc5d","#882986","#fdb95d",
+                                   "#404f8f","#917300","#f3aefc","#5c5800","#ff75c3","#00674a",
+                                   "#ba001c","#979760","#8b354c","#ff875f","#943105","#cf9478")
+    node_colours <- setNames(internal_colour_palette[1:length(as.character(unique(internal_nodes.df[[node_colour_column]])))], as.character(unique(internal_nodes.df[[node_colour_column]])))  
+  }
+  set_graph_style(family = "Arial Narrow", face = "plain", size = 11,
+                  text_size = 11, text_colour = "black")
+  correlation_graph_plot <- ggraph(mygraph, layout = network_layout) +
+    geom_edge_fan(aes(colour = get(edge_colour_column), width = get(edge_width_column)), alpha=1) +
+    geom_node_point(mapping = aes(fill=get(node_colour_column),
+                                  size= get(node_size_column), 
+                                  shape = get(node_shape_column), 
+                                  colour = get(node_colour_column))) +
+    geom_node_text(aes(label=get(node_label_column)),
+                   size = label_size,
+                   nudge_y = -.01, #fontface = "bold",
+                   point.padding = unit(0.3, "lines"),
+                   segment.size = 0.3,
+                   segment.colour = "grey",
+                   repel = T) +
+    scale_edge_color_gradientn(colors = my_palette(20),
+                               breaks = seq(-1,1,.25),
+                               limits = c(-1,1), 
+                               name = edge_colour_column,
+                               guide = guide_edge_colourbar(barheight = 8)) +
+    scale_edge_width_continuous(range = c(0.5,2),
+                                name= edge_width_name) +
+    scale_size_continuous(range = c(3,10), name = node_size_column) + 
+    scale_fill_manual(values = node_colours, name = node_colour_column) + 
+    scale_colour_manual(values = node_colours, name = node_colour_column) +
+    scale_shape_manual(values = node_shapes, name = node_shape_column) +
+    guides(byrow=F, ncol=2, 
+           colour=guide_legend(override.aes=list(size=6)), 
+           shape=guide_legend(override.aes=list(size=6))) +
+    theme(legend.position = 'bottom', 
+          legend.box = 'horizontal', 
+          legend.direction = 'vertical',
+          legend.title = element_text(face = "bold"),
+          
+          # text=element_text(size=10), 
+          plot.title = element_text(hjust = 0.5)
+    )
+  
+  # Save plot to file
+  if (!is.null(filename)){
+    if (file_type == "pdf"){
+      cairo_pdf(filename = filename,height = plot_height, width = plot_width)
+      plot(correlation_graph_plot)
+      dev.off()      
+    } else if (file_type == "svg"){
+      # Cairo::CairoSVG(file = filename,width = plot_width,height = plot_height)
+      # svg(filename = filename,height = plot_height, width = plot_width)
+      svglite(file = filename,height = plot_height, width = plot_width)
+      plot(correlation_graph_plot)
+      dev.off()
+    }
+  }
+  correlation_graph_plot
+}
+
 
 
 setwd("/Users/julianzaugg/Desktop/ACE/major_projects/skin_microbiome_16S/")
@@ -56,11 +228,6 @@ genus_data.df <- read.csv("Result_tables/combined_counts_abundances_and_metadata
 # Location of all FastSpar results
 fastspar_results_base <- "/Users/julianzaugg/Desktop/ACE/major_projects/skin_microbiome_16S/External_results/fastspar/all_results"
 
-
-# Read correlation and pvalues 
-# generate correlation network
-# If otu, change node names to taxonomy
-
 # ------------------------------------------------------------------------------------------------------------------------
 # immunosuppressed, ssc + scc_pl 
 
@@ -69,68 +236,364 @@ immunosuppressed_scc_sccpl_otu_fastspar_cor.m <- as.matrix(read.table("External_
                                                   sep ="\t",header = T,row.names = 1,comment.char = "", check.names = F))
 immunosuppressed_scc_sccpl_otu_fastspar_pval.m <- as.matrix(read.table("External_results/fastspar/all_results/immunosuppressed_SCC_SCCPL_otu_pvalues.tsv",
                                                    sep ="\t",header = T,row.names = 1,comment.char = "", check.names = F))
+# -------------------
+immunocompetent_scc_sccpl_otu_fastspar_cor.m <- as.matrix(read.table("External_results/fastspar/all_results/immunocompetent_SCC_SCCPL_otu_correlation.tsv",
+                                                                      sep ="\t",header = T,row.names = 1,comment.char = "", check.names = F))
+immunocompetent_scc_sccpl_otu_fastspar_pval.m <- as.matrix(read.table("External_results/fastspar/all_results/immunocompetent_SCC_SCCPL_otu_pvalues.tsv",
+                                                                       sep ="\t",header = T,row.names = 1,comment.char = "", check.names = F))
 
+# -------------------
+immunosuppressed_scc_sccpl_genus_fastspar_cor.m <- as.matrix(read.table("External_results/fastspar/all_results/immunosuppressed_SCC_SCCPL_genus_correlation.tsv",
+                                                                     sep ="\t",header = T,row.names = 1,comment.char = "", check.names = F))
+
+immunosuppressed_scc_sccpl_genus_fastspar_pval.m <- as.matrix(read.table("External_results/fastspar/all_results/immunosuppressed_SCC_SCCPL_genus_pvalues.tsv",
+                                                                      sep ="\t",header = T,row.names = 1,comment.char = "", check.names = F))
+
+# -------------------
+
+immunocompetent_scc_sccpl_genus_fastspar_cor.m <- as.matrix(read.table("External_results/fastspar/all_results/immunocompetent_SCC_SCCPL_genus_correlation.tsv",
+                                                                       sep ="\t",header = T,row.names = 1,comment.char = "", check.names = F))
+
+immunocompetent_scc_sccpl_genus_fastspar_pval.m <- as.matrix(read.table("External_results/fastspar/all_results/immunocompetent_SCC_SCCPL_genus_pvalues.tsv",
+                                                                        sep ="\t",header = T,row.names = 1,comment.char = "", check.names = F))
+
+
+# ------------------------------------------------
 # Load mixomics results
 mixomics_immunosuppressed_scc_sccpl_otu_Lesion_type_refined_comp1.df <- read.csv("Result_tables/mixomics/immunosuppressed_scc_sccpl_otu_Lesion_type_refined__comp_1.loadings.csv", header = T)
 mixomics_immunosuppressed_scc_sccpl_otu_Lesion_type_refined_comp2.df <- read.csv("Result_tables/mixomics/immunosuppressed_scc_sccpl_otu_Lesion_type_refined__comp_2.loadings.csv", header = T)
 mixomics_immunosuppressed_scc_sccpl_otu_Lesion_type_refined.df <- rbind(mixomics_immunosuppressed_scc_sccpl_otu_Lesion_type_refined_comp1.df,
                                                                         mixomics_immunosuppressed_scc_sccpl_otu_Lesion_type_refined_comp2.df)
-rownames(mixomics_immunosuppressed_scc_sccpl_otu_Lesion_type_refined.df) <- mixomics_immunosuppressed_scc_sccpl_otu_Lesion_type_refined.df[,1]
+# -------------------
+mixomics_immunocompetent_scc_sccpl_otu_Lesion_type_refined_comp1.df <- read.csv("Result_tables/mixomics/immunocompetent_scc_sccpl_otu_Lesion_type_refined__comp_1.loadings.csv", header = T)
+mixomics_immunocompetent_scc_sccpl_otu_Lesion_type_refined_comp2.df <- read.csv("Result_tables/mixomics/immunocompetent_scc_sccpl_otu_Lesion_type_refined__comp_2.loadings.csv", header = T)
+mixomics_immunocompetent_scc_sccpl_otu_Lesion_type_refined.df <- rbind(mixomics_immunocompetent_scc_sccpl_otu_Lesion_type_refined_comp1.df,
+                                                                       mixomics_immunocompetent_scc_sccpl_otu_Lesion_type_refined_comp2.df)
 
-# mixomics_immunosuppressed_genus_Lesion_type_refined.df$taxonomy_genus <- NULL
-# names(mixomics_immunosuppressed_genus_Lesion_type_refined.df)[1] <- "taxonomy_genus"
-# mixomics_immunosuppressed_genus_Lesion_type_refined.df <- mixomics_immunosuppressed_genus_Lesion_type_refined.df[,c("taxonomy_genus", "GroupContrib", "importance", "abs_importance")]
-feature_relabeller_function <- function(my_labels){
-  unlist(lapply(my_labels, 
-                function(x) {
-                  paste0(x, ":\n", species_relabeller_function(as.character(otu_taxonomy_map.df[x,]$taxonomy_species)))
-                  # species_relabeller_function(as.character(otu_taxonomy_map.df[x,]$taxonomy_species))
-                }))
-}
+# -------------------
+mixomics_immunosuppressed_scc_sccpl_genus_Lesion_type_refined_comp1.df <- read.csv("Result_tables/mixomics/immunosuppressed_scc_sccpl_genus_Lesion_type_refined__comp_1.loadings.csv", header = T)
+mixomics_immunosuppressed_scc_sccpl_genus_Lesion_type_refined_comp2.df <- read.csv("Result_tables/mixomics/immunosuppressed_scc_sccpl_genus_Lesion_type_refined__comp_2.loadings.csv", header = T)
+mixomics_immunosuppressed_scc_sccpl_genus_Lesion_type_refined.df <- rbind(mixomics_immunosuppressed_scc_sccpl_genus_Lesion_type_refined_comp1.df,
+                                                                        mixomics_immunosuppressed_scc_sccpl_genus_Lesion_type_refined_comp2.df)
+# -------------------
+mixomics_immunocompetent_scc_sccpl_genus_Lesion_type_refined_comp1.df <- read.csv("Result_tables/mixomics/immunocompetent_scc_sccpl_genus_Lesion_type_refined__comp_1.loadings.csv", header = T)
+mixomics_immunocompetent_scc_sccpl_genus_Lesion_type_refined_comp2.df <- read.csv("Result_tables/mixomics/immunocompetent_scc_sccpl_genus_Lesion_type_refined__comp_2.loadings.csv", header = T)
+mixomics_immunocompetent_scc_sccpl_genus_Lesion_type_refined.df <- rbind(mixomics_immunocompetent_scc_sccpl_genus_Lesion_type_refined_comp1.df,
+                                                                         mixomics_immunocompetent_scc_sccpl_genus_Lesion_type_refined_comp2.df)
 
-
-cor_filtered.m <- immunosuppressed_scc_sccpl_otu_fastspar_cor.m[mixomics_immunosuppressed_scc_sccpl_otu_Lesion_type_refined.df$OTU.ID,
-                                                               mixomics_immunosuppressed_scc_sccpl_otu_Lesion_type_refined.df$OTU.ID]
-pval_filtered.m <- immunosuppressed_scc_sccpl_otu_fastspar_pval.m[mixomics_immunosuppressed_scc_sccpl_otu_Lesion_type_refined.df$OTU.ID,
-                                                                  mixomics_immunosuppressed_scc_sccpl_otu_Lesion_type_refined.df$OTU.ID]
-
-# FIXME 
-# Create graphs with node shapes matching taxa.
-# Size of node should be importance values from splsDA.
-# Node colour should be associated lesion (SCC / SCC_PL)
-# line thickness should be p-values?
-# Remove entries not associated with anything according to splsda
-# FIXME handle nodes with the same name. Need unique, though option to rename in plot!
-
-
-generate_correlation_network2 <- function(myedges.df,
-                                          mynodes.df, 
-                                          p_value_threshold = 0.05, cor_threshold = 0.5){
+# ------------------------------------------------------------------------------------------------------------
+generate_lesion_network_dataframes <- function(mixomics_results,
+                                                       correlations,
+                                                       pvalues,
+                                                       cor_filter = 0.1,
+                                                       pvalue_filter = 0.05){
+  edges.df <- melt(correlations)
+  temp <- melt(pvalues)
+  edges.df <- cbind(edges.df, temp$value)
+  names(edges.df) <- c("from", "to", "Correlation", "Pvalue")
+  edges.df$Pvalue_logged <- -log10(edges.df$Pvalue)
+  edges.df <- edges.df[abs(edges.df$Correlation) >= cor_filter,]
+  edges.df <- edges.df[edges.df$Pvalue <= pvalue_filter,]
+  edges.df <- edges.df[edges.df$from %in% mixomics_results$OTU.ID,]
+  edges.df <- edges.df[edges.df$to %in% mixomics_results$OTU.ID,]
   
+  edges.df$ordered_label <- apply(edges.df, 1, function(x) {paste0(sort(c(as.character(x[1]), as.character(x[2]))),collapse = ":")})
+  edges.df <- edges.df[!duplicated(edges.df$ordered_label),]
   
+  internal_mixomics_results <- 
+    mixomics_results %>% 
+    dplyr::group_by(OTU.ID) %>%
+    dplyr::arrange(dplyr::desc(abs_importance)) %>%
+    dplyr::top_n(1, abs_importance) %>% as.data.frame()
+  rownames(internal_mixomics_results) <- internal_mixomics_results$OTU.ID
+  
+  nodes.v <- unique(c(as.character(edges.df$from), as.character(edges.df$to)))
+  nodes.df <- data.frame(row.names = nodes.v)
+  nodes.df[,'name'] <- nodes.v
+  nodes.df[,'Importance'] <- abs(internal_mixomics_results[nodes.v,'importance'])
+  nodes.df[,"Association"] <- as.character(internal_mixomics_results[nodes.v,"GroupContrib"])
+  nodes.df[,'Association_colour'] <- unlist(lapply(as.character(nodes.df$Association), 
+                                                   function(x) as.character(metadata.df[metadata.df$Lesion_type_refined == x,]$Lesion_type_refined_colour[1])))
+  
+  nodes.df$Association <- factor(nodes.df$Association, levels = c("C", "C_P", "AK", "SCC_PL", "SCC")[c("C", "C_P", "AK", "SCC_PL", "SCC") %in% nodes.df$Association])
+  
+  return(list(nodes.df = nodes.df, edges.df = edges.df))
 }
+# ------------------------------------------------
 
-# Create edge dataframe from correlation matrix
-edges.df <- melt(cor_filtered.m, value.name = "Correlation",varnames = c("from", "to"))
+network_data <- generate_lesion_network_dataframes(mixomics_results = mixomics_immunosuppressed_scc_sccpl_genus_Lesion_type_refined.df,
+                                                   correlations = immunosuppressed_scc_sccpl_genus_fastspar_cor.m,
+                                                   pvalues = immunosuppressed_scc_sccpl_genus_fastspar_pval.m,
+                                                   cor_filter = 0.1,
+                                                   pvalue_filter = 0.05)
+network_data$nodes.df$label <- genus_relabeller_function(network_data$nodes.df$name)
+set.seed(1234)
+myplot <- generate_correlation_network2(
+  myedges.df = network_data$edges.df,
+  mynodes.df = network_data$nodes.df,
+  variable_colours_available = T,
+  node_label_column = "label",
+  node_shape_column = "Association",
+  node_size_column = "Importance",
+  node_colour_column = "Association",
+  edge_colour_column = "Correlation",
+  edge_width_column = "Pvalue_logged",
+  label_size = 3,
+  filename = "Result_figures/correlation_analysis/networks/immunosuppressed_scc_sccpl_genus_mixomics_filtered_correlation_graph.pdf",
+  file_type = "pdf",
+  plot_height = 10,
+  plot_width = 10)
 
-# Add p-values
-edges.df$P_value <- melt(pval_filtered.m)$value
+# ------------------------------------------------
+network_data <- generate_lesion_network_dataframes(mixomics_results = mixomics_immunosuppressed_scc_sccpl_otu_Lesion_type_refined.df,
+                                                   correlations = immunosuppressed_scc_sccpl_otu_fastspar_cor.m,
+                                                   pvalues = immunosuppressed_scc_sccpl_otu_fastspar_pval.m,
+                                                   cor_filter = 0.1,
+                                                   pvalue_filter = 0.05)
 
-# Filter edges entries by the Correlation / p-value
-edges.df <- edges.df[abs(edges.df$Correlation) >= 0.0,]
-edges.df <- edges.df[edges.df$P_value <= 0.1,]
+network_data$nodes.df$label <- feature_relabeller_function(network_data$nodes.df$name,include_feature_ID = F)
+# unlist(lapply(network_data$nodes.df$name, function(x) as.character(otu_taxonomy_map.df[otu_taxonomy_map.df$OTU.ID == x,"taxonomy_species"])))
 
-# Create node dataframe from entries in edges
-nodes.v <- unique(c(as.character(edges.df[,'from']), as.character(edges.df[,'to'])))
+set.seed(1234)
+myplot <- generate_correlation_network2(
+  myedges.df = network_data$edges.df,
+  mynodes.df = network_data$nodes.df,
+  variable_colours_available = T,
+  node_label_column = "label",
+  node_shape_column = "Association",
+  node_size_column = "Importance",
+  node_colour_column = "Association",
+  edge_colour_column = "Correlation",
+  edge_width_column = "Pvalue_logged",
+  filename = "Result_figures/correlation_analysis/networks/immunosuppressed_scc_sccpl_otu_mixomics_filtered_correlation_graph.pdf",
+  file_type = "pdf",
+  label_size = 3,
+  plot_height = 10,
+  plot_width = 10)
+
+# ------------------------------------------------
+
+network_data <- generate_lesion_network_dataframes(mixomics_results = mixomics_immunocompetent_scc_sccpl_genus_Lesion_type_refined.df,
+                                                   correlations = immunocompetent_scc_sccpl_genus_fastspar_cor.m,
+                                                   pvalues = immunocompetent_scc_sccpl_genus_fastspar_pval.m,
+                                                   cor_filter = 0.1,
+                                                   pvalue_filter = 0.01)
+
+network_data$nodes.df$label <- genus_relabeller_function(network_data$nodes.df$name)
+
+set.seed(1234)
+myplot <- generate_correlation_network2(
+  myedges.df = network_data$edges.df,
+  mynodes.df = network_data$nodes.df,
+  variable_colours_available = T,
+  node_label_column = "label",
+  node_shape_column = "Association",
+  node_size_column = "Importance",
+  node_colour_column = "Association",
+  edge_colour_column = "Correlation",
+  edge_width_column = "Pvalue_logged",
+  filename = "Result_figures/correlation_analysis/networks/immunocompetent_scc_sccpl_genus_mixomics_filtered_correlation_graph.pdf",
+  file_type = "pdf",
+  network_layout = "stress",
+  label_size = 3,
+  plot_height = 15,
+  plot_width = 15)
+
+# ------------------------------------------------
+network_data <- generate_lesion_network_dataframes(mixomics_results = mixomics_immunocompetent_scc_sccpl_otu_Lesion_type_refined.df,
+                                                   correlations = immunocompetent_scc_sccpl_otu_fastspar_cor.m,
+                                                   pvalues = immunocompetent_scc_sccpl_otu_fastspar_pval.m,
+                                                   cor_filter = 0.1,
+                                                   pvalue_filter = 0.05)
+
+network_data$nodes.df$label <- feature_relabeller_function(network_data$nodes.df$name,include_feature_ID = F)
+# unlist(lapply(network_data$nodes.df$name, function(x) as.character(otu_taxonomy_map.df[otu_taxonomy_map.df$OTU.ID == x,"taxonomy_species"])))
+
+set.seed(1234)
+myplot <- generate_correlation_network2(
+  myedges.df = network_data$edges.df,
+  mynodes.df = network_data$nodes.df,
+  variable_colours_available = T,
+  node_label_column = "label",
+  node_shape_column = "Association",
+  node_size_column = "Importance",
+  node_colour_column = "Association",
+  edge_colour_column = "Correlation",
+  edge_width_column = "Pvalue_logged",
+  filename = "Result_figures/correlation_analysis/networks/immunocompetent_scc_sccpl_otu_mixomics_filtered_correlation_graph.pdf",
+  file_type = "pdf",
+  label_size = 3,
+  plot_height = 10,
+  plot_width = 10)
+
+# ------------------------------------------------
+
+
+
+
+
+
+edges.df <- melt(immunosuppressed_scc_sccpl_genus_fastspar_cor.m)
+temp <- melt(immunosuppressed_scc_sccpl_genus_fastspar_pval.m)
+edges.df <- cbind(edges.df, temp$value)
+names(edges.df) <- c("from", "to", "Correlation", "Pvalue")
+edges.df$Pvalue_logged <- -log10(edges.df$Pvalue)
+edges.df <- edges.df[abs(edges.df$Correlation) >= 0.1,]
+edges.df <- edges.df[edges.df$Pvalue <= 0.05,]
+edges.df <- edges.df[edges.df$from %in% mixomics_immunosuppressed_scc_sccpl_genus_Lesion_type_refined.df$OTU.ID,]
+edges.df <- edges.df[edges.df$to %in% mixomics_immunosuppressed_scc_sccpl_genus_Lesion_type_refined.df$OTU.ID,]
+
+edges.df$ordered_label <- apply(edges.df, 1, function(x) {paste0(sort(c(as.character(x[1]), as.character(x[2]))),collapse = ":")})
+edges.df <- edges.df[!duplicated(edges.df$ordered_label),]
+
+mixomics_immunosuppressed_scc_sccpl_genus_Lesion_type_refined.df %>% group_by(OTU.ID)
+internal_mixomics_results <- 
+  mixomics_immunosuppressed_scc_sccpl_genus_Lesion_type_refined.df %>% 
+  dplyr::group_by(OTU.ID) %>%
+  dplyr::arrange(dplyr::desc(abs_importance)) %>%
+  dplyr::top_n(1, abs_importance) %>% as.data.frame()
+rownames(internal_mixomics_results) <- internal_mixomics_results$OTU.ID
+
+nodes.v <- unique(c(as.character(edges.df$from), as.character(edges.df$to)))
 nodes.df <- data.frame(row.names = nodes.v)
 nodes.df[,'name'] <- nodes.v
-nodes.df[,'Association'] <- mixomics_immunosuppressed_scc_sccpl_otu_Lesion_type_refined.df[nodes.v,'GroupContrib']
-nodes.df[,'Importance'] <- abs(mixomics_immunosuppressed_scc_sccpl_otu_Lesion_type_refined.df[nodes.v,'importance'])
-nodes.df[,'taxonomy_genus'] <- unlist(lapply(nodes.df$name, function(x) as.character(otu_taxonomy_map.df[otu_taxonomy_map.df$OTU.ID == x,]$taxonomy_genus)))
-nodes.df[,'Family'] <- unlist(lapply(nodes.df$name, function(x) as.character(otu_taxonomy_map.df[otu_taxonomy_map.df$OTU.ID == x,]$Family)))
-nodes.df[,'Genus'] <- unlist(lapply(nodes.df$name, function(x) as.character(otu_taxonomy_map.df[otu_taxonomy_map.df$OTU.ID == x,]$Genus)))
-nodes.df[,'Species'] <- unlist(lapply(nodes.df$name, function(x) as.character(otu_taxonomy_map.df[otu_taxonomy_map.df$OTU.ID == x,]$Species)))
-nodes.df[,'Taxa_label'] <- with(nodes.df, paste0(Family,";", Genus, ";", Species))
+nodes.df[,'Importance'] <- abs(internal_mixomics_results[nodes.v,'importance'])
+nodes.df[,"Association"] <- as.character(internal_mixomics_results[nodes.v,"GroupContrib"])
+nodes.df[,'Association_colour'] <- unlist(lapply(as.character(nodes.df$Association), 
+                                                 function(x) as.character(metadata.df[metadata.df$Lesion_type_refined == x,]$Lesion_type_refined_colour[1])))
+
+
+mygraph <- tbl_graph(nodes = nodes.df, edges = edges.df,directed = F)
+mygraph <- mygraph %>%
+  # Remove loops
+  activate(edges) %>%
+  filter(!edge_is_loop()) %>%
+  # Remove isolated nodes
+  activate(nodes) %>%
+  filter(!node_is_isolated())
+
+
+
+correlation_graph_plot <- ggraph(mygraph, layout = "fr") +
+  geom_edge_fan(aes(colour = Correlation, width = Pvalue_logged), alpha=1) +
+  geom_node_point(mapping = aes(fill=Association,
+                                size= Importance, 
+                                # shape = get(node_shape_column), 
+                                colour = Association)) +
+  geom_node_text(aes(label=name), repel = T) +
+  scale_edge_color_gradientn(colors = my_palette(20),
+                             breaks = seq(-1,1,.25),
+                             limits = c(-1,1), 
+                             name = "Correlation",
+                             guide = guide_edge_colourbar(barheight = 8)) +
+  scale_edge_width_continuous(range = c(0.5,2),
+                              name="-log10(Pval)") +
+  scale_size_continuous(range = c(3,10), name = "importance") + 
+  # scale_fill_manual(values = node_colours, name = "Correlation") + 
+  # scale_colour_manual(values = node_colours, name = "Correlation") +
+  # scale_shape_manual(values = node_shapes, name = node_shape_column) +
+  guides(byrow=F, ncol=2, 
+         colour=guide_legend(override.aes=list(size=6))) +
+  theme(legend.position = 'bottom', 
+        legend.box = 'horizontal', 
+        legend.direction = 'vertical',
+        legend.title = element_text(face = "bold"),
+        
+        text=element_text(size=10), 
+        plot.title = element_text(hjust = 0.5)
+  )
+
+correlation_graph_plot
+
+
+
+
+
+
+
+
+
+
+
+myplot <- generate_correlation_network2(
+  myedges.df = network_data$edges.df,
+  mynodes.df = network_data$nodes.df,
+  variable_colours_available = T,
+  node_label_column = "Taxa_label",
+  node_shape_column = "Association",
+  node_size_column = "Importance",
+  node_colour_column = "Association",
+  edge_colour_column = "Correlation",
+  edge_width_column = "P_value_logged",
+  filename = "Result_figures/correlation_analysis/networks/test_correlation_graph2.pdf",
+  file_type = "pdf",
+  plot_height = 18,
+  plot_width = 18)
+
+generate_correlation_network(cor_matrix = immunosuppressed_scc_sccpl_otu_fastspar_cor.m,
+                             p_matrix = immunosuppressed_scc_sccpl_otu_fastspar_pval.m,
+                             p_value_threshold = 0.05,
+                             cor_threshold = 0.5,
+                             label_size = 2,
+                             relabeller_function = feature_relabeller_function)
+network_data <- generate_feature_lesion_network_dataframes(mixomics_results = mixomics_immunosuppressed_scc_sccpl_otu_Lesion_type_refined.df,
+                                           correlations = immunosuppressed_scc_sccpl_otu_fastspar_cor.m,
+                                           pvalues = immunosuppressed_scc_sccpl_otu_fastspar_pval.m,
+                                           cor_filter = 0.1,
+                                           pvalue_filter = 0.05)
+
+# mygraph <- tbl_graph(nodes = network_data$nodes.df, edges = network_data$edges.df,directed = F)
+# ggraph(mygraph, layout = "kk") + geom_edge_fan(aes(colour = get(edge_colour_column), width = get(edge_width_column)), alpha=1) +
+#   geom_node_point(mapping = aes(fill=get(node_colour_column),
+#                                 size= get(node_size_column), 
+#                                 shape = get(node_shape_column), 
+#                                 colour = get(node_colour_column))) 
+
+myplot <- generate_correlation_network2(
+  myedges.df = network_data$edges.df,
+  mynodes.df = network_data$nodes.df,
+  variable_colours_available = T,
+  node_label_column = "Taxa_label2",
+  node_shape_column = "Association",
+  node_size_column = "Importance",
+  node_colour_column = "Association",
+  edge_colour_column = "Correlation",
+  edge_width_column = "P_value",
+  filename = "Result_figures/correlation_analysis/networks/test_correlation_graph.pdf",
+  file_type = "pdf",
+  plot_height = 8,
+  plot_width = 8)
+myplot
+
+
+network_data <- generate_feature_lesion_network_dataframes(mixomics_results = mixomics_immunocompetent_scc_sccpl_otu_Lesion_type_refined.df,
+                                                           correlations = immunocompetent_scc_sccpl_otu_fastspar_cor.m,
+                                                           pvalues = immunocompetent_scc_sccpl_otu_fastspar_pval.m,
+                                                           cor_filter = 0.1,
+                                                           pvalue_filter = 0.05)
+# mixomics_immunocompetent_scc_sccpl_otu_Lesion_type_refined.df
+# network_data$edges.df
+# mygraph <- tbl_graph(nodes = network_data$nodes.df, edges = network_data$edges.df,directed = F)
+# ggraph(mygraph, layout = "kk") + geom_edge_fan(aes(colour = Correlation, width = P_value), alpha=1) +
+#   geom_node_point(aes(colour = Association, size = Importance))
+network_data$nodes.df
+myplot <- generate_correlation_network2(
+  myedges.df = network_data$edges.df,
+  mynodes.df = network_data$nodes.df,
+  variable_colours_available = T,
+  node_label_column = "Taxa_label2",
+  node_shape_column = "Association",
+  node_size_column = "Importance",
+  node_colour_column = "Association",
+  edge_colour_column = "Correlation",
+  edge_width_column = "P_value",
+  filename = "Result_figures/correlation_analysis/networks/test_correlation_graph2.pdf",
+  file_type = "pdf",
+  plot_height = 8,
+  plot_width = 8)
+myplot
+
+
 
 # Filter nodes by column values
 nodes.df <- nodes.df[complete.cases(nodes.df),]
@@ -156,13 +619,26 @@ mygraph <- mygraph %>%
   activate(nodes) %>%
   filter(!node_is_isolated())
 
+(nodes.df$Association_colour)
+
+temp <- unique(nodes.df[,c("Association", "Association_colour")])
+
+node_values <- sort(factor(as.character(unique(nodes.df$Association)), levels = sort(unique(as.character(nodes.df$Association)))))
+node_colours <- setNames(unique(as.character(nodes.df$Association_colour)), unique(as.character(nodes.df$Association)))
+node_shapes <- setNames(rep(c(25,24,23,22,21),length(unique(nodes.df$Genus)))[1:length(unique(nodes.df$Genus))],unique(nodes.df$Genus))
+my_palette <- colorRampPalette(c("#17468a","#ffdd47","#99113a"))
 ggraph(mygraph, layout = "kk") +
-  geom_edge_fan(aes(colour = Correlation, width = -log10(P_value)), alpha=0.7) +
-  geom_node_point(mapping = aes(colour=Association, size=Importance, shape = Genus)) +
+  geom_edge_fan(aes(colour = Correlation, width = -log10(P_value)), alpha=1) +
+  geom_node_point(mapping = aes(fill=Association, size=Importance, shape = Genus, colour = Association)) +
   geom_node_text(aes(label=paste0(name,"\n", Genus)), repel = T) +
-  scale_edge_color_continuous(name="Correlation", low = "blue", high = "green", limits = c(-1,1)) +
+  scale_edge_color_gradientn(colors = my_palette(20),
+                             breaks = seq(-1,1,.2),
+                             limits = c(-1,1))+
   scale_size_continuous(range = c(3,10))+ 
   scale_edge_width_continuous(name="-log10(Pval)", range = c(0.5,2)) +
+  scale_fill_manual(values = node_colours) + 
+  scale_colour_manual(values = node_colours) +
+  scale_shape_manual(values = node_shapes) +
   guides(byrow=F, ncol=2, 
          colour=guide_legend(override.aes=list(size=8)), 
          shape=guide_legend(override.aes=list(size=8))) +
@@ -171,54 +647,13 @@ ggraph(mygraph, layout = "kk") +
         plot.title = element_text(hjust = 0.5)
   )
  
-geom_edge_fan(aes(colour = Correlation, width=abs(Correlation)), show.legend = T, alpha = 1,
-              angle_calc = "along", label_colour = "black",
-              label_dodge=unit(1,"mm"),label_push=unit(-1,"mm"))
 
 
-head(graph.df)
-head(flare$edges)
-head(flare$vertices)
-head(highschool)
-
-temp <- graph_from_data_frame(graph.df,vertices = nodes.df,directed = F)
-temp <- as_tbl_graph(graph.df)
-temp
-ggraph(temp, layout = 'fr') +
-  geom_edge_link(aes(colour = Correlation), alpha=0.7) +
-  geom_node_point(aes(colour=Association, size=Importance))
-f
 
 
-library(igraph)
-temp <- graph_from_data_frame(graph.df,vertices = nodes.df)
-ggraph(temp) + 
-  geom_edge_link(aes(colour = Correlation),  show.legend = T, alpha = 1,
-                 angle_calc = "along", label_colour = "black",
-                 label_dodge=unit(1,"mm"),label_push=unit(-1,"mm")) +
-  geom_node_point()
 
 
-as_tbl_graph(nodes.df, edges = graph.df)
-# names(graph.df) <- c("Variable_1", "Variable_2", "Correlation")
-graph.df <- as_tbl_graph(graph.df, nodes = nodes.df) %>%
-  # Remove loops
-  activate(edges) %>%
-  filter(!edge_is_loop()) %>%
-  # Remove isolated nodes
-  activate(nodes) %>%
-  filter(!node_is_isolated())
-graph.df %>% activate(nodes) %>% as.data.frame()
 
-ggraph(graph.df) + 
-  geom_edge_link(aes(colour = Correlation, shape = Association),  show.legend = T, alpha = 1,
-                 angle_calc = "along", label_colour = "black",
-                 label_dodge=unit(1,"mm"),label_push=unit(-1,"mm")) +
-  geom_node_point()
-
-rownames(mixomics_immunosuppressed_scc_sccpl_otu_Lesion_type_refined.df) <- 
-
-head(graph.df)
 
 
 

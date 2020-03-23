@@ -116,8 +116,8 @@ for (cohort in as.character(unique(metadata.df$Cohort))){
     names(otu_subset_data.df)[1] <- "#OTU ID"
     names(genus_subset_data.df)[1] <- "#OTU ID"
     
-    write.table(x = otu_subset_data.df, file = paste0("Result_tables/fastspar_inputs/per_lesion_type_cohort/", cohort, "_", lesion, "__otu_counts_fastspar.tsv"), sep = "\t", quote = F, row.names = F)
-    write.table(x = genus_subset_data.df, file = paste0("Result_tables/fastspar_inputs/per_lesion_type_cohort/", cohort, "_", lesion, "__genus_counts_fastspar.tsv"), sep = "\t", quote = F, row.names = F)
+    write.table(x = otu_subset_data.df, file = paste0("Result_tables/fastspar_inputs/per_lesion_type_cohort/", cohort, "_", gsub("_","",lesion), "__otu_counts_fastspar.tsv"), sep = "\t", quote = F, row.names = F)
+    write.table(x = genus_subset_data.df, file = paste0("Result_tables/fastspar_inputs/per_lesion_type_cohort/", cohort, "_", gsub("_","",lesion), "__genus_counts_fastspar.tsv"), sep = "\t", quote = F, row.names = F)
   }
 }
 
