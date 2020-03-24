@@ -442,6 +442,7 @@ genus_data_subset.df <- subset(genus_data.df, taxonomy_genus %in% deseq_subset.d
 genus_data_subset.df <- genus_data_subset.df[genus_data_subset.df$Cohort == "immunosuppressed",]
 
 source("Code/helper_functions.R")
+# g__Staphylococcus
 myplot <- make_publication_plot(taxa = "g__Staphylococcus",
                                 significances_IS.df = deseq_subset.df,
                                 significances_IC.df = deseq_subset2.df,
@@ -455,7 +456,7 @@ myplot <- make_publication_plot(taxa = "g__Staphylococcus",
 myplot
 ggsave(plot = myplot, filename = "Result_figures/DESeq_plots/g__Staphylococcus_boxplot.pdf",width = 15,height = 12,units = "cm")
 
-
+# g__Pseudomonas
 myplot <- make_publication_plot(taxa = "g__Pseudomonas",
                                 significances_IS.df = deseq_subset.df,
                                 significances_IC.df = deseq_subset2.df,
@@ -467,6 +468,87 @@ myplot <- make_publication_plot(taxa = "g__Pseudomonas",
                                 ymin_break = 0, ymax_break = 40,ybreak = 5,ymax_limit = 40, sig_line_starting_scale = 1.7,sig_line_scaling_percentage = 0.2)
 myplot
 ggsave(plot = myplot, filename = "Result_figures/DESeq_plots/g__Pseudomonas_boxplot.pdf",width = 15,height = 12,units = "cm")
+
+# g__Paracoccus
+myplot <- make_publication_plot(taxa = "g__Paracoccus",
+                                significances_IS.df = deseq_subset.df,
+                                significances_IC.df = deseq_subset2.df,
+                                taxonomy_level = "taxonomy_genus",
+                                sample_data.df = genus_data.df,
+                                relabeller_function = genus_relabeller_function,
+                                p_value_column = "padj",
+                                value_column = "Relative_abundance",
+                                ymin_break = 0, ymax_break = 60,ybreak = 5,ymax_limit = 60, sig_line_starting_scale = 1.7,sig_line_scaling_percentage = 0.2)
+
+myplot
+ggsave(plot = myplot, filename = "Result_figures/DESeq_plots/g__Paracoccus_boxplot.pdf",width = 15,height = 12,units = "cm")
+
+# g__Corynebacterium
+myplot <- make_publication_plot(taxa = "g__Corynebacterium",
+                                significances_IS.df = deseq_subset.df,
+                                significances_IC.df = deseq_subset2.df,
+                                taxonomy_level = "taxonomy_genus",
+                                sample_data.df = genus_data.df,
+                                relabeller_function = genus_relabeller_function,
+                                p_value_column = "padj",
+                                value_column = "Relative_abundance",
+                                ymin_break = 0, ymax_break = 60,ybreak = 5,ymax_limit = 65, sig_line_starting_scale = 1.1,sig_line_scaling_percentage = 0.2)
+# generate_significance_boxplots(sig_vjust = )
+myplot
+ggsave(plot = myplot, filename = "Result_figures/DESeq_plots/g__Corynebacterium_boxplot.pdf",width = 15,height = 12,units = "cm")
+
+
+# g__Brevundimonas
+myplot <- make_publication_plot(taxa = "g__Brevundimonas",
+                                significances_IS.df = deseq_subset.df,
+                                significances_IC.df = deseq_subset2.df,
+                                taxonomy_level = "taxonomy_genus",
+                                sample_data.df = genus_data.df,
+                                relabeller_function = genus_relabeller_function,
+                                p_value_column = "padj",
+                                value_column = "Relative_abundance",
+                                ymin_break = 0, ymax_break = 60,ybreak = 2,ymax_limit = 10, sig_line_starting_scale = .6,sig_line_scaling_percentage = 0.2)
+# generate_significance_boxplots(sig_vjust = )
+myplot
+ggsave(plot = myplot, filename = "Result_figures/DESeq_plots/g__Brevundimonas_boxplot.pdf",width = 15,height = 12,units = "cm")
+
+# g__Xanthobacter
+myplot <- make_publication_plot(taxa = "g__Xanthobacter",
+                                significances_IS.df = deseq_subset.df,
+                                significances_IC.df = deseq_subset2.df,
+                                taxonomy_level = "taxonomy_genus",
+                                sample_data.df = genus_data.df,
+                                relabeller_function = genus_relabeller_function,
+                                p_value_column = "padj",
+                                value_column = "Relative_abundance",
+                                ymin_break = 0, ymax_break = 60,ybreak = 2,ymax_limit = 8, sig_line_starting_scale = .6,sig_line_scaling_percentage = 0.1)
+# generate_significance_boxplots(sig_vjust = )
+myplot
+ggsave(plot = myplot, filename = "Result_figures/DESeq_plots/g__Xanthobacter_boxplot.pdf",width = 15,height = 12,units = "cm")
+
+# g__Pseudomonas
+myplot <- make_publication_plot(taxa = "g__Pseudomonas",
+                                significances_IS.df = deseq_subset.df,
+                                significances_IC.df = deseq_subset2.df,
+                                taxonomy_level = "taxonomy_genus",
+                                sample_data.df = genus_data.df,
+                                relabeller_function = genus_relabeller_function,
+                                p_value_column = "padj",
+                                value_column = "Relative_abundance",
+                                ymin_break = 0, ymax_break = 60,ybreak = 5,ymax_limit = 45, sig_line_starting_scale = 1.7,sig_line_scaling_percentage = 0.1)
+myplot
+ggsave(plot = myplot, filename = "Result_figures/DESeq_plots/g__Pseudomonas_boxplot.pdf",width = 15,height = 12,units = "cm")
+
+make_publication_plot(taxa = "g__Pseudomonas",
+                      significances_IS.df = deseq_subset.df,
+                      significances_IC.df = deseq_subset2.df,
+                      taxonomy_level = "taxonomy_genus",
+                      sample_data.df = genus_data.df,
+                      relabeller_function = genus_relabeller_function,
+                      p_value_column = "padj",
+                      value_column = "Read_count_logged",
+                      ymin_break = 0, ymax_break = 60,ybreak = 2,ymax_limit = 10, sig_line_starting_scale = 1.7,sig_line_scaling_percentage = 0.1)
+
 # ------------------------------------------------------------------------------------------------
 # ------------------------------------------------------------------------------------------------
 # -------- Heatmap showing differentially abundant taxa (deseq)
