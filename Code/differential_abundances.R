@@ -318,6 +318,8 @@ genus_data.df <- subset(genus_data.df, Cohort == "immunosuppressed" | Snapshot_s
 otu_data.df$Lesion_type_refined <- factor(otu_data.df$Lesion_type_refined, levels = c("C", "C_P", "AK", "SCC_PL", "SCC"))
 genus_data.df$Lesion_type_refined <- factor(genus_data.df$Lesion_type_refined, levels = c("C", "C_P", "AK", "SCC_PL", "SCC"))
 
+genus_data.df$Cohort <- factor(genus_data.df$Cohort, levels = c("immunosuppressed", "immunocompetent"))
+
 # Load DESeq results
 otu_within_cohort_deseq_results <- read.csv("Result_tables/DESeq_results/OTU_within_cohort_deseq.csv", header =T)
 genus_within_cohort_deseq_results <- read.csv("Result_tables/DESeq_results/Genus_within_cohort_deseq.csv", header =T)
@@ -438,9 +440,9 @@ deseq_subset.df <- genus_within_cohort_deseq_results[genus_within_cohort_deseq_r
 deseq_subset2.df <- genus_within_cohort_deseq_results[genus_within_cohort_deseq_results$Cohort == "immunocompetent",]
 
 # Subset data main data
-genus_data_subset.df <- subset(genus_data.df, taxonomy_genus %in% deseq_subset.df$Taxonomy)
-genus_data_subset.df <- genus_data_subset.df[genus_data_subset.df$Cohort == "immunosuppressed",]
-
+# genus_data_subset.df <- subset(genus_data.df, taxonomy_genus %in% deseq_subset.df$Taxonomy)
+# genus_data_subset.df <- genus_data_subset.df[genus_data_subset.df$Cohort == "immunosuppressed",]
+# ---------------------------------------------
 source("Code/helper_functions.R")
 # g__Staphylococcus
 myplot <- make_publication_plot(taxa = "g__Staphylococcus",
@@ -455,7 +457,7 @@ myplot <- make_publication_plot(taxa = "g__Staphylococcus",
                                 # ymin_break = 0, ymax_break = 1000,ybreak = 2,ymax_limit = 8,sig_vjust = 0.5)
 myplot
 ggsave(plot = myplot, filename = "Result_figures/DESeq_plots/g__Staphylococcus_boxplot.pdf",width = 15,height = 12,units = "cm")
-
+# ---------------------------------------------
 # g__Pseudomonas
 myplot <- make_publication_plot(taxa = "g__Pseudomonas",
                                 significances_IS.df = deseq_subset.df,
@@ -468,7 +470,7 @@ myplot <- make_publication_plot(taxa = "g__Pseudomonas",
                                 ymin_break = 0, ymax_break = 40,ybreak = 5,ymax_limit = 40, sig_line_starting_scale = 1.7,sig_line_scaling_percentage = 0.2)
 myplot
 ggsave(plot = myplot, filename = "Result_figures/DESeq_plots/g__Pseudomonas_boxplot.pdf",width = 15,height = 12,units = "cm")
-
+# ---------------------------------------------
 # g__Paracoccus
 myplot <- make_publication_plot(taxa = "g__Paracoccus",
                                 significances_IS.df = deseq_subset.df,
@@ -482,7 +484,7 @@ myplot <- make_publication_plot(taxa = "g__Paracoccus",
 
 myplot
 ggsave(plot = myplot, filename = "Result_figures/DESeq_plots/g__Paracoccus_boxplot.pdf",width = 15,height = 12,units = "cm")
-
+# ---------------------------------------------
 # g__Corynebacterium
 myplot <- make_publication_plot(taxa = "g__Corynebacterium",
                                 significances_IS.df = deseq_subset.df,
@@ -497,7 +499,7 @@ myplot <- make_publication_plot(taxa = "g__Corynebacterium",
 myplot
 ggsave(plot = myplot, filename = "Result_figures/DESeq_plots/g__Corynebacterium_boxplot.pdf",width = 15,height = 12,units = "cm")
 
-
+# ---------------------------------------------
 # g__Brevundimonas
 myplot <- make_publication_plot(taxa = "g__Brevundimonas",
                                 significances_IS.df = deseq_subset.df,
@@ -511,7 +513,7 @@ myplot <- make_publication_plot(taxa = "g__Brevundimonas",
 # generate_significance_boxplots(sig_vjust = )
 myplot
 ggsave(plot = myplot, filename = "Result_figures/DESeq_plots/g__Brevundimonas_boxplot.pdf",width = 15,height = 12,units = "cm")
-
+# ---------------------------------------------
 # g__Xanthobacter
 myplot <- make_publication_plot(taxa = "g__Xanthobacter",
                                 significances_IS.df = deseq_subset.df,
@@ -525,7 +527,7 @@ myplot <- make_publication_plot(taxa = "g__Xanthobacter",
 # generate_significance_boxplots(sig_vjust = )
 myplot
 ggsave(plot = myplot, filename = "Result_figures/DESeq_plots/g__Xanthobacter_boxplot.pdf",width = 15,height = 12,units = "cm")
-
+# ---------------------------------------------
 # g__Pseudomonas
 myplot <- make_publication_plot(taxa = "g__Pseudomonas",
                                 significances_IS.df = deseq_subset.df,
@@ -548,6 +550,114 @@ make_publication_plot(taxa = "g__Pseudomonas",
                       p_value_column = "padj",
                       value_column = "Read_count_logged",
                       ymin_break = 0, ymax_break = 60,ybreak = 2,ymax_limit = 10, sig_line_starting_scale = 1.7,sig_line_scaling_percentage = 0.1)
+# ---------------------------------------------
+# g__Cutibacterium  (formerly Propionibacterium)
+myplot <- make_publication_plot(taxa = "g__Cutibacterium",
+                                significances_IS.df = deseq_subset.df,
+                                significances_IC.df = deseq_subset2.df,
+                                taxonomy_level = "taxonomy_genus",
+                                sample_data.df = genus_data.df,
+                                relabeller_function = genus_relabeller_function,
+                                p_value_column = "padj",
+                                value_column = "Relative_abundance",
+                                ymin_break = 0, ymax_break = 100,ybreak = 10,ymax_limit = 110, sig_line_starting_scale = 1.2,sig_line_scaling_percentage = 0.1)
+myplot
+ggsave(plot = myplot, filename = "Result_figures/DESeq_plots/g__Cutibacterium_boxplot.pdf",width = 15,height = 12,units = "cm")
+# ---------------------------------------------
+# g__Corynebacterium
+myplot <- make_publication_plot(taxa = "g__Corynebacterium",
+                                significances_IS.df = deseq_subset.df,
+                                significances_IC.df = deseq_subset2.df,
+                                taxonomy_level = "taxonomy_genus",
+                                sample_data.df = genus_data.df,
+                                relabeller_function = genus_relabeller_function,
+                                p_value_column = "padj",
+                                value_column = "Relative_abundance",
+                                ymin_break = 0, ymax_break = 100,ybreak = 10,ymax_limit = 70, sig_line_starting_scale = 1.2,sig_line_scaling_percentage = 0.1)
+myplot
+ggsave(plot = myplot, filename = "Result_figures/DESeq_plots/g__Cutibacterium_boxplot.pdf",width = 15,height = 12,units = "cm")
+# ---------------------------------------------
+# g__Micrococcus
+myplot <- make_publication_plot(taxa = "g__Micrococcus",
+                                significances_IS.df = deseq_subset.df,
+                                significances_IC.df = deseq_subset2.df,
+                                taxonomy_level = "taxonomy_genus",
+                                sample_data.df = genus_data.df,
+                                relabeller_function = genus_relabeller_function,
+                                p_value_column = "padj",
+                                value_column = "Relative_abundance",
+                                ymin_break = 0, ymax_break = 100,ybreak = 10,ymax_limit = 70, sig_line_starting_scale = 1.2,sig_line_scaling_percentage = 0.1)
+myplot
+ggsave(plot = myplot, filename = "Result_figures/DESeq_plots/g__Micrococcus_boxplot.pdf",width = 15,height = 12,units = "cm")
+# ------------------------------------------------------------------------------------------------
+# ------ Within Lesion
+
+deseq_subset_CP.df <- genus_cohort_within_lesion_deseq_results[genus_cohort_within_lesion_deseq_results$Lesion_type_refined == "C_P",]
+deseq_subset_AK.df <- genus_cohort_within_lesion_deseq_results[genus_cohort_within_lesion_deseq_results$Lesion_type_refined == "AK",]
+deseq_subset_SCCPL.df <- genus_cohort_within_lesion_deseq_results[genus_cohort_within_lesion_deseq_results$Lesion_type_refined == "SCC_PL",]
+deseq_subset_SCC.df <- genus_cohort_within_lesion_deseq_results[genus_cohort_within_lesion_deseq_results$Lesion_type_refined == "SCC",]
+
+# ---------------------------------------------
+# g__Staphylococcus
+temp <- subset(genus_data.df, Lesion_type_refined == "C_P")
+temp <- temp[grepl("g__Staphylococcus", temp$taxonomy_genus),]
+temp$Relative_abundance <- temp$Relative_abundance *100
+temp_sig <- deseq_subset_CP.df[grepl("g__Staph", deseq_subset_CP.df$Taxonomy),]
+myplot <- generate_significance_boxplots(mydata.df = temp,
+                               variable_column = "Cohort",
+                               value_column = "Relative_abundance",
+                               variable_colours_available = T,
+                               significances.df = temp_sig,
+                               p_value_column = "padj",
+                               sig_threshold = 0.05) + 
+  ylab("Relative abundance") + 
+  ggtitle(genus_relabeller_function(as.character(temp$taxonomy_genus[1]))) +
+  theme(plot.title = element_text(face = "bold", size = 5), 
+        axis.text.x = element_text(size = 7)) + 
+  scale_y_continuous(breaks = seq(0,100,10), limits = c(0,100))
+
+ggsave(plot = myplot, filename = "Result_figures/DESeq_plots/g__Staphylococcus_within_lesion_CP_boxplot.pdf",width = 7,height = 10,units = "cm")
+# ---------------------------------------------
+# ---------------------------------------------
+# g__Corynebacterium 
+temp <- subset(genus_data.df, Lesion_type_refined == "C_P")
+temp <- temp[grepl("g__Corynebacterium", temp$taxonomy_genus),]
+temp$Relative_abundance <- temp$Relative_abundance *100
+temp_sig <- deseq_subset_CP.df[grepl("g__Corynebacterium", deseq_subset_CP.df$Taxonomy),]
+myplot <- generate_significance_boxplots(mydata.df = temp,
+                                         variable_column = "Cohort",
+                                         value_column = "Relative_abundance",
+                                         variable_colours_available = T,
+                                         significances.df = temp_sig,
+                                         p_value_column = "padj",
+                                         sig_threshold = 0.05) + 
+  ylab("Relative abundance") + 
+  ggtitle(genus_relabeller_function(as.character(temp$taxonomy_genus[1]))) +
+  theme(plot.title = element_text(face = "bold", size = 5), 
+        axis.text.x = element_text(size = 7)) + 
+  scale_y_continuous(breaks = seq(0,100,10), limits = c(0,100))
+
+ggsave(plot = myplot, filename = "Result_figures/DESeq_plots/g__Corynebacterium_within_lesion_CP_boxplot.pdf",width = 7,height = 10,units = "cm")
+
+
+temp <- subset(genus_data.df, Lesion_type_refined == "AK")
+temp <- temp[grepl("g__Corynebacterium", temp$taxonomy_genus),]
+temp$Relative_abundance <- temp$Relative_abundance *100
+temp_sig <- deseq_subset_AK.df[grepl("g__Corynebacterium", deseq_subset_AK.df$Taxonomy),]
+myplot <- generate_significance_boxplots(mydata.df = temp,
+                                         variable_column = "Cohort",
+                                         value_column = "Relative_abundance",
+                                         variable_colours_available = T,
+                                         significances.df = temp_sig,
+                                         p_value_column = "padj",
+                                         sig_threshold = 0.05) + 
+  ylab("Relative abundance") + 
+  ggtitle(genus_relabeller_function(as.character(temp$taxonomy_genus[1]))) +
+  theme(plot.title = element_text(face = "bold", size = 5), 
+        axis.text.x = element_text(size = 7)) + 
+  scale_y_continuous(breaks = seq(0,100,10), limits = c(0,100))
+
+ggsave(plot = myplot, filename = "Result_figures/DESeq_plots/g__Corynebacterium_within_lesion_AK_boxplot.pdf",width = 7,height = 10,units = "cm")
 
 # ------------------------------------------------------------------------------------------------
 # ------------------------------------------------------------------------------------------------
