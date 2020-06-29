@@ -107,12 +107,14 @@ immunosuppressed_otu.m <- otu.m[,rownames(immunosuppressed_metadata.df)]
 immunosuppressed_genus.m <- genus.m[,rownames(immunosuppressed_metadata.df)]
 immunosuppressed_otu_rel.m <- t(t(immunosuppressed_otu.m)/colSums(immunosuppressed_otu.m))
 immunosuppressed_genus_rel.m <- t(t(immunosuppressed_genus.m)/colSums(immunosuppressed_genus.m))
+immunosuppressed_metadata.df$Lesion_type_refined <- factor(immunosuppressed_metadata.df$Lesion_type_refined, levels = c("C", "C_P", "AK", "SCC_PL", "SCC"))
 
 immunocompetent_metadata.df <- metadata.df[metadata.df$Cohort == "immunocompetent",]
 immunocompetent_otu.m <- otu.m[,rownames(immunocompetent_metadata.df)]
 immunocompetent_genus.m <- genus.m[,rownames(immunocompetent_metadata.df)]
 immunocompetent_otu_rel.m <- t(t(immunocompetent_otu.m)/colSums(immunocompetent_otu.m))
 immunocompetent_genus_rel.m <- t(t(immunocompetent_genus.m)/colSums(immunocompetent_genus.m))
+immunocompetent_metadata.df$Lesion_type_refined <- factor(immunocompetent_metadata.df$Lesion_type_refined, levels = c("C_P", "AK", "SCC_PL", "SCC"))
 
 immunosuppressed_scc_sccpl_metadata.df <- immunosuppressed_metadata.df[which(immunosuppressed_metadata.df$Lesion_type_refined %in% c("SCC_PL", "SCC")),]
 immunocompetent_scc_sccpl_metadata.df <- immunocompetent_metadata.df[which(immunocompetent_metadata.df$Lesion_type_refined %in% c("SCC_PL", "SCC")),]
@@ -123,6 +125,12 @@ immunosuppressed_scc_cp_metadata.df <- immunosuppressed_metadata.df[which(immuno
 immunocompetent_scc_cp_metadata.df <- immunocompetent_metadata.df[which(immunocompetent_metadata.df$Lesion_type_refined %in% c("C_P", "SCC")),]
 immunosuppressed_scc_cp_metadata.df$Lesion_type_refined <- factor(immunosuppressed_scc_cp_metadata.df$Lesion_type_refined, levels = c("C_P", "SCC"))
 immunocompetent_scc_cp_metadata.df$Lesion_type_refined <- factor(immunocompetent_scc_cp_metadata.df$Lesion_type_refined, levels = c("C_P", "SCC"))
+
+
+
+mixomics_lesion_colours.l <- setNames(as.character(unique(immunosuppressed_metadata.df[,c("Lesion_type_refined", "Lesion_type_refined_colour")])$Lesion_type_refined_colour),
+                                      as.character(unique(immunosuppressed_metadata.df[,c("Lesion_type_refined", "Lesion_type_refined_colour")])$Lesion_type_refined))
+
 
 
 # Like DESeq, filter out features that do not have at # reads in at least one sample
@@ -192,12 +200,19 @@ run_mixomics <- function(my_otu_matrix, my_metadata, outcome_variable,
   list.keepX = c(c(5:10), seq(15, 50, 5), seq(60, 200, 10))
   
   # This tests what number of features and components to use to give the best discriminatory power
-  tune.splsda.mydata <- tune.splsda(X=t(internal_otu_matrix.m), Y = outcome, 
-                                   validation = 'Mfold', dist = 'max.dist', 
-                                   measure = "BER", logratio = "CLR",
-                                   progressBar = TRUE, test.keepX = list.keepX,
-                                   scale = TRUE, ncomp = 4,
-                                   folds = 5, nrepeat = 10, cpus = 2)
+  
+  
+  if (file.exists(paste0("Result_objects/mixomics/", prefix, "_", outcome_variable, ".tune.multi.splsda.RData"))) {
+    tune.splsda.mydata = readRDS(paste0("Result_objects/mixomics/", prefix, "_", outcome_variable, ".tune.multi.splsda.RData"))
+  } else {
+    tune.splsda.mydata <- tune.splsda(X=t(internal_otu_matrix.m), Y = outcome, 
+                                      validation = 'Mfold', dist = 'max.dist', 
+                                      measure = "BER", logratio = "CLR",
+                                      progressBar = TRUE, test.keepX = list.keepX,
+                                      scale = TRUE, ncomp = 4,
+                                      folds = 5, nrepeat = 10, cpus = 2)
+    saveRDS(tune.splsda.mydata, file = paste0("Result_objects/mixomics/", prefix, "_", outcome_variable, ".tune.multi.splsda.RData"))
+  }
   
   tune.splsda.mydata$choice.ncomp # what does mixomics think is the best number of components?
   tune.splsda.mydata$choice.keepX # what does mixomics think is the best number of features?
@@ -337,8 +352,11 @@ immunosuppressed_otu_splda <- run_mixomics(my_otu_matrix = immunosuppressed_otu.
              assign_taxonomy = T,
              pseudo_count = .0000001,
              my_levels = c("C", "C_P", "AK","SCC_PL","SCC"))
+# temp <- readRDS("Result_objects/mixomics/immunosuppressed_otu__Lesion_type_refined.tune.multi.splsda.RData")
 
-svg(filename = "Result_figures/mixomics/immunosuppressed_otu_heatmap.svg", width = 15,height = 6)
+
+# svg(filename = "Result_figures/mixomics/immunosuppressed_otu_heatmap.svg", width = 15,height = 6)
+pdf(file = "Result_figures/mixomics/immunosuppressed_otu_heatmap.pdf", width = 20,height = 6)
 cim(immunosuppressed_otu_splda,
     scale = T,
     margins = c(10, 40), 
@@ -346,14 +364,14 @@ cim(immunosuppressed_otu_splda,
     transpose = T, 
     col.names = paste0(immunosuppressed_otu_splda$names$colnames$X, ": ", species_relabeller_function(as.character(otu_taxonomy_map.df[immunosuppressed_otu_splda$names$colnames$X,]$taxonomy_species))),
     row.sideColors = as.character(metadata.df[immunosuppressed_otu_splda$names$sample,]$Lesion_type_refined_colour),
-    legend = list(legend = as.character(unique(immunosuppressed_metadata.df$Lesion_type_refined)),
-                  col = as.character(unique(immunosuppressed_metadata.df$Lesion_type_refined_colour)),
+    legend = list(legend = levels(immunosuppressed_metadata.df$Lesion_type_refined),
+                  col = as.character(mixomics_lesion_colours.l[levels(immunosuppressed_metadata.df$Lesion_type_refined)]),
                   title = "Lesion type"),
     symkey = T,
     # color = colorRampPalette(c("royalblue","#fff4ad","red"))(40)
     title = "",
     col.cex = .8,
-    row.cex = .8,
+    row.cex = .8
 )
 dev.off()
 
@@ -367,16 +385,17 @@ immunocompetent_otu_splda <- run_mixomics(my_otu_matrix = immunocompetent_otu.m[
                                           pseudo_count = .0000001,
                                           my_levels = c("C_P", "AK","SCC_PL","SCC"))
 
-svg(filename = "Result_figures/mixomics/immunocompetent_otu_heatmap.svg", width = 15,height = 6)
+# svg(filename = "Result_figures/mixomics/immunocompetent_otu_heatmap.svg", width = 20,height = 6)
+pdf(file = "Result_figures/mixomics/immunocompetent_otu_heatmap.pdf", width = 20,height = 6)
 cim(immunocompetent_otu_splda,
     scale = T,
-    margins = c(10, 40), 
+    margins = c(5, 45), 
     comp = 1,
     transpose = T, 
     col.names = paste0(immunocompetent_otu_splda$names$colnames$X, ": ", species_relabeller_function(as.character(otu_taxonomy_map.df[immunocompetent_otu_splda$names$colnames$X,]$taxonomy_species))),
     row.sideColors = as.character(metadata.df[immunocompetent_otu_splda$names$sample,]$Lesion_type_refined_colour),
-    legend = list(legend = as.character(unique(immunocompetent_metadata.df$Lesion_type_refined)),
-                  col = as.character(unique(immunocompetent_metadata.df$Lesion_type_refined_colour)),
+    legend = list(legend = levels(immunocompetent_metadata.df$Lesion_type_refined),
+                  col = as.character(mixomics_lesion_colours.l[levels(immunocompetent_metadata.df$Lesion_type_refined)]),
                   title = "Lesion type"),
     symkey = T,
     # color = colorRampPalette(c("royalblue","#fff4ad","red"))(40)
@@ -399,6 +418,27 @@ immunosuppressed_genus_splda <- run_mixomics(my_otu_matrix = immunosuppressed_ge
                                              pseudo_count = .0000001,
                                              my_levels = c("C", "C_P", "AK","SCC_PL","SCC"))
 
+pdf(file = "Result_figures/mixomics/immunosuppressed_genus_heatmap.pdf", width = 20,height = 6)
+cim(immunosuppressed_genus_splda,
+    scale = T,
+    margins = c(10, 20), 
+    comp = 1,
+    transpose = T, 
+    col.names = paste0(genus_relabeller_function(immunosuppressed_genus_splda$names$colnames$X)),
+    row.sideColors = as.character(metadata.df[immunosuppressed_genus_splda$names$sample,]$Lesion_type_refined_colour),
+    legend = list(
+      legend = levels(immunosuppressed_metadata.df$Lesion_type_refined),
+      col = as.character(mixomics_lesion_colours.l[levels(immunosuppressed_metadata.df$Lesion_type_refined)]),
+                  title = "Lesion type"),
+    symkey = T,
+    # color = colorRampPalette(c("royalblue","#fff4ad","red"))(40)
+    title = "",
+    col.cex = .8,
+    row.cex = .8
+)
+dev.off()
+
+
 # immunocompetent
 immunocompetent_genus_splda <- run_mixomics(my_otu_matrix = immunocompetent_genus.m[which(apply(immunocompetent_genus.m, 1, sum) >= 150),],
                                             my_metadata = immunocompetent_metadata.df,
@@ -409,7 +449,24 @@ immunocompetent_genus_splda <- run_mixomics(my_otu_matrix = immunocompetent_genu
                                             pseudo_count = .0000001,
                                             my_levels = c("C_P", "AK","SCC_PL","SCC"))
 
-
+pdf(file = "Result_figures/mixomics/immunocompetent_genus_heatmap.pdf", width = 20,height = 6)
+cim(immunocompetent_genus_splda,
+    scale = T,
+    margins = c(10, 30), 
+    comp = 1,
+    transpose = T, 
+    col.names = paste0(genus_relabeller_function(immunocompetent_genus_splda$names$colnames$X)),
+    row.sideColors = as.character(metadata.df[immunocompetent_genus_splda$names$sample,]$Lesion_type_refined_colour),
+    legend = list(legend = levels(immunocompetent_metadata.df$Lesion_type_refined),
+                  col = as.character(mixomics_lesion_colours.l[levels(immunocompetent_metadata.df$Lesion_type_refined)]),
+                  title = "Lesion type"),
+    symkey = T,
+    # color = colorRampPalette(c("royalblue","#fff4ad","red"))(40)
+    title = "",
+    col.cex = .8,
+    row.cex = .8,
+)
+dev.off()
 # ----------------------------------------------------------------------------------------------------------------------
 # SCC and SCC_PL samples, each cohort, OTU
 
@@ -423,7 +480,8 @@ immunosuppressed_scc_sccpl_otu_splda <- run_mixomics(my_otu_matrix = immunosuppr
                                                      pseudo_count = .0000001,
                                                      my_levels = c("SCC_PL","SCC"))
 
-svg(filename = "Result_figures/mixomics/immunosuppressed_scc_sccpl_otu_heatmap.svg", width = 15,height = 6)
+# svg(filename = "Result_figures/mixomics/immunosuppressed_scc_sccpl_otu_heatmap.svg", width = 15,height = 6)
+pdf(file = "Result_figures/mixomics/immunosuppressed_scc_sccpl_otu_heatmap.pdf", width = 20,height = 6)
 cim(immunosuppressed_scc_sccpl_otu_splda,
     scale = T,
     margins = c(10, 40), 
@@ -431,8 +489,8 @@ cim(immunosuppressed_scc_sccpl_otu_splda,
     transpose = T, 
     col.names = paste0(immunosuppressed_scc_sccpl_otu_splda$names$colnames$X, ": ", species_relabeller_function(as.character(otu_taxonomy_map.df[immunosuppressed_scc_sccpl_otu_splda$names$colnames$X,]$taxonomy_species))),
     row.sideColors = as.character(metadata.df[immunosuppressed_scc_sccpl_otu_splda$names$sample,]$Lesion_type_refined_colour),
-    legend = list(legend = as.character(unique(immunosuppressed_scc_sccpl_metadata.df$Lesion_type_refined)),
-                  col = as.character(unique(immunosuppressed_scc_sccpl_metadata.df$Lesion_type_refined_colour)),
+    legend = list(legend = levels(immunosuppressed_scc_sccpl_metadata.df$Lesion_type_refined),
+                  col = as.character(mixomics_lesion_colours.l[levels(immunosuppressed_scc_sccpl_metadata.df$Lesion_type_refined)]),
                   title = "Lesion type"),
     symkey = T,
     # color = colorRampPalette(c("royalblue","#fff4ad","red"))(40)
@@ -451,7 +509,8 @@ immunocompetent_scc_sccpl_otu_splda <- run_mixomics(my_otu_matrix = immunocompet
                                                     pseudo_count = .0000001,
                                                     my_levels = c("SCC_PL","SCC"))
 
-svg(filename = "Result_figures/mixomics/immunocompetent_scc_sccpl_otu_heatmap.svg", width = 15,height = 6)
+# svg(filename = "Result_figures/mixomics/immunocompetent_scc_sccpl_otu_heatmap.svg", width = 15,height = 6)
+pdf(file = "Result_figures/mixomics/immunocompetent_scc_sccpl_otu_heatmap.pdf", width = 20,height = 6)
 cim(immunocompetent_scc_sccpl_otu_splda,
     scale = T,
     margins = c(10, 40), 
@@ -459,8 +518,8 @@ cim(immunocompetent_scc_sccpl_otu_splda,
     transpose = T, 
     col.names = paste0(immunocompetent_scc_sccpl_otu_splda$names$colnames$X, ": ", species_relabeller_function(as.character(otu_taxonomy_map.df[immunocompetent_scc_sccpl_otu_splda$names$colnames$X,]$taxonomy_species))),
     row.sideColors = as.character(metadata.df[immunocompetent_scc_sccpl_otu_splda$names$sample,]$Lesion_type_refined_colour),
-    legend = list(legend = as.character(unique(immunocompetent_scc_sccpl_metadata.df$Lesion_type_refined)),
-                  col = as.character(unique(immunocompetent_scc_sccpl_metadata.df$Lesion_type_refined_colour)),
+    legend = list(legend = levels(immunocompetent_scc_sccpl_metadata.df$Lesion_type_refined),
+                  col = as.character(mixomics_lesion_colours.l[levels(immunocompetent_scc_sccpl_metadata.df$Lesion_type_refined)]),
                   title = "Lesion type"),
     symkey = T,
     # color = colorRampPalette(c("royalblue","#fff4ad","red"))(40)
@@ -482,6 +541,26 @@ immunosuppressed_scc_sccpl_genus_splda <- run_mixomics(my_otu_matrix = immunosup
                                                        pseudo_count = .0000001,
                                                        my_levels = c("SCC_PL","SCC"))
 
+pdf(file = "Result_figures/mixomics/immunosuppressed_scc_sccpl_genus_heatmap.pdf", width = 20,height = 6)
+cim(immunosuppressed_scc_sccpl_genus_splda,
+    scale = T,
+    margins = c(10, 20), 
+    comp = 1,
+    transpose = T, 
+    col.names = paste0(genus_relabeller_function(immunosuppressed_scc_sccpl_genus_splda$names$colnames$X)),
+    row.sideColors = as.character(metadata.df[immunosuppressed_scc_sccpl_genus_splda$names$sample,]$Lesion_type_refined_colour),
+    legend = list(
+      legend = levels(immunosuppressed_scc_sccpl_metadata.df$Lesion_type_refined),
+      col = as.character(mixomics_lesion_colours.l[levels(immunosuppressed_scc_sccpl_metadata.df$Lesion_type_refined)]),
+      title = "Lesion type"),
+    symkey = T,
+    # color = colorRampPalette(c("royalblue","#fff4ad","red"))(40)
+    title = "",
+    col.cex = .8,
+    row.cex = .8
+)
+dev.off()
+
 # immunocompetent
 immunocompetent_scc_sccpl_genus_splda <- run_mixomics(my_otu_matrix = immunocompetent_genus.m[which(apply(immunocompetent_genus.m, 1, sum) >= 150),][,rownames(immunocompetent_scc_sccpl_metadata.df)],
                                                       my_metadata = immunocompetent_scc_sccpl_metadata.df,
@@ -493,6 +572,25 @@ immunocompetent_scc_sccpl_genus_splda <- run_mixomics(my_otu_matrix = immunocomp
                                                       my_levels = c("SCC_PL","SCC"))
 
 
+pdf(file = "Result_figures/mixomics/immunocompetent_scc_sccpl_genus_heatmap.pdf", width = 20,height = 10)
+cim(immunocompetent_scc_sccpl_genus_splda,
+    scale = T,
+    margins = c(5, 30), 
+    comp = 1,
+    transpose = T, 
+    col.names = paste0(genus_relabeller_function(immunocompetent_scc_sccpl_genus_splda$names$colnames$X)),
+    row.sideColors = as.character(metadata.df[immunocompetent_scc_sccpl_genus_splda$names$sample,]$Lesion_type_refined_colour),
+    legend = list(
+      legend = levels(immunocompetent_scc_sccpl_metadata.df$Lesion_type_refined),
+      col = as.character(mixomics_lesion_colours.l[levels(immunocompetent_scc_sccpl_metadata.df$Lesion_type_refined)]),
+      title = "Lesion type"),
+    symkey = T,
+    # color = colorRampPalette(c("royalblue","#fff4ad","red"))(40)
+    title = "",
+    col.cex = .8,
+    row.cex = .8
+)
+dev.off()
 
 # ---------------------------------------------------------------------------------------------------------------------------------------
 # ---------------------------------------------------------------------------------------------------------------------------------------

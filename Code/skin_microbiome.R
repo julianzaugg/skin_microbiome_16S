@@ -121,27 +121,29 @@ dir.create(file.path(".", "Result_other"), showWarnings = FALSE)
 
 dir.create(file.path("./Result_other", "sequences"), showWarnings = FALSE,recursive = T)
 
+dir.create(file.path("Result_objects/mixomics"), showWarnings = FALSE, recursive = T)
+
 dir.create(file.path("./Result_figures", "abundance_analysis_plots"), showWarnings = FALSE)
 dir.create(file.path("./Result_figures/abundance_analysis_plots/boxplots"), showWarnings = FALSE, recursive = T)
 dir.create(file.path("./Result_figures/abundance_analysis_plots/boxplots/Cohort/otu"), showWarnings = FALSE, recursive = T)
 dir.create(file.path("./Result_figures/abundance_analysis_plots/boxplots/Cohort/species"), showWarnings = FALSE, recursive = T)
 dir.create(file.path("./Result_figures/abundance_analysis_plots/boxplots/Cohort/genus"), showWarnings = FALSE, recursive = T)
-dir.create(file.path("./Result_figures/abundance_analysis_plots/boxplots/Lesion_type_refined/otu"), showWarnings = FALSE, recursive = T)
-dir.create(file.path("./Result_figures/abundance_analysis_plots/boxplots/Lesion_type_refined/species"), showWarnings = FALSE, recursive = T)
-dir.create(file.path("./Result_figures/abundance_analysis_plots/boxplots/Lesion_type_refined/genus"), showWarnings = FALSE, recursive = T)
-dir.create(file.path("./Result_figures/abundance_analysis_plots/boxplots/immunosuppressed/Lesion_type_refined/otu"), showWarnings = FALSE, recursive = T)
-dir.create(file.path("./Result_figures/abundance_analysis_plots/boxplots/immunosuppressed/Lesion_type_refined/species"), showWarnings = FALSE, recursive = T)
-dir.create(file.path("./Result_figures/abundance_analysis_plots/boxplots/immunosuppressed/Lesion_type_refined/genus"), showWarnings = FALSE, recursive = T)
-dir.create(file.path("./Result_figures/abundance_analysis_plots/boxplots/immunocompetent/Lesion_type_refined/otu"), showWarnings = FALSE, recursive = T)
-dir.create(file.path("./Result_figures/abundance_analysis_plots/boxplots/immunocompetent/Lesion_type_refined/species"), showWarnings = FALSE, recursive = T)
-dir.create(file.path("./Result_figures/abundance_analysis_plots/boxplots/immunocompetent/Lesion_type_refined/genus"), showWarnings = FALSE, recursive = T)
+dir.create(file.path("./Result_figures/abundance_analysis_plots/boxplots/Sample_type/otu"), showWarnings = FALSE, recursive = T)
+dir.create(file.path("./Result_figures/abundance_analysis_plots/boxplots/Sample_type/species"), showWarnings = FALSE, recursive = T)
+dir.create(file.path("./Result_figures/abundance_analysis_plots/boxplots/Sample_type/genus"), showWarnings = FALSE, recursive = T)
+dir.create(file.path("./Result_figures/abundance_analysis_plots/boxplots/immunosuppressed/Sample_type/otu"), showWarnings = FALSE, recursive = T)
+dir.create(file.path("./Result_figures/abundance_analysis_plots/boxplots/immunosuppressed/Sample_type/species"), showWarnings = FALSE, recursive = T)
+dir.create(file.path("./Result_figures/abundance_analysis_plots/boxplots/immunosuppressed/Sample_type/genus"), showWarnings = FALSE, recursive = T)
+dir.create(file.path("./Result_figures/abundance_analysis_plots/boxplots/immunocompetent/Sample_type/otu"), showWarnings = FALSE, recursive = T)
+dir.create(file.path("./Result_figures/abundance_analysis_plots/boxplots/immunocompetent/Sample_type/species"), showWarnings = FALSE, recursive = T)
+dir.create(file.path("./Result_figures/abundance_analysis_plots/boxplots/immunocompetent/Sample_type/genus"), showWarnings = FALSE, recursive = T)
 dir.create(file.path("./Result_figures/abundance_analysis_plots/pie_charts"), showWarnings = FALSE, recursive = T)
 
 
 dir.create(file.path("./Result_figures", "DESeq_plots"), showWarnings = FALSE)
 dir.create(file.path("./Result_figures/DESeq_plots/boxplots"), showWarnings = FALSE, recursive = T)
-dir.create(file.path("./Result_figures/DESeq_plots/boxplots/lesion_type_refined_genus"), showWarnings = FALSE, recursive = T)
-dir.create(file.path("./Result_figures/DESeq_plots/boxplots/lesion_type_refined_otu"), showWarnings = FALSE, recursive = T)
+dir.create(file.path("./Result_figures/DESeq_plots/boxplots/sample_type_genus"), showWarnings = FALSE, recursive = T)
+dir.create(file.path("./Result_figures/DESeq_plots/boxplots/sample_type_otu"), showWarnings = FALSE, recursive = T)
 
 dir.create(file.path("./Result_figures", "exploratory_analysis"), showWarnings = FALSE)
 dir.create(file.path("./Result_figures", "heatmaps"), showWarnings = FALSE)
@@ -333,7 +335,7 @@ metadata.df$Index <- with(metadata.df,paste0(Internal_name, "_", Job_ID))
 metadata.df[metadata.df == ''] <- NA
 
 # Change lesion types that are labelled SwabCo to negative (as they are negative)
-levels(metadata.df$Lesion_type)[match("SwabCo",levels(metadata.df$Lesion_type))] <- "negative"
+levels(metadata.df$Sample_type_original)[match("SwabCo",levels(metadata.df$Sample_type_original))] <- "negative"
 
 # Make the index the rowname
 rownames(metadata.df) <- metadata.df$Index
@@ -343,10 +345,12 @@ metadata.df <- subset(metadata.df, !is.na(Cohort))
 
 # Filter samples to those that are immunosuppressed, immunocompetent snapshot 5 samples or negative
 # this saves processing time later
-metadata.df <- metadata.df[which(metadata.df$Cohort == "immunosuppressed" | metadata.df$Snapshot_sample_5 == "yes" | metadata.df$Lesion_type == "negative"),]
+metadata.df <- metadata.df[which(metadata.df$Cohort == "immunosuppressed" | metadata.df$Snapshot_sample_5 == "yes" | metadata.df$Sample_type_original == "negative"),]
 
 # ------------------------------------------------------------------------------------------
 # Create Lesion_final_refined variable. This will be used for publication.
+# Probably already specificed in metadata, though re-specify here
+
 # For the immunocompetent cohort:
 # C_P (C1-3 and AK_PL) – P indicating photo-damaged; as Nancy said they are not direct AK controls, this may be the more appropriate description
 # AK (AK)
@@ -359,20 +363,22 @@ metadata.df <- metadata.df[which(metadata.df$Cohort == "immunosuppressed" | meta
 # AK (AK)
 # SCC_PL (SCC_PL and IEC_PL)
 # SCC (SCC and IEC)
-metadata.df$Lesion_type_refined <- NA
-metadata.df[metadata.df$Cohort == "immunocompetent" & metadata.df$Lesion_type %in% c("C","LC", "NLC", "AK_PL"),]$Lesion_type_refined <- "C_P"
-metadata.df[metadata.df$Cohort == "immunocompetent" & metadata.df$Lesion_type %in% c("AK"),]$Lesion_type_refined <- "AK"
-metadata.df[metadata.df$Cohort == "immunocompetent" & metadata.df$Lesion_type %in% c("SCC_PL", "IEC_PL"),]$Lesion_type_refined <- "SCC_PL"
-metadata.df[metadata.df$Cohort == "immunocompetent" & metadata.df$Lesion_type %in% c("SCC", "IEC"),]$Lesion_type_refined <- "SCC"
+metadata.df$Sample_type <- NA
+# metadata.df[metadata.df$Cohort == "immunocompetent" & metadata.df$Lesion_type %in% c("C","LC", "NLC", "AK_PL"),]$Sample_type <- "C_P"
+metadata.df[metadata.df$Cohort == "immunocompetent" & metadata.df$Sample_type_original %in% c("C","LC", "NLC", "AK_PL"),]$Sample_type <- "PDS"
+metadata.df[metadata.df$Cohort == "immunocompetent" & metadata.df$Sample_type_original %in% c("AK"),]$Sample_type <- "AK"
+metadata.df[metadata.df$Cohort == "immunocompetent" & metadata.df$Sample_type_original %in% c("SCC_PL", "IEC_PL"),]$Sample_type <- "SCC_PL"
+metadata.df[metadata.df$Cohort == "immunocompetent" & metadata.df$Sample_type_original %in% c("SCC", "IEC"),]$Sample_type <- "SCC"
 
-metadata.df[metadata.df$Cohort == "immunosuppressed" & metadata.df$Lesion_type %in% c("C", "AK_PL"),]$Lesion_type_refined <- "C_P"
-metadata.df[metadata.df$Cohort == "immunosuppressed" & metadata.df$Lesion_type_suppressed_refined %in% c("C"),]$Lesion_type_refined <- "C"
-metadata.df[metadata.df$Cohort == "immunosuppressed" & metadata.df$Lesion_type %in% c("AK"),]$Lesion_type_refined <- "AK"
-metadata.df[metadata.df$Cohort == "immunosuppressed" & metadata.df$Lesion_type %in% c("SCC_PL", "IEC_PL"),]$Lesion_type_refined <- "SCC_PL"
-metadata.df[metadata.df$Cohort == "immunosuppressed" & metadata.df$Lesion_type %in% c("SCC", "IEC"),]$Lesion_type_refined <- "SCC"
-metadata.df[metadata.df$Lesion_type %in% c("negative"),]$Lesion_type_refined <- "negative"
-metadata.df$Lesion_type_refined <- factor(metadata.df$Lesion_type_refined)
-
+# metadata.df[metadata.df$Cohort == "immunosuppressed" & metadata.df$Lesion_type %in% c("C", "AK_PL"),]$Sample_type <- "C_P"
+metadata.df[metadata.df$Cohort == "immunosuppressed" & metadata.df$Sample_type_original %in% c("C", "AK_PL"),]$Sample_type <- "PDS"
+# metadata.df[metadata.df$Cohort == "immunosuppressed" & metadata.df$Lesion_type_suppressed_refined %in% c("C"),]$Sample_type <- "C"
+metadata.df[metadata.df$Cohort == "immunosuppressed" & metadata.df$Sample_type_suppressed_refined %in% c("C"),]$Sample_type <- "HS"
+metadata.df[metadata.df$Cohort == "immunosuppressed" & metadata.df$Sample_type_original %in% c("AK"),]$Sample_type <- "AK"
+metadata.df[metadata.df$Cohort == "immunosuppressed" & metadata.df$Sample_type_original %in% c("SCC_PL", "IEC_PL"),]$Sample_type <- "SCC_PL"
+metadata.df[metadata.df$Cohort == "immunosuppressed" & metadata.df$Sample_type_original %in% c("SCC", "IEC"),]$Sample_type <- "SCC"
+metadata.df[metadata.df$Sample_type_original %in% c("negative"),]$Sample_type <- "negative"
+# metadata.df[c("Sample_type_original", "Sample_type")]
 # ------------------------------------------------------------------------------------------------------------
 # Assign grouping to samples based on whether a patient has a SCC. Or if not, an AK/IEC. Or if not, control.
 # metadata.df$Patient_grouping <- NA
@@ -399,21 +405,28 @@ metadata.df$Lesion_type_refined <- factor(metadata.df$Lesion_type_refined)
 metadata_unfiltered.df <- metadata.df
 
 # Filter to samples those that are the following lesion types.
-metadata.df <- metadata.df[metadata.df$Lesion_type %in% c("C","AK_PL","IEC_PL","SCC_PL","AK","IEC","SCC", "negative", "NLC"),]
+metadata.df <- metadata.df[metadata.df$Sample_type_original %in% c("C","AK_PL","IEC_PL","SCC_PL","AK","IEC","SCC", "negative", "NLC"),]
 
 # Remove unnessary columns / variables from metadata
 metadata.df <- metadata.df %>% select( 
-                       -Lesion_type_suppressed_refined, 
+                       -Sample_type_suppressed_refined,
                        -Patient_group,
                        -Patient_group_other,
+                       -old_Lesion_type_refined,
+                       -R1_location,
+                       -R2_location,
+                       -R1_location_renamed,
+                       -R2_location_renamed,
+                       -Bacterial_load_CFU,
+                       -Bacterial_load_category,
                        # -Patient_ID_number,
                        # -Age,
                        # -Gender,
                        -Fitzpatrick_skin_type,
                        -Swab_category_other,
                        -Swab_photo,
-                       -Number_of_meds,
-                       -Bacterial_load_category)
+                       -Number_of_meds
+                       )
 
 ##############################
 # Load and process the OTU table
@@ -569,7 +582,6 @@ if ( length(missing_samples.v) == 0) {
 # Are these missing samples in the filtered metadata? What about the unfiltered metadata?
 summary(metadata.df[metadata.df$Index %in% missing_samples.v,]$Lesion_type)
 summary(metadata_unfiltered.df[metadata_unfiltered.df$Index  %in% missing_samples.v,]$Lesion_type)
-metadata_unfiltered.df[missing_samples.v,]
 
 # Also the reverse, are there samples in the metadata missing from the data (possibly filtered earlier)
 missing_samples_metadata.v <- as.character(metadata.df$Index[!metadata.df$Index %in% sample_ids])
@@ -605,9 +617,6 @@ metadata.df <- metadata.df[!metadata.df$Index %in% MS_resequenced_samples,]
 project_otu_table.df <- project_otu_table.df[,!names(project_otu_table.df) %in% MS_resequenced_samples]
 # ------------------------------------------------------------------------------------
 
-summary(metadata.df$Cohort)
-summary(subset(metadata.df, Lesion_type != "negative")$Cohort)
-
 # Finally, just remove any sample not in the metadata
 sample_ids <- grep("R[0-9].*|S[AB][0-9].*|S[0-9].*", names(project_otu_table.df), value = T)
 project_otu_table.df <- project_otu_table.df[,c(sample_ids[sample_ids %in% rownames(metadata.df)],
@@ -616,8 +625,12 @@ project_otu_table.df <- project_otu_table.df[,c(sample_ids[sample_ids %in% rowna
 
 
 summary(metadata.df$Cohort)
-summary(subset(metadata.df, Lesion_type != "negative")$Cohort)
-metadata.df %>% group_by(Cohort, Lesion_type_refined) %>% tally()
+summary(subset(metadata.df, Sample_type_original != "negative")$Cohort)
+metadata.df %>% group_by(Cohort, Sample_type_original) %>% tally()
+metadata.df %>% group_by(Cohort) %>% tally()
+metadata_unfiltered.df %>% group_by(Cohort, Sample_type_original) %>% tally()
+metadata_unfiltered.df %>% group_by(Cohort) %>% tally()
+
 
 # Metadata and feature data after consolidating samples. This should be everything needed from this point on!
 write.csv(metadata.df,file = "Result_tables/other/metadata_consolidated.csv", row.names = F, quote = F)
@@ -628,7 +641,7 @@ write.csv(project_otu_table.df,file = "Result_tables/other/feature_data_consolid
 # ------------------------------------------------------------------------------------------------
 # Assign unique colours for each discrete state for variables
 # names(metadata.df)
-# Lesion_type, Lesion_type_refined,Length_of_immunosuppression_group_1,Length_of_immunosuppression_group_2,
+# Lesion_type, Sample_type,Length_of_immunosuppression_group_1,Length_of_immunosuppression_group_2,
 # 
 # for (myvar in discrete_variables){
 #   myvar_values <- factor(as.character(sort(unique(metadata.df[,myvar]))))
@@ -638,17 +651,17 @@ write.csv(project_otu_table.df,file = "Result_tables/other/feature_data_consolid
 #   metadata.df[,paste0(myvar,"_colour")] <- all_variable_colours
 # }
 
-# For Lesion_type (NLC and C have different colours!!!)
-lesion_type_values <- sort(factor(as.character(unique(metadata.df$Lesion_type)), levels = sort(unique(as.character(metadata.df$Lesion_type)))))
-lesion_type_colours <- setNames(lesion_palette_10[1:length(lesion_type_values)], lesion_type_values)
-all_sample_colours <- as.character(lapply(as.character(metadata.df$Lesion_type), function(x) lesion_type_colours[x]))
-metadata.df$Lesion_type_colour <- all_sample_colours
+# For Sample_type_original (NLC and C have different colours!!!)
+sample_type_original_values <- sort(factor(as.character(unique(metadata.df$Sample_type_original)), levels = sort(unique(as.character(metadata.df$Sample_type_original)))))
+sample_type_original_colours <- setNames(lesion_palette_10[1:length(sample_type_original_values)], sample_type_original_values)
+all_sample_colours <- as.character(lapply(as.character(metadata.df$Sample_type_original), function(x) sample_type_original_colours[x]))
+metadata.df$Sample_type_original_colour <- all_sample_colours
 
-# For Sampletype_final Same Sampletype colours defined above
-lesion_type_refined_values <- sort(factor(as.character(unique(metadata.df$Lesion_type_refined)), levels = sort(unique(as.character(metadata.df$Lesion_type_refined)))))
-lesion_type_refined_colours <- setNames(lesion_palette_10[1:length(lesion_type_refined_values)], lesion_type_refined_values)
-all_sample_colours <- as.character(lapply(as.character(metadata.df$Lesion_type_refined), function(x) lesion_type_refined_colours[x]))
-metadata.df$Lesion_type_refined_colour <- all_sample_colours
+# For Sample_type (final) Same Sampletype colours defined above
+sample_type_values <- sort(factor(as.character(unique(metadata.df$Sample_type)), levels = sort(unique(as.character(metadata.df$Sample_type)))))
+sample_type_colours <- setNames(lesion_palette_10[1:length(sample_type_values)], sample_type_values)
+all_sample_colours <- as.character(lapply(as.character(metadata.df$Sample_type), function(x) sample_type_colours[x]))
+metadata.df$Sample_type_colour <- all_sample_colours
 
 # For Cohort
 cohort_values <- factor(as.character(unique(metadata.df$Cohort)))
@@ -740,7 +753,7 @@ project_otu_table_discarded.df <- project_otu_table.df[!grepl(paste0("d__Bacteri
 # Abundance of discarded features in each sample based on unfiltered data
 temp <- melt(round(colSums(project_otu_table_discarded.df[sample_ids]) / colSums(project_otu_table_unfiltered.df[sample_ids]) * 100,4), value.name = "Relative_abundance")
 temp <- m2df(temp,column_name = "Index")
-temp <- merge(temp,metadata.df,by = "Index") %>% select(Index, Lesion_type_refined, Cohort, Relative_abundance)
+temp <- merge(temp,metadata.df,by = "Index") %>% select(Index, Sample_type, Cohort, Relative_abundance)
 temp <- temp[order(temp$Relative_abundance,decreasing = T),]
 max(temp$Relative_abundance)
 min(temp$Relative_abundance)
@@ -750,19 +763,20 @@ median(temp$Relative_abundance)
 # Read counts of discarded features in each sample based on unfiltered data
 temp <- melt(colSums(project_otu_table_discarded.df[sample_ids]), value.name = "Read_count")
 temp <- m2df(temp,column_name = "Index")
-temp <- merge(temp,metadata.df,by = "Index") %>% select(Index, Lesion_type_refined, Cohort, Read_count)
+temp <- merge(temp,metadata.df,by = "Index") %>% select(Index, Sample_type, Cohort, Read_count)
 temp <- temp[order(temp$Read_count,decreasing = T),]
 max(temp$Read_count)
 min(temp$Read_count)
 mean(temp$Read_count)
 median(temp$Read_count)
+# Number of features discarded
 length(project_otu_table_discarded.df$OTU.ID) / length(project_otu_table_unfiltered.df$OTU.ID) *100
 
 # Abundance of Unassigned features in each sample based on unfiltered data
 dim(project_otu_table_discarded.df[project_otu_table_discarded.df$Taxon == "Unassigned",])
 temp <- melt(round(colSums(project_otu_table_discarded.df[project_otu_table_discarded.df$Taxon == "Unassigned",sample_ids])/colSums(project_otu_table_unfiltered.df[sample_ids]) * 100,4), value.name = "Relative_abundance")
 temp <- m2df(temp,column_name = "Index")
-temp <- merge(temp,metadata.df,by = "Index") %>% select(Index, Lesion_type_refined, Cohort, Relative_abundance)
+temp <- merge(temp,metadata.df,by = "Index") %>% select(Index, Sample_type_original, Cohort, Relative_abundance)
 temp <- temp[order(temp$Relative_abundance,decreasing = T),]
 max(temp$Relative_abundance)
 min(temp$Relative_abundance)
@@ -859,11 +873,11 @@ otu_unfiltered_rel.m[is.nan(otu_unfiltered_rel.m)] <- 0
 # want to retain the negative samples abundances to profile them later
 
 # Get the negative sample IDs
-negative_sample_ids <- as.character(metadata.df[metadata.df$Lesion_type == "negative",]$Index)
+negative_sample_ids <- as.character(metadata.df[metadata.df$Sample_type_original == "negative",]$Index)
 
 # Get the negative sample IDs for each cohort
-immunosuppressed_negative_sample_ids <- as.character(subset(metadata.df, Lesion_type == "negative" & Cohort == "immunosuppressed")$Index)
-immunocompetent_negative_sample_ids <- as.character(subset(metadata.df, Lesion_type == "negative" & Cohort == "immunocompetent")$Index)
+immunosuppressed_negative_sample_ids <- as.character(subset(metadata.df, Sample_type_original == "negative" & Cohort == "immunosuppressed")$Index)
+immunocompetent_negative_sample_ids <- as.character(subset(metadata.df, Sample_type_original == "negative" & Cohort == "immunocompetent")$Index)
 
 # Get the sample ids for each cohort (only used to check length)
 immunosuppressed_sample_ids <- as.character(subset(metadata.df, Cohort == "immunosuppressed")$Index)
@@ -1025,9 +1039,6 @@ immunosuppressed_otu_rel.m <- otu_rel.m[,rownames(metadata.df[metadata.df$Cohort
 
 immunocompetent_otu.m <- otu.m[,rownames(metadata.df[metadata.df$Cohort == "immunocompetent",])]
 immunocompetent_otu_rel.m <- otu_rel.m[,rownames(metadata.df[metadata.df$Cohort == "immunocompetent",])]
-# dim(metadata.df)
-# dim(immunosuppressed_otu.m)
-# dim(immunocompetent_otu.m)
 
 # 1. Use Decontam to identify contaminants
 # decontam_contaminants.df <- isContaminant(t(otu.m), 
@@ -1138,7 +1149,6 @@ contaminating_features_immunocompetent <- unique(c(decontam_contaminants_feature
 contaminating_features <- unique(c(contaminating_features_immunosuppressed, contaminating_features_immunocompetent))
 contaminating_feature_taxonomy_data.df <- otu_taxonomy_map.df[otu_taxonomy_map.df$OTU.ID %in% contaminating_features,]
 contaminating_feature_taxonomy_data.df <- unique(contaminating_feature_taxonomy_data.df)
-contaminating_feature_taxonomy_data.df <- unique(contaminating_feature_taxonomy_data.df)
 contaminating_feature_taxonomy_data.df$Present_immunosuppressed <- contaminating_feature_taxonomy_data.df$OTU.ID %in% contaminating_features_immunosuppressed
 contaminating_feature_taxonomy_data.df$Present_immunocompetent <- contaminating_feature_taxonomy_data.df$OTU.ID %in% contaminating_features_immunocompetent
 temp <- contaminating_feature_taxonomy_data.df$RepSeq
@@ -1169,6 +1179,7 @@ write.table(otu_rel_contaminates.m, file = "Result_tables/relative_abundance_tab
 # Do this for all samples, regardless of cohort
 otu_contaminates.df <- m2df(otu_contaminates.m, "OTU.ID")
 otu_rel_contaminates.df <- m2df(otu_rel_contaminates.m, "OTU.ID")
+
 # Merge the otu counts back with the taxonomy data
 otu_metadata_merged.df <- merge(otu_contaminates.df, otu_taxonomy_map.df, by.x = "OTU.ID", by.y = "OTU.ID")
 otu_rel_metadata_merged.df <- merge(otu_rel_contaminates.df, otu_taxonomy_map.df, by.x = "OTU.ID", by.y = "OTU.ID")
@@ -1294,11 +1305,22 @@ write.table(phylum_combined, file = "Result_tables/combined_counts_abundances_an
 
 
 # Generate a summary of the genera in the contaminants
-genus_contaminant_taxa_summary.df <- genus_combined %>% group_by(taxonomy_genus) %>%
+# NOTE - dplyr::summarise ignores samples that were zero, hence the median / mean is not accurate
+# if the total number of samples in the group is not calculated first
+
+# Across all samples
+genus_contaminant_taxa_summary.df <- genus_combined %>% 
+  dplyr::mutate(Total_N_Samples = n_distinct(Sample)) %>% # number of unique samples/index
+  group_by(taxonomy_genus) %>% 
   dplyr::summarise(
-    Median_relative_abundance = round(median(Relative_abundance), 5),
-    Mean_relative_abundance = round(mean(Relative_abundance), 5)) %>% 
+    Total_N_Samples = max(Total_N_Samples),
+    Median_relative_abundance_non_zero = round(median(Relative_abundance), 5),
+    Mean_relative_abundance_non_zero = round(mean(Relative_abundance), 5),
+    Mean_relative_abundance = round(sum(Relative_abundance)/max(Total_N_Samples), 5),
+    Median_relative_abundance = round(sum(Relative_abundance)/max(Total_N_Samples), 5)
+    ) %>%
   as.data.frame()
+
 genus_contaminant_taxa_summary_top_20.df <- genus_contaminant_taxa_summary.df %>% 
   dplyr::arrange(dplyr::desc(Mean_relative_abundance)) %>% 
   dplyr::top_n(20, Mean_relative_abundance)  %>% 
@@ -1306,12 +1328,20 @@ genus_contaminant_taxa_summary_top_20.df <- genus_contaminant_taxa_summary.df %>
 write.csv(genus_contaminant_taxa_summary_top_20.df, "Result_tables/abundance_analysis_tables/Contaminant_top_20.csv", quote = F, row.names = F)
 
 # Generate a summary of the genera in the contaminants, within each Cohort
+# genus_combined %>% select(Cohort, Sample) %>% unique() %>% group_by(Cohort) %>% tally() 
 genus_contaminant_taxa_summary.df <- genus_combined %>%
+  group_by(Cohort) %>%
+  dplyr::mutate(Total_N_Samples = n_distinct(Sample)) %>% # number of unique samples/index
   group_by(Cohort, taxonomy_genus) %>%
   dplyr::summarise(
-    Median_relative_abundance = round(median(Relative_abundance), 5),
-    Mean_relative_abundance = round(mean(Relative_abundance), 5)) %>%
+    Total_N_Samples = max(Total_N_Samples),
+    Median_relative_abundance_non_zero = round(median(Relative_abundance), 5),
+    Mean_relative_abundance_non_zero = round(mean(Relative_abundance), 5),
+    Mean_relative_abundance = round(sum(Relative_abundance)/max(Total_N_Samples), 5),
+    Median_relative_abundance = round(sum(Relative_abundance)/max(Total_N_Samples), 5)
+  ) %>%
   as.data.frame()
+
 genus_contaminant_taxa_summary_cohort_top_20.df <- genus_contaminant_taxa_summary.df %>% 
   group_by(Cohort) %>% 
   dplyr::arrange(dplyr::desc(Mean_relative_abundance)) %>% 
@@ -1322,18 +1352,25 @@ write.csv(genus_contaminant_taxa_summary_cohort_top_20.df, "Result_tables/abunda
 
 # Generate a summary of the genera in the contaminants, within each Lesion type
 genus_contaminant_taxa_summary.df <- genus_combined %>%
-  group_by(Lesion_type_refined, taxonomy_genus) %>%
+  group_by(Sample_type) %>%
+  dplyr::mutate(Total_N_Samples = n_distinct(Sample)) %>% # number of unique samples/index
+  group_by(Sample_type, taxonomy_genus) %>%
   dplyr::summarise(
-    Median_relative_abundance = round(median(Relative_abundance), 5),
-    Mean_relative_abundance = round(mean(Relative_abundance), 5)) %>%
+    Total_N_Samples = max(Total_N_Samples),
+    Median_relative_abundance_non_zero = round(median(Relative_abundance), 5),
+    Mean_relative_abundance_non_zero = round(mean(Relative_abundance), 5),
+    Mean_relative_abundance = round(sum(Relative_abundance)/max(Total_N_Samples), 5),
+    Median_relative_abundance = round(sum(Relative_abundance)/max(Total_N_Samples), 5)
+  ) %>%
   as.data.frame()
+
 genus_contaminant_taxa_summary_lesion_type_top_20.df <- genus_contaminant_taxa_summary.df %>% 
-  group_by(Lesion_type_refined) %>% 
+  group_by(Sample_type) %>% 
   dplyr::arrange(dplyr::desc(Mean_relative_abundance)) %>% 
   dplyr::top_n(20, Mean_relative_abundance)  %>% 
-  dplyr::arrange(Lesion_type_refined) %>% 
+  dplyr::arrange(Sample_type) %>% 
   as.data.frame()
-write.csv(genus_contaminant_taxa_summary_lesion_type_top_20.df, "Result_tables/abundance_analysis_tables/Contaminant_Lesion_type_refined_top_20.csv", quote = F, row.names = F)
+write.csv(genus_contaminant_taxa_summary_lesion_type_top_20.df, "Result_tables/abundance_analysis_tables/Contaminant_Sample_type_top_20.csv", quote = F, row.names = F)
 
 
 # ------------------------------------------------------------------------------------------
@@ -1374,6 +1411,11 @@ otu_decontaminated.m <- df2matrix(temp4)
 sample_contamination.df <- m2df(melt(round(colSums(otu_rel.m[contaminating_features,])*100,5),value.name = "Contaminant_abundance"),"Sample")
 sample_contamination.df <- left_join(sample_contamination.df, m2df(melt(round(colSums(otu_rel.m[contaminating_features_immunosuppressed,])*100,5),value.name = "Immunosuppressed_contaminant_abundance"),"Sample"))
 sample_contamination.df <- left_join(sample_contamination.df, m2df(melt(round(colSums(otu_rel.m[contaminating_features_immunocompetent,])*100,5),value.name = "Immunocompetent_contaminant_abundance"),"Sample"))
+
+sample_contamination.df <- left_join(sample_contamination.df,m2df(melt(round(colSums(otu_unfiltered_rel.m[contaminating_features,])*100,5),value.name = "Contaminant_abundance_unfiltered"),"Sample"))
+sample_contamination.df <- left_join(sample_contamination.df, m2df(melt(round(colSums(otu_unfiltered_rel.m[contaminating_features_immunosuppressed,])*100,5),value.name = "Immunosuppressed_contaminant_abundance_unfiltered"),"Sample"))
+sample_contamination.df <- left_join(sample_contamination.df, m2df(melt(round(colSums(otu_unfiltered_rel.m[contaminating_features_immunocompetent,])*100,5),value.name = "Immunocompetent_contaminant_abundance_unfiltered"),"Sample"))
+
 rownames(sample_contamination.df) <- sample_contamination.df$Sample
 # sample_contamination.df$test <- sample_contamination.df$Immunosuppressed_contaminant_abundance + sample_contamination.df$Immunocompetent_contaminant_abundance
 
@@ -1398,6 +1440,12 @@ temp[temp > 0] <- 1
 temp <- melt(colSums(temp))
 sample_contamination.df$Number_of_features <- temp[rownames(sample_contamination.df),]
 
+# Get the number of features in each sample (unfiltered)
+temp <- otu_unfiltered_rel.m[,sample_contamination.df$Sample]
+temp[temp > 0] <- 1
+temp <- melt(colSums(temp))
+sample_contamination.df$Number_of_features_unfiltered <- temp[rownames(sample_contamination.df),]
+
 # Fix entries where if there are no features total, contaminant abundance must be 0
 sample_contamination.df[which(sample_contamination.df$Number_of_features == 0),]$Contaminant_abundance <- 0
 
@@ -1405,10 +1453,20 @@ sample_contamination.df[which(sample_contamination.df$Number_of_features == 0),]
 sample_contamination.df <- sample_contamination.df[order(sample_contamination.df$Contaminant_abundance,decreasing = T),]
 
 # Add lesion, cohort and patient data
-sample_contamination.df$Lesion_type_refined <- metadata.df[rownames(sample_contamination.df),]$Lesion_type_refined
+sample_contamination.df$Sample_type <- metadata.df[rownames(sample_contamination.df),]$Sample_type
 sample_contamination.df$Cohort <- metadata.df[rownames(sample_contamination.df),]$Cohort
 sample_contamination.df$Patient <- metadata.df[rownames(sample_contamination.df),]$Patient
+sample_contamination.df$Swab_ID <-  metadata.df[rownames(sample_contamination.df),]$Swab_ID
 # head(sample_contamination.df)
+
+min(sample_contamination.df$Contaminant_abundance)
+max(sample_contamination.df$Contaminant_abundance)
+mean(sample_contamination.df$Contaminant_abundance)
+median(sample_contamination.df$Contaminant_abundance)
+min(sample_contamination.df$Contaminant_abundance_unfiltered)
+max(sample_contamination.df$Contaminant_abundance_unfiltered)
+mean(sample_contamination.df$Contaminant_abundance_unfiltered)
+median(sample_contamination.df$Contaminant_abundance_unfiltered)
 
 write.csv(sample_contamination.df, "Result_tables/other/sample_contaminant_summary.csv", quote =F, row.names = F)
 
@@ -1416,13 +1474,14 @@ write.csv(sample_contamination.df, "Result_tables/other/sample_contaminant_summa
 otu_rel_decontaminated.m <- t(t(otu_rel_decontaminated.m) / colSums(otu_rel_decontaminated.m))
 otu_rel_decontaminated.m[is.nan(otu_rel_decontaminated.m)] <- 0
 
-# (Optional) Use de-contamainated data going forward
+# (Optional) Use de-contaminated data going forward
 otu_rel.m <- otu_rel_decontaminated.m
 otu.m <- otu_decontaminated.m
 
 # (Optional) Remove negative samples as they are no longer needed
 otu_rel.m <- otu_rel.m[,!colnames(otu_rel.m) %in% negative_sample_ids]
 otu.m <- otu.m[,!colnames(otu.m) %in% negative_sample_ids]
+negative_metadata.df <- metadata.df[rownames(metadata.df) %in% negative_sample_ids,]
 metadata.df <- metadata.df[!rownames(metadata.df) %in% negative_sample_ids,]
 # dim(metadata.df)
 # dim(otu.m)
@@ -1439,6 +1498,8 @@ filter_percentage = 0.0005
 otu_rel_low_abundance_otus.m <- otu_rel.m[apply(otu_rel.m[,sample_ids],1,function(z) all(z < filter_percentage)),]
 # otu_unfiltered_rel.m
 # otu_rel_low_abundance_otus.m <- otu_unfiltered_rel.m[apply(otu_unfiltered_rel.m[,sample_ids],1,function(z) all(z < filter_percentage)),]
+dim(otu_rel_low_abundance_otus.m)[1]/dim(otu_rel.m)[1]
+dim(otu_rel_low_abundance_otus.m)[1]/dim(otu_unfiltered_rel.m)[1]
 
 otu_rel_low_abundance_otus.df <- as.data.frame(otu_rel_low_abundance_otus.m)
 percent_removed_before_taxa_filtered <- round(dim(otu_rel_low_abundance_otus.m)[1]/length(rownames(otu_unfiltered.m)) * 100,2)
@@ -1523,7 +1584,7 @@ if (max(unassigned_otu_unfiltered_rel.df$Relative_abundance) != 0){
   length(unique(most_abundant_unassigned.df$OTU.ID)) / length(project_otu_table_unfiltered.df$OTU.ID) *100
   # temp <- melt(round(colSums(unassigned_project_otu_table_unfiltered.df[,sample_ids])/colSums(project_otu_table_unfiltered.df[,sample_ids]) * 100,4), value.name = "Relative_abundance")
   temp <- m2df(temp,column_name = "Index")
-  temp <- merge(temp,metadata.df,by = "Index") %>% select(Index, Lesion_type_refined, Cohort, Relative_abundance)
+  temp <- merge(temp,metadata.df,by = "Index") %>% select(Index, Sample_type, Cohort, Relative_abundance)
   temp <- temp[order(temp$Relative_abundance,decreasing = T),]
   print(max(temp$Relative_abundance))
   print(min(temp$Relative_abundance))
@@ -1627,7 +1688,33 @@ rare_stats.df[,'Proportion_features_removed_from_filtered_data_after_rarefaction
 
 rare_stats.df <- m2df(rare_stats.df, "Sample")
 rare_stats.df$Cohort <- metadata.df[rare_stats.df$Sample,]$Cohort
-rare_stats.df$Lesion_type_refined <- metadata.df[rare_stats.df$Sample,]$Lesion_type_refined
+rare_stats.df$Sample_type <- metadata.df[rare_stats.df$Sample,]$Sample_type
+rare_stats.df$Swab_ID <- metadata.df[rare_stats.df$Sample,]$Swab_ID
+
+# min(rare_stats.df$Reads_removed_from_filtered_data_after_rarefaction)
+# max(rare_stats.df$Reads_removed_from_filtered_data_after_rarefaction)
+# median(rare_stats.df$Reads_removed_from_filtered_data_after_rarefaction)
+# max(rare_stats.df$Proportion_reads_removed_from_filtered_data_after_rarefaction)
+# median(rare_stats.df$Proportion_reads_removed_from_filtered_data_after_rarefaction)
+# mean(rare_stats.df$Proportion_reads_removed_from_filtered_data_after_rarefaction)
+# 
+# min(rare_stats.df$Features_removed_from_filtered_data_after_rarefaction)
+# max(rare_stats.df$Features_removed_from_filtered_data_after_rarefaction)
+# median(rare_stats.df$Features_removed_from_filtered_data_after_rarefaction)
+# min(rare_stats.df$Proportion_features_removed_from_filtered_data_after_rarefaction)
+# max(rare_stats.df$Proportion_features_removed_from_filtered_data_after_rarefaction)
+# median(rare_stats.df$Proportion_features_removed_from_filtered_data_after_rarefaction)
+# mean(rare_stats.df$Proportion_features_removed_from_filtered_data_after_rarefaction)
+
+# Number of features removed from the samples that lost reads
+min(rare_stats.df[which(rare_stats.df$Filtered_data_reads > rare_stats.df$Rarefied_data_reads),]$Features_removed_from_filtered_data_after_rarefaction)
+max(rare_stats.df[which(rare_stats.df$Filtered_data_reads > rare_stats.df$Rarefied_data_reads),]$Features_removed_from_filtered_data_after_rarefaction)
+median(rare_stats.df[which(rare_stats.df$Filtered_data_reads > rare_stats.df$Rarefied_data_reads),]$Features_removed_from_filtered_data_after_rarefaction)
+
+# Proportion of reads removed from the samples that lost reads
+min(rare_stats.df[which(rare_stats.df$Filtered_data_reads > rare_stats.df$Rarefied_data_reads),]$Proportion_reads_removed_from_filtered_data_after_rarefaction)
+max(rare_stats.df[which(rare_stats.df$Filtered_data_reads > rare_stats.df$Rarefied_data_reads),]$Proportion_reads_removed_from_filtered_data_after_rarefaction)
+median(rare_stats.df[which(rare_stats.df$Filtered_data_reads > rare_stats.df$Rarefied_data_reads),]$Proportion_reads_removed_from_filtered_data_after_rarefaction)
 
 write.csv(rare_stats.df,"Result_tables/other/rarefaction_stats.csv",quote = F, row.names = F)
 
@@ -1691,15 +1778,19 @@ print(paste(length(samples_lost), "samples lost"))
 
 metadata.df$Sample_retained <- "no"
 metadata.df[metadata.df$Index %in% samples_retained,]$Sample_retained <- "yes"
+negative_metadata.df$Sample_retained  <- "no"
 
 write.table(metadata.df[metadata.df$Sample_retained == "yes",], file = "Result_tables/other/processed_metadata.csv", sep = ",", quote = F, row.names = F)
 write.table(metadata.df[metadata.df$Sample_retained == "no",], file = "Result_tables/other/metadata_samples_removed.csv", sep = ",", quote = F, row.names = F)
+write.table(negative_metadata.df, file = "Result_tables/other/metadata_negative.csv", sep = ",", quote = F, row.names = F)
 
 # -------------------------------------------------------------------------------------------------------------------------------------
 # -------------------------------------------------------------------------------------------------------------------------------------
 # -------------------------------------------------------------------------------------------------------------------------------------
 #                                                           METADATA AND READ SUMMARIES
 # Generate summaries of the metadata
+metadata_temp.df <- metadata.df
+metadata.df <- metadata.df[metadata.df$Sample_retained == "yes",]
 
 # Number of MST patients
 n_MST_patients <- length(unique(metadata.df$Patient[grepl("MST", metadata.df$Patient)]))
@@ -1710,59 +1801,64 @@ n_MST_samples <- length(metadata.df[grepl("MST", metadata.df$Patient),]$Index)
 # Number of MS samples
 n_MS_samples <- length(metadata.df[!grepl("MST", metadata.df$Patient),]$Index)
 
-# Number of samples for each Lesion_type
-per_lesion_type <- metadata.df %>% 
-  group_by(Lesion_type) %>%
+# Number of samples for each Sample_type_original
+per_sample_type_original <- metadata.df %>% 
+  group_by(Sample_type_original) %>%
   dplyr::summarise(Count = n()) %>%
   mutate(Percent = round((Count/sum(Count))*100,2)) %>%
   arrange(desc(Percent)) %>%
   as.data.frame
 # per_sampletype <- per_sampletype[order(per_sampletype$Percent),]per_sampletype$Sampletype <- factor(per_sampletype$Sampletype, levels = per_sampletype$Sampletype)
 
-per_lesion_type_refined <- metadata.df %>% 
-  group_by(Lesion_type_refined) %>%
+per_sample_type <- metadata.df %>% 
+  group_by(Sample_type) %>%
   dplyr::summarise(Count = n()) %>%
   mutate(Percent = round((Count/sum(Count))*100,2)) %>%
   arrange(desc(Percent)) %>%
   as.data.frame
 
-# Number of samples for each Lesion_type for each patient
-per_patient_lesion_type <- metadata.df %>% 
-  group_by(Patient,Lesion_type) %>%
+# Number of samples for each Sample_type_original for each patient
+per_patient_sample_type_original <- metadata.df %>% 
+  group_by(Patient,Sample_type_original) %>%
   dplyr::summarise(Count = n()) %>%
   mutate(Percent = round((Count/sum(Count))*100,2)) %>%
   arrange(Patient, desc(Percent)) %>%
   as.data.frame
 
-# Number of samples for each Lesion_type_refined for each patient
-per_patient_lesion_type_refined <- metadata.df %>% 
-  group_by(Patient,Lesion_type_refined) %>%
+# Number of samples for each Sample_type for each patient
+per_patient_sample_type <- metadata.df %>% 
+  group_by(Patient,Sample_type) %>%
   dplyr::summarise(Count = n()) %>%
   mutate(Percent = round((Count/sum(Count))*100,2)) %>%
   arrange(Patient, desc(Percent)) %>%
   as.data.frame
 
 # Number of samples for each Lesion_type for each cohort
-per_cohort_lesion_type <- metadata.df %>% 
-  group_by(Cohort, Lesion_type) %>%
+per_cohort_sample_type_original <- metadata.df %>% 
+  group_by(Cohort, Sample_type_original) %>%
   dplyr::summarise(Count = n()) %>%
   mutate(Percent = round((Count/sum(Count))*100,2)) %>%
   arrange(Cohort, desc(Percent)) %>%
   as.data.frame
 
-# Number of samples for each Lesion_type for each cohort
-per_cohort_lesion_type_refined <- metadata.df %>% 
-  group_by(Cohort,Lesion_type_refined) %>%
+# Number of samples for each Sample_type for each cohort
+per_cohort_sample_type <- metadata.df %>% 
+  group_by(Cohort,Sample_type) %>%
   dplyr::summarise(Count = n()) %>%
   mutate(Percent = round((Count/sum(Count))*100,2)) %>%
   arrange(Cohort, desc(Percent)) %>%
   as.data.frame
 
-write.csv(per_lesion_type,"Result_tables/other/metadata_lesion_type_counts.csv", row.names = F)
-write.csv(per_patient_lesion_type,"Result_tables/other/metadata_patient_lesion_type_counts.csv", row.names = F)
-write.csv(per_patient_lesion_type_refined,"Result_tables/other/metadata_patient_lesion_type_refined_type_counts.csv", row.names = F)
-write.csv(per_cohort_lesion_type,"Result_tables/other/metadata_cohort_lesion_type_counts.csv", row.names = F)
-write.csv(per_cohort_lesion_type_refined,"Result_tables/other/metadata_cohort_lesion_type_refined_counts.csv", row.names = F)
+metadata.df %>% 
+  group_by(Cohort) %>% tally()
+
+write.csv(per_sample_type_original,"Result_tables/other/metadata_sample_type_original_counts.csv", row.names = F)
+write.csv(per_sample_type,"Result_tables/other/metadata_sample_type_counts.csv", row.names = F)
+
+write.csv(per_patient_sample_type_original,"Result_tables/other/metadata_patient_sample_type_original_counts.csv", row.names = F)
+write.csv(per_patient_sample_type,"Result_tables/other/metadata_patient_sample_type_type_counts.csv", row.names = F)
+write.csv(per_cohort_sample_type_original,"Result_tables/other/metadata_cohort_sample_type_original_counts.csv", row.names = F)
+write.csv(per_cohort_sample_type,"Result_tables/other/metadata_cohort_sample_type_counts.csv", row.names = F)
 
 
 # ------------------------------------
@@ -1790,15 +1886,16 @@ stats.df$Sample_retained <- "no"
 stats.df[samples_passing_QC,]$Sample_retained <- "yes"
 samples_not_retained <- rownames(stats.df[stats.df$Sample_retained == "no",])
 
-# metadata_unfiltered.df[samples_not_retained,]$Lesion_type_refined
+# metadata_unfiltered.df[samples_not_retained,]$Sample_type
 # stats.df$Patient <- metadata.df[samples_passing_QC,"Patient"]
 # stats.df$Cohort <- metadata.df[samples_passing_QC,"Cohort"]
-# stats.df$Lesion_type_refined <- metadata.df[samples_passing_QC,"Lesion_type_refined"]
+# stats.df$Sample_type <- metadata.df[samples_passing_QC,"Sample_type"]
 
 stats.df$Patient <- metadata_unfiltered.df[samples_in_unfiltered,"Patient"]
+stats.df$Swab_ID <- metadata_unfiltered.df[samples_in_unfiltered,"Swab_ID"]
 stats.df$Cohort <- metadata_unfiltered.df[samples_in_unfiltered,"Cohort"]
-stats.df$Lesion_type <- metadata_unfiltered.df[samples_in_unfiltered,"Lesion_type_refined"]
-stats.df$Lesion_type_refined <- metadata_unfiltered.df[samples_in_unfiltered,"Lesion_type_refined"]
+stats.df$Sample_type_original <- metadata_unfiltered.df[samples_in_unfiltered,"Sample_type_original"]
+stats.df$Sample_type <- metadata_unfiltered.df[samples_in_unfiltered,"Sample_type"]
 
 # Add the raw read counts
 stats.df[,"Raw_R1_read_counts"] <- metadata_unfiltered.df[rownames(stats.df),]$R1_read_count_raw

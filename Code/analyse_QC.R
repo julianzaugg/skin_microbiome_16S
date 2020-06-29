@@ -34,7 +34,8 @@ source("Code/helper_functions.R")
 metadata.df <- read.csv("Result_tables/other/processed_metadata.csv", sep =",", header = T)
 
 # Filter to snapshot or immunosuppressed samples
-metadata.df <- subset(metadata.df, Cohort == "immunosuppressed" | Snapshot_sample_5 == "yes")
+# metadata.df <- subset(metadata.df, Cohort == "immunosuppressed" | Snapshot_sample_5 == "yes")
+metadata.df <- metadata.df[which(metadata.df$Cohort == "immunosuppressed" | metadata.df$Snapshot_sample_5 == "yes" | metadata.df$Lesion_type == "negative"),]
 
 
 # Load QC results

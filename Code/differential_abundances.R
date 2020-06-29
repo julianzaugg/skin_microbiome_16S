@@ -177,7 +177,7 @@ compare_groups_deseq <- function(mydata.m, mymetadata.df, myvariables, assign_ta
       
       # Extract results for contrasted groups
       print(paste0(myvar, ": ", group_1, " vs ", group_2))
-      resMFSource <- results(dds, contrast = c(myvar,group_1,group_2), alpha=0.01, independentFiltering = F, cooksCutoff = F,parallel = T)
+      resMFSource <- results(dds, contrast = c(myvar,group_1,group_2), alpha=0.05, independentFiltering = F, cooksCutoff = F,parallel = T)
       # print(resMFSource)
       resMFSource$Group_1 <- group_1
       resMFSource$Group_2 <- group_2
@@ -195,7 +195,7 @@ compare_groups_deseq <- function(mydata.m, mymetadata.df, myvariables, assign_ta
         resMFSource <- m2df(resMFSource, "Taxonomy")
       }
       # print(resMFSource)
-      resMFSource <- filter_and_sort_dds_results(resMFSource, 0.01)
+      resMFSource <- filter_and_sort_dds_results(resMFSource, 0.05)
       combined_results_ordered.df <- rbind(combined_results_ordered.df, resMFSource)
     }
   }
@@ -222,15 +222,14 @@ compare_groups_deseq_within_group <- function(mydata.m, mymetadata.df, myvariabl
 
 # May be commented out to avoid re-running (very slow)
 
-# # Compare groups
+# Compare groups
 # otu_group_comparison.df <- compare_groups_deseq(mydata.m = otu.m, mymetadata.df = metadata.df, myvariables = c("Lesion_type_refined"), assign_taxonomy = T)
 # write.csv(x =otu_group_comparison.df,file ="Result_tables/DESeq_results/OTU_deseq.csv",quote = F, row.names =F)
-# 
+
 # genus_group_comparison.df <- compare_groups_deseq(mydata.m = genus.m, mymetadata.df = metadata.df, myvariables = c("Lesion_type_refined"), assign_taxonomy = F)
 # write.csv(x =genus_group_comparison.df,file ="Result_tables/DESeq_results/Genus_deseq.csv",quote = F, row.names =F)
-# 
-# 
-# # Compare all lesion types within each patient
+
+# Compare all lesion types within each patient
 # otu_group_comparison_within_patient.df <- compare_groups_deseq_within_group(mydata.m = otu.m,
 #                                                                             mymetadata.df = metadata.df,
 #                                                                             myvariables = c("Lesion_type_refined"),
@@ -239,36 +238,36 @@ compare_groups_deseq_within_group <- function(mydata.m, mymetadata.df, myvariabl
 # write.csv(x =otu_group_comparison_within_patient.df,file ="Result_tables/DESeq_results/OTU_within_patient_deseq.csv",quote = F, row.names =F)
 # 
 # genus_group_comparison_within_patient.df <- compare_groups_deseq_within_group(mydata.m = genus.m,
-#                                                                               mymetadata.df = metadata.df,
-#                                                                               myvariables = c("Lesion_type_refined"),
-#                                                                               within_group_variable = "Patient",
-#                                                                               assign_taxonomy = F)
+                                                                              # mymetadata.df = metadata.df,
+                                                                              # myvariables = c("Lesion_type_refined"),
+                                                                              # within_group_variable = "Patient",
+                                                                              # assign_taxonomy = F)
 # write.csv(x =genus_group_comparison_within_patient.df,file ="Result_tables/DESeq_results/Genus_within_patient_deseq.csv",quote = F, row.names =F)
-# 
-# # Compare all lesion types within each cohort
+
+# Compare all lesion types within each cohort
 # otu_group_comparison_within_cohort.df <- compare_groups_deseq_within_group(mydata.m = otu.m,
 #                                                                            mymetadata.df = metadata.df,
 #                                                                            myvariables = c("Lesion_type_refined"),
 #                                                                            within_group_variable = "Cohort",
 #                                                                            assign_taxonomy = T)
 # write.csv(x =otu_group_comparison_within_cohort.df,file ="Result_tables/DESeq_results/OTU_within_cohort_deseq.csv",quote = F, row.names =F)
-# 
+
 # genus_group_comparison_within_cohort.df <- compare_groups_deseq_within_group(mydata.m = genus.m,
 #                                                                              mymetadata.df = metadata.df,
 #                                                                              myvariables = c("Lesion_type_refined"),
 #                                                                              within_group_variable = "Cohort",
 #                                                                              assign_taxonomy = F)
 # write.csv(x =genus_group_comparison_within_cohort.df,file ="Result_tables/DESeq_results/Genus_within_cohort_deseq.csv",quote = F, row.names =F)
-# 
-# # Comparing the same lesion types between cohorts. Always compare suppressed vs competent, e.g. suppressed AK vs competent AK
-# # The trick is to group by the lesion type and then only compare groups within the Cohort variable
+
+# Comparing the same lesion types between cohorts. Always compare suppressed vs competent, e.g. suppressed AK vs competent AK
+# The trick is to group by the lesion type and then only compare groups within the Cohort variable
 # otu_cohort_comparison_within_lesion.df <- compare_groups_deseq_within_group(mydata.m = otu.m,
 #                                                                             mymetadata.df = metadata.df,
 #                                                                             myvariables = c("Cohort"),
 #                                                                             within_group_variable = "Lesion_type_refined",
 #                                                                             assign_taxonomy = T)
 # write.csv(x =otu_cohort_comparison_within_lesion.df,file ="Result_tables/DESeq_results/OTU_cohort_within_lesion_deseq.csv",quote = F, row.names =F)
-# 
+
 # genus_cohort_comparison_within_lesion.df <- compare_groups_deseq_within_group(mydata.m = genus.m,
 #                                                                               mymetadata.df = metadata.df,
 #                                                                               myvariables = c("Cohort"),
@@ -371,7 +370,7 @@ make_publication_plot <- function(taxa,
                                              p_value_column = p_value_column,
                                              sig_threshold = 0.05, ...) +
     labs(title = "Immunosuppressed") +
-    xlab("Lesion type") + 
+    xlab("Sample type") + 
     ylab(gsub("_", " ", value_column)) + 
     scale_y_continuous(breaks = seq(ymin_break,ymax_break,ybreak), limits = c(0,ymax_limit)) +
     theme(plot.title = element_text(size = 8),
@@ -390,7 +389,7 @@ make_publication_plot <- function(taxa,
                                             p_value_column = p_value_column,
                                             sig_threshold = 0.05,...) +
     labs(title = "Immunocompetent") +
-    xlab("Lesion type") + 
+    xlab("Sample type") + 
     ylab("") +
     # scale_y_continuous( breaks = seq(0,1,.1), limits = c(0,1.4)) +
     scale_y_continuous(breaks = seq(ymin_break,ymax_break,ybreak), limits = c(0,ymax_limit)) +
@@ -589,6 +588,33 @@ myplot <- make_publication_plot(taxa = "g__Micrococcus",
                                 ymin_break = 0, ymax_break = 100,ybreak = 10,ymax_limit = 70, sig_line_starting_scale = 1.2,sig_line_scaling_percentage = 0.1)
 myplot
 ggsave(plot = myplot, filename = "Result_figures/DESeq_plots/g__Micrococcus_boxplot.pdf",width = 15,height = 12,units = "cm")
+# ---------------------------------------------
+# g__Psychromonas
+
+myplot <- make_publication_plot(taxa = "g__Psychromonas",
+                                significances_IS.df = deseq_subset.df,
+                                significances_IC.df = deseq_subset2.df,
+                                taxonomy_level = "taxonomy_genus",
+                                sample_data.df = genus_data.df,
+                                relabeller_function = genus_relabeller_function,
+                                p_value_column = "padj",
+                                value_column = "Relative_abundance",
+                                ymin_break = 0, ymax_break = 100,ybreak = 10,ymax_limit = 70, sig_line_starting_scale = 1.2,sig_line_scaling_percentage = 0.1)
+myplot
+ggsave(plot = myplot, filename = "Result_figures/DESeq_plots/g__Psychromonas_boxplot.pdf",width = 15,height = 12,units = "cm")
+
+# ---------------------------------------------
+# g__Malassezia
+myplot <- make_publication_plot(taxa = "g__Malassezia",
+                                significances_IS.df = deseq_subset.df,
+                                significances_IC.df = deseq_subset2.df,
+                                taxonomy_level = "taxonomy_genus",
+                                sample_data.df = genus_data.df,
+                                relabeller_function = genus_relabeller_function,
+                                p_value_column = "padj",
+                                value_column = "Relative_abundance",
+                                ymin_break = 0, ymax_break = 100,ybreak = 10,ymax_limit = 70, sig_line_starting_scale = 1.2,sig_line_scaling_percentage = 0.1)
+myplot
 # ------------------------------------------------------------------------------------------------
 # ------ Within Lesion
 
@@ -618,7 +644,7 @@ myplot <- generate_significance_boxplots(mydata.df = temp,
 
 ggsave(plot = myplot, filename = "Result_figures/DESeq_plots/g__Staphylococcus_within_lesion_CP_boxplot.pdf",width = 7,height = 10,units = "cm")
 # ---------------------------------------------
-# ---------------------------------------------
+
 # g__Corynebacterium 
 temp <- subset(genus_data.df, Lesion_type_refined == "C_P")
 temp <- temp[grepl("g__Corynebacterium", temp$taxonomy_genus),]
@@ -658,6 +684,51 @@ myplot <- generate_significance_boxplots(mydata.df = temp,
   scale_y_continuous(breaks = seq(0,100,10), limits = c(0,100))
 
 ggsave(plot = myplot, filename = "Result_figures/DESeq_plots/g__Corynebacterium_within_lesion_AK_boxplot.pdf",width = 7,height = 10,units = "cm")
+
+
+# ---------------------------------------------
+# g__Streptococcus
+temp <- subset(genus_data.df, Lesion_type_refined == "C_P")
+temp <- temp[grepl("g__Streptococcus", temp$taxonomy_genus),]
+temp$Relative_abundance <- temp$Relative_abundance *100
+temp_sig <- deseq_subset_CP.df[grepl("g__Streptococcus", deseq_subset_CP.df$Taxonomy),]
+myplot <- generate_significance_boxplots(mydata.df = temp,
+                                         variable_column = "Cohort",
+                                         value_column = "Relative_abundance",
+                                         variable_colours_available = T,
+                                         significances.df = temp_sig,
+                                         p_value_column = "padj",
+                                         sig_threshold = 0.05) + 
+  ylab("Relative abundance") + 
+  ggtitle(genus_relabeller_function(as.character(temp$taxonomy_genus[1]))) +
+  theme(plot.title = element_text(face = "bold", size = 5), 
+        axis.text.x = element_text(size = 7)) + 
+  scale_y_continuous(breaks = seq(0,100,5), limits = c(0,25))
+myplot
+ggsave(plot = myplot, filename = "Result_figures/DESeq_plots/g__Streptococcus_within_lesion_CP_boxplot.pdf",width = 7,height = 10,units = "cm")
+
+# ---------------------------------------------
+# g__Psychromonas
+# temp <- subset(genus_data.df, Lesion_type_refined == "SCC_PL")
+# temp <- temp[grepl("g__Psychromonas", temp$taxonomy_genus),]
+# temp$Relative_abundance <- temp$Relative_abundance *100
+# temp_sig <- deseq_subset_SCCPL.df[grepl("g__Psychromonas", deseq_subset_SCCPL.df$Taxonomy),]
+# myplot <- generate_significance_boxplots(mydata.df = temp,
+#                                          variable_column = "Cohort",
+#                                          value_column = "Relative_abundance",
+#                                          variable_colours_available = T,
+#                                          significances.df = temp_sig,
+#                                          p_value_column = "padj",
+#                                          sig_threshold = 0.05) +
+#   ylab("Relative abundance") +
+#   ggtitle(genus_relabeller_function(as.character(temp$taxonomy_genus[1]))) +
+#   theme(plot.title = element_text(face = "bold", size = 5),
+#         axis.text.x = element_text(size = 7)) +
+#   scale_y_continuous(breaks = seq(0,100,5), limits = c(0,100))
+# myplot
+# ggsave(plot = myplot, filename = "Result_figures/DESeq_plots/g__Psychromonas_within_lesion_SCC_boxplot.pdf",width = 7,height = 10,units = "cm")
+
+
 
 # ------------------------------------------------------------------------------------------------
 # ------------------------------------------------------------------------------------------------

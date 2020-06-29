@@ -45,7 +45,9 @@ generate_taxa_summary_unassigned <- function(mydata, taxa_column, group_by_colum
                      Percent_group_samples = round((max(N_samples) / max(N_total_samples_in_group))*100, 2),
                      Percent_total_samples = round((max(N_samples) / total_samples)*100, 2),
                      
-                     Mean_relative_abundance = round(mean(Relative_abundance), 5),
+                     Mean_relative_abundance_non_zero = round(mean(Relative_abundance), 5),
+                     Mean_relative_abundance = round(sum(Relative_abundance)/N_total_samples_in_group, 5),
+                     
                      Median_relative_abundance = round(median(Relative_abundance), 5),
                      Min_relative_abundance = round(min(Relative_abundance),5),
                      Max_relative_abundance = round(max(Relative_abundance),5),
@@ -63,6 +65,11 @@ source("Code/helper_functions.R")
 
 # Load the processed metadata
 metadata.df <- read.csv("Result_tables/other/processed_metadata.csv", sep =",", header = T)
+metadata_removed_samples.df <-  read.csv("Result_tables/other/metadata_samples_removed.csv", sep =",", header = T)
+metadata_negative_samples.df <-  read.csv("Result_tables/other/metadata_negative.csv", sep =",", header = T)
+metadata.df <- rbind(metadata.df, metadata_removed_samples.df)
+metadata.df <- rbind(metadata.df, metadata_negative_samples.df)
+
 
 # Set the Index to be the rowname
 rownames(metadata.df) <- metadata.df$Index
@@ -81,11 +88,14 @@ discrete_variables <- c("Lesion_type_refined","Gender","Patient", "Cohort", "Len
 # length(unique(temp$taxonomy_genus))
 
 feature_abundances.df <- read.csv("Result_tables/other/most_abundant_unassigned.csv", header = T)
-feature_abundances.df <- feature_abundances.df[feature_abundances.df$Sample %in% metadata.df$Index,]
+# Filter to only those samples in the metdadata. This will mean some BLAST queries won't be retained in the
+# processed table generated below
+# feature_abundances.df <- feature_abundances.df[feature_abundances.df$Sample %in% metadata.df$Index,]
 
 # Load blast results for the most abundant features
 # May need to manually fix file to remove bad characters, e.g. # and '
 top_blast_hits.df <- read.table("External_results/Unassigned_blast_final.tsv", sep = "\t", header = T,comment.char = "",check.names = F)
+
 
 # Remove problemantic characters
 # top_blast_hits.df <- lapply(top_blast_hits.df, function(x) gsub("#", "_"))
@@ -94,7 +104,7 @@ top_blast_hits.df <- read.table("External_results/Unassigned_blast_final.tsv", s
 # grepl("#", top_blast_hits.df$subject_title)
 # top_blast_hits.df
 top_blast_hits.df <- top_blast_hits.df[c("query_id","subject_id","subject_scientific_name","Taxonomy")]
-
+length(unique(top_blast_hits.df$query_id))
 # strain
 # species	name of a species (coincide with organism name for species-level nodes)
 # genus	genus name when available
@@ -110,7 +120,7 @@ top_blast_hits.df$Taxonomy <- NULL
 # top_blast_hits.df[which(top_blast_hits.df$Species ==""),]$Species <- top_blast_hits.df[which(top_blast_hits.df$Species ==""),]$Strain
 top_blast_hits.df[is.na(top_blast_hits.df)] <- "Unassigned"
 top_blast_hits.df[top_blast_hits.df == ""] <- "Unassigned"
-
+length(unique(top_blast_hits.df$query_id))
 
 # top_blast_hits.df$Phylum <- as.character(lapply(top_blast_hits.df$Phylum, FUN = function(x) gsub("^", "p_", x)))
 
@@ -135,16 +145,24 @@ sort(summary(factor(top_blast_hits.df[top_blast_hits.df$Genus != "Unassigned",]$
 sort(summary(factor(top_blast_hits.df[top_blast_hits.df$Genus != "Unassigned",]$Strain)))
 sort(summary(factor(top_blast_hits.df[top_blast_hits.df$Genus != "Unassigned",]$Strain)) /n_features_with_hit * 100)
 
-
 full_table.df <- left_join(feature_abundances.df, metadata.df,by = c("Sample" = "Index"))
+# top_blast_hits.df$query_id %in% feature_abundances.df$OTU.ID
 full_table.df <- left_join(full_table.df, top_blast_hits.df, by = c("OTU.ID" = "query_id"))
 
 full_table.df$study_accession.y <- NULL
 names(full_table.df)[names(full_table.df) == "study_accession.x"] <- "study_accession"
 full_table.df <- full_table.df[!is.na(full_table.df$taxonomy_strain),]
 full_table.df <- full_table.df[,c(grep("RepSeq", names(full_table.df), value = T, invert = T), "RepSeq")]
-write.csv(full_table.df, file = "Result_tables/other/unassigned_blast_results_processed.csv", quote = F, row.names = F)
 
+write.csv(full_table.df[,c("OTU.ID", "Sample","Sample_type", "Patient", "Cohort", "Relative_abundance", "subject_id",
+"subject_scientific_name", "Super_kingdom",  "Kingdom", "Phylum", "Class",  "Order", "Family", 
+"Genus",  "Species", "Strain", "taxonomy_kingdom", "taxonomy_phylum",  "taxonomy_class",  "taxonomy_order",  
+"taxonomy_family", "taxonomy_genus", "taxonomy_species", "taxonomy_strain",  "RepSeq")],
+file = "Result_tables/other/unassigned_blast_results_processed.csv", quote = F, row.names = F)
+length(unique(full_table.df$OTU.ID))
+length(unique(full_table.df$Sample))
+
+# FIXME > mean_relative_abundance values very different from non-zero
 # Generate taxa summaries
 strain_taxa_summary_sample.df <- generate_taxa_summary_unassigned(mydata = full_table.df,taxa_column = "taxonomy_strain",group_by_columns = c("Sample"))
 species_taxa_summary_sample.df <- generate_taxa_summary_unassigned(mydata = full_table.df,taxa_column = "taxonomy_species",group_by_columns = c("Sample"))

@@ -133,13 +133,15 @@ generate_taxa_summary <- function(mydata, taxa_column, group_by_columns){
                      Percent_total_samples = round((max(N_samples) / total_samples)*100, 2),
                      Percent_group_patients = round((max(N_patients) / max(N_total_patients_in_group))*100, 2),
                      Percent_total_patients = round((max(N_patients) / total_patients)*100, 2),
-                     Mean_read_count = round(mean(Read_count), 2),
+                     Mean_read_count_non_zero = round(mean(Read_count), 2),
+                     Mean_read_count = round(sum(Read_count)/N_total_samples_in_group, 2),
                      Median_read_count = median(Read_count),
                      Min_read_count = min(Read_count),
                      Max_read_count = max(Read_count),
                      Summed_read_count = sum(Read_count),
                      
-                     Mean_relative_abundance = round(mean(Relative_abundance), 5),
+                     Mean_relative_abundance_non_zero = round(mean(Relative_abundance), 5),
+                     Mean_relative_abundance = round(sum(Relative_abundance)/N_total_samples_in_group, 5),
                      Median_relative_abundance = round(median(Relative_abundance), 5),
                      Min_relative_abundance = round(min(Relative_abundance),5),
                      Max_relative_abundance = round(max(Relative_abundance),5),
@@ -175,7 +177,7 @@ generate_pca <- function(pca_object, mymetadata, variable_to_plot, colour_palett
                          plot_arrows = F, arrow_colour = "black", arrow_alpha = 1,
                          label_arrows=T,arrow_label_size = .5, num_top_species = 5, arrow_scalar = 1,
                          arrow_label_colour = "black", arrow_thickness = .2,arrow_label_font_type = 1,
-                         specie_labeller_function = NULL, arrow_label_offset = 0,
+                         specie_labeller_function = NULL, arrow_label_offset = 0,file_type = "pdf",
                          show_x_label = T,show_y_label = T,plot_x_ticks = T, plot_y_ticks = T,
                          plot_x_tick_labels = T, plot_y_tick_labels = T){
   pca.scores <- try(scores(pca_object, choices=c(1,2,3)))
@@ -228,9 +230,15 @@ generate_pca <- function(pca_object, mymetadata, variable_to_plot, colour_palett
     # metadata_ordered.df[,variable_to_plot] <- factor(metadata_ordered.df[,variable_to_plot])
   }
   # ------------------------------------------------------------------------------------
-  
+
   if (!is.null(filename)){
-    pdf(filename, height=plot_height,width=plot_width)  
+    if (file_type == "pdf"){
+      pdf(file = filename,height = plot_height, width = plot_width)
+    } else if (file_type == "svg"){
+      # Cairo::CairoSVG(file = filename,width = plot_width,height = plot_height)
+      svg(filename = filename,height = plot_height, width = plot_width)
+      # svglite(file = filename,height = plot_height, width = plot_width)
+    }
   }
   
   plot(0,
@@ -243,7 +251,7 @@ generate_pca <- function(pca_object, mymetadata, variable_to_plot, colour_palett
        xaxt = "n",
        yaxt = "n",
        # frame.plot = F,
-       frame.plot = T,
+       frame.plot = T
        )
        # xaxt = ifelse(plot_x_ticks, "s","n"),
        # yaxt = ifelse(plot_y_ticks, "s","n"))
@@ -252,7 +260,7 @@ generate_pca <- function(pca_object, mymetadata, variable_to_plot, colour_palett
   grid(NULL,NULL, lty = 2, lwd = 1, col = "grey80")
   
   # Add axes 
-  axis(side = 1, labels = ifelse(plot_x_tick_labels, T, F), tck = -0.01,tick = ifelse(plot_x_ticks,T,F),)
+  axis(side = 1, labels = ifelse(plot_x_tick_labels, T, F), tck = -0.01,tick = ifelse(plot_x_ticks,T,F))
   axis(side = 2, labels = ifelse(plot_y_tick_labels, T, F), tck = -0.01, tick = ifelse(plot_x_ticks,T,F))
   # box(which = "plot", lty = "solid")
   
@@ -547,7 +555,7 @@ generate_pca <- function(pca_object, mymetadata, variable_to_plot, colour_palett
       # pt.cex = 0.6,
       pt.lwd = point_line_thickness,
       y.intersp =1,
-      x.intersp =1,
+      x.intersp =1
     )  
   }
   

@@ -59,11 +59,11 @@ source("Code/helper_functions.R")
 metadata.df <- read.csv("Result_tables/other/processed_metadata.csv", sep =",", header = T)
 rownames(metadata.df) <- metadata.df$Index
 
-discrete_variables <- c("Lesion_type_refined","Gender","Patient", "Cohort", "Length_of_immunosuppression_group_1", "Length_of_immunosuppression_group_2")
+discrete_variables <- c("Sample_type","Gender","Patient", "Cohort", "Length_of_immunosuppression_group_1", "Length_of_immunosuppression_group_2")
 
 # We are only interested in C,AK_PL,IEC_PL,SCC_PL,AK,IEC and SCC lesions. 
-# Remove samples for different lesion types (negative, nasal,scar,scar_PL,KA,KA_PL,VV,VV_PL,SF,SF_PL,other,other_PL) from metadata and otu table
-# metadata.df <- metadata.df[metadata.df$Lesion_type %in% c("C","AK_PL","IEC_PL","SCC_PL","AK","IEC","SCC", "LC", "NLC"),]
+# Remove samples for different Sample types (negative, nasal,scar,scar_PL,KA,KA_PL,VV,VV_PL,SF,SF_PL,other,other_PL) from metadata and otu table
+# metadata.df <- metadata.df[metadata.df$Sample_type %in% c("C","AK_PL","IEC_PL","SCC_PL","AK","IEC","SCC", "LC", "NLC"),]
 
 # Load the OTU - taxonomy mapping file
 otu_taxonomy_map.df <- read.csv("Result_tables/other/otu_taxonomy_map.csv", header = T)
@@ -91,8 +91,9 @@ rownames(metadata.df) <- metadata.df$Index
 
 # Factorise discrete columns
 metadata.df$Patient <- factor(metadata.df$Patient)
-metadata.df$Lesion_type <- factor(metadata.df$Lesion_type)
-metadata.df$Lesion_type_refined <- factor(metadata.df$Lesion_type_refined, levels = c("C", "C_P", "AK", "SCC_PL", "SCC"))
+metadata.df$Sample_type_original <- factor(metadata.df$Sample_type_original)
+# metadata.df$Lesion_type_refined <- factor(metadata.df$Lesion_type_refined, levels = c("C", "C_P", "AK", "SCC_PL", "SCC"))
+metadata.df$Sample_type <- factor(metadata.df$Sample_type, levels = c("HS", "PDS", "AK", "SCC_PL", "SCC"))
 metadata.df$Cohort <- factor(metadata.df$Cohort)
 metadata.df$Gender <- factor(metadata.df$Gender)
 
@@ -103,9 +104,6 @@ metadata.df[colour_columns] <- lapply(metadata.df[colour_columns], factor)
 
 # Filter to just immunosuppressed or snapshot samples
 metadata.df <- subset(metadata.df, Cohort == "immunosuppressed" | Snapshot_sample_5 == "yes")
-dim(subset(metadata.df, Cohort == "immunosuppressed" | Snapshot_sample_5 == "yes"))
-dim(subset(metadata.df, Snapshot_sample_5 == "yes"))
-dim(subset(metadata.df,  Cohort == "immunosuppressed"))
 
 # Order the metadata.df by the index value
 metadata.df <- metadata.df[order(metadata.df$Index),]
@@ -117,6 +115,7 @@ genus.m <- genus.m[,as.character(metadata.df$Index)]
 # Order the matrices and metadata to be the same order
 metadata.df <- metadata.df[order(rownames(metadata.df)),]
 otu.m <- otu.m[,order(rownames(metadata.df))]
+genus.m <- genus.m[,order(rownames(metadata.df))]
 
 # CLR transform the otu matrix.
 otu_clr.m <- clr(otu.m)
@@ -125,7 +124,7 @@ genus_clr.m <- clr(genus.m)
 
 # ------------------------------------------------------------------------------------------------------------------------
 # Testing
-# temp_metadata <- subset(metadata.df, Lesion_type != "negative")
+# temp_metadata <- subset(metadata.df, Sample_type != "negative")
 # temp_data <- otu_rare_filtered.m[,rownames(temp_metadata)]
 # temp <- capscale(t(otu_rare_filtered.m)~1, data = temp_metadata, distance = "bray")
 # 
@@ -134,7 +133,7 @@ genus_clr.m <- clr(genus.m)
 #              legend_x = -6, legend_y = 4,
 #              point_size = .7, point_line_thickness = .3,point_alpha =.7,
 #              legend_title = "Sample type",
-#              plot_title = "Both cohorts, all lesion types",
+#              plot_title = "Both cohorts, all Sample types",
 #              limits = c(-5,5,-5,5),
 #              plot_spiders = F,
 #              plot_ellipses = F,
@@ -142,11 +141,11 @@ genus_clr.m <- clr(genus.m)
 #              ellipse_border_width = .5,
 #              label_ellipse = F, ellipse_label_size = .5,
 #              colour_palette = my_colour_palette_206_distinct,
-#              variable_to_plot = "Lesion_type_refined", legend_cols = 1,
+#              variable_to_plot = "Sample_type", legend_cols = 1,
 #              variable_colours_available = T,
-#              filename = paste0("Result_figures/ordination_plots/both_cohorts_Lesion_type_refined_bray.pdf"))
+#              filename = paste0("Result_figures/ordination_plots/both_cohorts_Sample_type_bray.pdf"))
 
-# metadata_sampletype.df <- subset(metadata.df, Lesion_type_refined == "AK")
+# metadata_sampletype.df <- subset(metadata.df, Sample_type == "AK")
 # metadata_sampletype.df <- metadata_sampletype.df[order(rownames(metadata_sampletype.df)),]
 # otu_rare_sampletype.m <- otu_rare_filtered.m[,colnames(otu_rare_filtered.m) %in% rownames(metadata_sampletype.df)]
 # m.pca_sampletype <- capscale(t(otu_rare_filtered.m)~1, data = metadata_sampletype.df, distance = "bray")
@@ -157,7 +156,7 @@ genus_clr.m <- clr(genus.m)
 #              point_size = .7, point_line_thickness = .3,point_alpha =.7,
 #              legend_title = "Cohort",
 #              include_legend = T,
-#              plot_title = paste0("Lesion_type : AK"),
+#              plot_title = paste0("Sample_type : AK"),
 #              # limits = c(-5,5,-5,5),
 #              plot_hulls = F,
 #              plot_spiders = F,
@@ -228,15 +227,15 @@ temp <- calculate_PC_abundance_correlations(genus_pca, mydata.df = genus_data.df
 # ------------------------------------------------------------------------------------
 # All samples, both cohorts
 
-# Lesion_type_refined
+# Sample_type
 generate_pca(genus_pca, mymetadata = metadata.df,
              plot_height = 5, plot_width = 5,
              legend_x = -4, legend_y = 3,
              # legend_x = -2, legend_y = 2,
              point_size = .7, point_line_thickness = 0.3,point_alpha =.9,
-             legend_title = "Lesion type",
+             legend_title = "Sample type",
              legend_cex = .5,
-             plot_title = "Both cohorts, all lesion types",
+             plot_title = "Both cohorts, all sample types",
              limits = c(-4,5,-6,3),
              plot_spiders = F,
              plot_ellipses = F,
@@ -246,13 +245,13 @@ generate_pca(genus_pca, mymetadata = metadata.df,
              include_legend = T,
              label_ellipse = F, ellipse_label_size = .3,
              colour_palette = my_colour_palette_15,
-             variable_to_plot = "Lesion_type_refined", legend_cols = 1,
+             variable_to_plot = "Sample_type", legend_cols = 1,
              variable_colours_available = T,
              num_top_species = 3,
              plot_arrows = F,arrow_alpha = .7, arrow_colour = "grey20",arrow_scalar = 2,arrow_thickness = .7,
              label_arrows = T, arrow_label_size = .5, arrow_label_colour = "black", arrow_label_font_type = 1,
              specie_labeller_function = genus_relabeller_function,arrow_label_offset = 0,
-             filename = paste0("Result_figures/ordination_plots/genus/both_cohorts_lesion_type_refined.pdf"))
+             filename = paste0("Result_figures/ordination_plots/genus/both_cohorts_sample_type.pdf"))
              
 
 # Patient
@@ -263,7 +262,7 @@ generate_pca(genus_pca, mymetadata = metadata.df,
              point_size = .7, point_line_thickness = 0.3,point_alpha =.9,
              legend_title = "Patient",
              legend_cex = .5,
-             plot_title = "Both cohorts, all lesion types",
+             plot_title = "Both cohorts, all Sample types",
              limits = c(-6,5,-6,3),
              plot_spiders = F,
              plot_ellipses = F,
@@ -290,7 +289,7 @@ generate_pca(genus_pca, mymetadata = metadata.df,
              point_size = .7, point_line_thickness = 0.3,point_alpha =.9,
              legend_title = "Cohort",
              legend_cex = .5,
-             plot_title = "Both cohorts, all lesion types",
+             plot_title = "Both cohorts, all Sample types",
              limits = c(-4,5,-6,3),
              plot_spiders = F,
              plot_ellipses = F,
@@ -312,14 +311,14 @@ generate_pca(genus_pca, mymetadata = metadata.df,
 # ------------------------------------------------------------------------------------
 # All samples, immunocompetent
 
-# Lesion_type_final
+# Sample_type
 generate_pca(immunocompetent_genus_pca, mymetadata = subset(metadata.df, Cohort == "immunocompetent"),
              plot_height = 5, plot_width = 5,
              legend_x = -6, legend_y = 5,
              point_size = .7, point_line_thickness = 0.3,point_alpha =.9,
-             legend_title = "Lesion type",
+             legend_title = "Sample type",
              legend_cex = .5,
-             plot_title = "immunocompetent cohort, all lesion types",
+             plot_title = "immunocompetent cohort, all Sample types",
              limits = c(-6,3,-4,5),
              plot_spiders = F,
              plot_ellipses = F,
@@ -329,13 +328,13 @@ generate_pca(immunocompetent_genus_pca, mymetadata = subset(metadata.df, Cohort 
              include_legend = T,
              label_ellipse = F, ellipse_label_size = .3,
              colour_palette = patient_colour_palette_45,
-             variable_to_plot = "Lesion_type_refined", legend_cols = 1,
+             variable_to_plot = "Sample_type", legend_cols = 1,
              variable_colours_available = T,
              num_top_species = 3,
              plot_arrows = F,arrow_alpha = .7, arrow_colour = "grey20",arrow_scalar = 2,arrow_thickness = .7,
              label_arrows = T, arrow_label_size = .5, arrow_label_colour = "black", arrow_label_font_type = 1,
              specie_labeller_function = genus_relabeller_function,arrow_label_offset = 0,
-             filename = paste0("Result_figures/ordination_plots/genus/immunocompetent_lesion_type_refined.pdf"))
+             filename = paste0("Result_figures/ordination_plots/genus/immunocompetent_sample_type.pdf"))
 
 
 # Patient ***
@@ -345,7 +344,7 @@ generate_pca(immunocompetent_genus_pca, mymetadata = subset(metadata.df, Cohort 
              point_size = .7, point_line_thickness = 0.3,point_alpha =.9,
              legend_title = "Patient",
              legend_cex = .5,
-             plot_title = "immunocompetent cohort, all lesion types",
+             plot_title = "immunocompetent cohort, all Sample types",
              limits = c(-6,3,-4,6),
              plot_spiders = F,
              plot_ellipses = T,
@@ -371,7 +370,7 @@ generate_pca(immunocompetent_otu_pca, mymetadata = subset(metadata.df, Cohort ==
              point_size = .7, point_line_thickness = 0.3,point_alpha =.9,
              legend_title = "Patient",
              legend_cex = .5,
-             plot_title = "immunocompetent cohort, all lesion types",
+             plot_title = "immunocompetent cohort, all Sample types",
              limits = c(-7,7,-2,8),
              plot_spiders = F,
              plot_ellipses = T,
@@ -396,7 +395,7 @@ generate_pca(immunocompetent_otu_pca, mymetadata = subset(metadata.df, Cohort ==
              point_size = .7, point_line_thickness = 0.3,point_alpha =.9,
              legend_title = "Patient",
              legend_cex = .5,
-             plot_title = "immunocompetent cohort, all lesion types",
+             plot_title = "immunocompetent cohort, all Sample types",
              limits = c(-6,3,-4,5),
              plot_spiders = F,
              plot_ellipses = F,
@@ -424,7 +423,7 @@ generate_pca(immunocompetent_genus_pca2, mymetadata = metadata.df[immunocompeten
              point_size = .7, point_line_thickness = 0.3,point_alpha =.7,
              legend_title = "Patient",
              legend_cex = .5,
-             plot_title = "immunocompetent cohort, all lesion types",
+             plot_title = "immunocompetent cohort, all Sample types",
              # limits = c(-6,3,-4,5),
              plot_spiders = F,
              plot_ellipses = F,
@@ -445,14 +444,14 @@ generate_pca(immunocompetent_genus_pca2, mymetadata = metadata.df[immunocompeten
 
 # ---------------------------------------------------------------------------------------------------------
 # Immunosuppressed, all sample types
-# Lesion_type_final
+# Sample_type
 generate_pca(immunosuppressed_genus_pca, mymetadata = metadata.df[immunosuppressed_samples,],
              plot_height = 5, plot_width = 5,
              legend_x = -5, legend_y = 8,
              point_size = .7, point_line_thickness = 0.3,point_alpha =.9,
-             legend_title = "Lesion type",
+             legend_title = "Sample type",
              legend_cex = .5,
-             plot_title = "immunosuppressed cohort, all lesion types",
+             plot_title = "immunosuppressed cohort, all Sample types",
              limits = c(-5,5,-5,8),
              plot_spiders = F,
              plot_ellipses = F,
@@ -462,13 +461,13 @@ generate_pca(immunosuppressed_genus_pca, mymetadata = metadata.df[immunosuppress
              include_legend = T,
              label_ellipse = F, ellipse_label_size = .3,
              colour_palette = patient_colour_palette_45,
-             variable_to_plot = "Lesion_type_refined", legend_cols = 1,
+             variable_to_plot = "Sample_type", legend_cols = 1,
              variable_colours_available = T,
              num_top_species = 3,
              plot_arrows = F,arrow_alpha = .7, arrow_colour = "grey20",arrow_scalar = 2,arrow_thickness = .7,
              label_arrows = T, arrow_label_size = .5, arrow_label_colour = "black", arrow_label_font_type = 1,
              specie_labeller_function = genus_relabeller_function,arrow_label_offset = 0,
-             filename = paste0("Result_figures/ordination_plots/genus/immunosuppressed_lesion_type_refined.pdf"))
+             filename = paste0("Result_figures/ordination_plots/genus/immunosuppressed_sample_type.pdf"))
 
 
 # Patient ***
@@ -478,7 +477,7 @@ generate_pca(immunosuppressed_genus_pca, mymetadata = metadata.df[immunosuppress
              point_size = .7, point_line_thickness = 0.3,point_alpha =.9,
              legend_title = "Patient",
              legend_cex = .5,
-             plot_title = "immunosuppressed cohort, all lesion types",
+             plot_title = "immunosuppressed cohort, all Sample types",
              limits = c(-4,5,-5,8),
              plot_spiders = F,
              plot_ellipses = T,
@@ -503,7 +502,7 @@ generate_pca(immunosuppressed_otu_pca, mymetadata = metadata.df[immunosuppressed
              point_size = .7, point_line_thickness = 0.3,point_alpha =.9,
              legend_title = "Patient",
              legend_cex = .5,
-             plot_title = "immunosuppressed cohort, all lesion types",
+             plot_title = "immunosuppressed cohort, all Sample types",
              limits = c(-4,7,-8,8),
              plot_spiders = F,
              plot_ellipses = T,
@@ -531,7 +530,7 @@ generate_pca(immunosuppressed_genus_pca, mymetadata = metadata.df[immunosuppress
              point_size = .7, point_line_thickness = 0.3,point_alpha =.9,
              legend_title = "Gender",
              legend_cex = .5,
-             plot_title = "immunosuppressed cohort, all lesion types",
+             plot_title = "immunosuppressed cohort, all Sample types",
              limits = c(-5,5,-5,8),
              plot_spiders = F,
              plot_ellipses = F,
@@ -552,19 +551,19 @@ generate_pca(immunosuppressed_genus_pca, mymetadata = metadata.df[immunosuppress
 
 # ---------------------------------------------------------------------------------------------------------
 
-# Each lesion type, color by cohort and patient
-for (lesion_type in unique(metadata.df$Lesion_type_refined)){
-  metadata_lesion_type.df <- subset(metadata.df, Lesion_type_refined == lesion_type)
-  metadata_lesion_type.df <- metadata_lesion_type.df[order(rownames(metadata_lesion_type.df)),]
-  genus_clr_lesion_type.m <- genus_clr.m[,colnames(genus_clr.m) %in% rownames(metadata_lesion_type.df)]
-  genus_pca_lesion_type <- rda(t(genus_clr_lesion_type.m), data = metadata_lesion_type.df)
-  generate_pca(genus_pca_lesion_type, mymetadata = metadata_lesion_type.df,
+# Each Sample type, color by cohort and patient
+for (sample_type in unique(metadata.df$Sample_type)){
+  metadata_sample_type.df <- subset(metadata.df, Sample_type == sample_type)
+  metadata_sample_type.df <- metadata_sample_type.df[order(rownames(metadata_sample_type.df)),]
+  genus_clr_sample_type.m <- genus_clr.m[,colnames(genus_clr.m) %in% rownames(metadata_sample_type.df)]
+  genus_pca_sample_type <- rda(t(genus_clr_sample_type.m), data = metadata_sample_type.df)
+  generate_pca(genus_pca_sample_type, mymetadata = metadata_sample_type.df,
                plot_height = 5, plot_width = 5,
                legend_x = -5, legend_y = 8,
                point_size = .7, point_line_thickness = 0.3,point_alpha =.9,
                legend_title = "Cohort",
                legend_cex = .5,
-               plot_title = paste0("Lesion_type : ", lesion_type),
+               plot_title = paste0("Sample type : ", sample_type),
                limits = c(-10,10,-10,10),
                plot_spiders = F,
                plot_ellipses = F,
@@ -581,16 +580,16 @@ for (lesion_type in unique(metadata.df$Lesion_type_refined)){
                plot_arrows = F,arrow_alpha = .7, arrow_colour = "grey20",arrow_scalar = 2,arrow_thickness = .7,
                label_arrows = T, arrow_label_size = .5, arrow_label_colour = "black", arrow_label_font_type = 1,
                specie_labeller_function = genus_relabeller_function,arrow_label_offset = 0,
-               filename = paste0("Result_figures/ordination_plots/genus/",lesion_type,"_cohort.pdf"))
+               filename = paste0("Result_figures/ordination_plots/genus/",sample_type,"_cohort.pdf"))
   
   
-  generate_pca(genus_pca_lesion_type, mymetadata = metadata_lesion_type.df,
+  generate_pca(genus_pca_sample_type, mymetadata = metadata_sample_type.df,
                plot_height = 5, plot_width = 5,
                legend_x = -5, legend_y = 8,
                point_size = .7, point_line_thickness = 0.3,point_alpha =.9,
                legend_title = "Patient",
                legend_cex = .5,
-               plot_title = paste0("Lesion_type : ", lesion_type),
+               plot_title = paste0("Sample type : ", sample_type),
                limits = c(-10,10,-10,10),
                plot_spiders = F,
                plot_ellipses = F,
@@ -607,29 +606,26 @@ for (lesion_type in unique(metadata.df$Lesion_type_refined)){
                plot_arrows = F,arrow_alpha = .7, arrow_colour = "grey20",arrow_scalar = 2,arrow_thickness = .7,
                label_arrows = T, arrow_label_size = .5, arrow_label_colour = "black", arrow_label_font_type = 1,
                specie_labeller_function = genus_relabeller_function,arrow_label_offset = 0,
-               filename = paste0("Result_figures/ordination_plots/genus/", lesion_type, "_patient.pdf"))
+               filename = paste0("Result_figures/ordination_plots/genus/", sample_type, "_patient.pdf"))
 }
 
-# Each lesion type within cohort, color by patient
+# Each Sample type within cohort, color by patient
 for (cohort in unique(metadata.df$Cohort)){
-  for (lesion_type in unique(metadata.df$Lesion_type_refined)){
-    metadata_lesion_type.df <- subset(metadata.df, Cohort == cohort & Lesion_type_refined == lesion_type)
-    metadata_lesion_type.df <- metadata_lesion_type.df[order(rownames(metadata_lesion_type.df)),]
-    genus_clr_lesion_type.m <- genus_clr.m[,colnames(genus_clr.m) %in% rownames(metadata_lesion_type.df)]
-    if (dim(genus_clr_lesion_type.m)[2] == 0){
+  for (sample_type in unique(metadata.df$Sample_type)){
+    metadata_sample_type.df <- subset(metadata.df, Cohort == cohort & Sample_type == sample_type)
+    metadata_sample_type.df <- metadata_sample_type.df[order(rownames(metadata_sample_type.df)),]
+    genus_clr_sample_type.m <- genus_clr.m[,colnames(genus_clr.m) %in% rownames(metadata_sample_type.df)]
+    if (dim(genus_clr_sample_type.m)[2] == 0){
       next
     }
-    # print(paste0(cohort, " ", lesion_type))
-    # print(dim(genus_clr_lesion_type.m))
-    # print(dim(metadata_lesion_type.df))
-    genus_pca_lesion_type <- rda(t(genus_clr_lesion_type.m), data = metadata_lesion_type.df)
-    generate_pca(genus_pca_lesion_type, mymetadata = metadata_lesion_type.df,
+    genus_pca_sample_type <- rda(t(genus_clr_sample_type.m), data = metadata_sample_type.df)
+    generate_pca(genus_pca_sample_type, mymetadata = metadata_sample_type.df,
                  plot_height = 5, plot_width = 5,
                  legend_x = -5, legend_y = 8,
                  point_size = .7, point_line_thickness = 0.3,point_alpha =.9,
                  legend_title = "Patient",
                  legend_cex = .5,
-                 plot_title = paste0("Lesion_type : ", lesion_type),
+                 plot_title = paste0("Sample type : ", sample_type),
                  limits = c(-10,10,-10,10),
                  plot_spiders = F,
                  plot_ellipses = F,
@@ -646,7 +642,7 @@ for (cohort in unique(metadata.df$Cohort)){
                  plot_arrows = F,arrow_alpha = .7, arrow_colour = "grey20",arrow_scalar = 2,arrow_thickness = .7,
                  label_arrows = T, arrow_label_size = .5, arrow_label_colour = "black", arrow_label_font_type = 1,
                  specie_labeller_function = genus_relabeller_function,arrow_label_offset = 0,
-                 filename = paste0("Result_figures/ordination_plots/genus/",cohort, "_",lesion_type,"_patient.pdf"))
+                 filename = paste0("Result_figures/ordination_plots/genus/",cohort, "_",sample_type,"_patient.pdf"))
   }
 }
 
@@ -662,8 +658,8 @@ for (cohort in unique(metadata.df$Cohort)){
 make_publication_plot <- function(){
   source("Code/helper_functions.R")
   graphics.off()
-  svg(filename = "Result_figures/ordination_plots/lesion_type_patient_genus_PCA_for_publication.svg",width = 8,height = 7)
-  # pdf(file = "Result_figures/ordination_plots/lesion_type_patient_genus_PCA_for_publication.pdf",width = 8,height = 7)
+  # svg(filename = "Result_figures/ordination_plots/sample_type_patient_genus_PCA_for_publication.svg",width = 8,height = 7)
+  pdf(file = "Result_figures/ordination_plots/sample_type_patient_genus_PCA_for_publication.pdf",width = 8,height = 7)
   # par(mfrow = c(2,2))
   # par(mfrow = c(2,2),
   #     mar = c(1,10,5,1))
@@ -676,7 +672,7 @@ make_publication_plot <- function(){
                plot_height = 5, plot_width = 5,
                legend_x = -5, legend_y = 8,
                point_size = .7, point_line_thickness = 0.3,point_alpha =.9,
-               legend_title = "Lesion type",
+               legend_title = "Sample type",
                legend_cex = .5,
                plot_title = "",
                limits = c(-5,4,-5,8),
@@ -694,22 +690,22 @@ make_publication_plot <- function(){
                include_legend = T,
                label_ellipse = F, ellipse_label_size = .3,
                colour_palette = patient_colour_palette_45,
-               variable_to_plot = "Lesion_type_refined", legend_cols = 1,
+               variable_to_plot = "Sample_type", legend_cols = 1,
                variable_colours_available = T,
                num_top_species = 3,
                plot_arrows = F,arrow_alpha = .7, arrow_colour = "grey20",arrow_scalar = 2,arrow_thickness = .7,
                label_arrows = T, arrow_label_size = .5, arrow_label_colour = "black", arrow_label_font_type = 1,
                specie_labeller_function = genus_relabeller_function,arrow_label_offset = 0)
   title(outer=F,adj=.5,main="Immunosuppressed",cex.main=4,col.main="black",font.main=2,line=1, cex.main =1.5, family = "serif")
-  # title(outer=F,ylab = "By lesion type",font.lab=2, line = 5,cex.lab = 2, family = "serif")
-  title(outer=T,adj=.77,ylab = "By lesion type",font.lab=2, line = 2,cex.lab = 1.5, family = "serif")
+  # title(outer=F,ylab = "By Sample type",font.lab=2, line = 5,cex.lab = 2, family = "serif")
+  title(outer=T,adj=.77,ylab = "By sample type",font.lab=2, line = 2,cex.lab = 1.5, family = "serif")
 
   par(mar = c(1,4,3,1))
   generate_pca(immunocompetent_genus_pca, mymetadata = subset(metadata.df, Cohort == "immunocompetent"),
                plot_height = 5, plot_width = 5,
                legend_x = -4, legend_y = 4,
                point_size = .7, point_line_thickness = 0.3,point_alpha =.9,
-               legend_title = "Lesion type",
+               legend_title = "Sample type",
                legend_cex = .5,
                plot_title = "",
                limits = c(-4,7,-6,4),
@@ -727,7 +723,7 @@ make_publication_plot <- function(){
                include_legend = T,
                label_ellipse = F, ellipse_label_size = .3,
                colour_palette = patient_colour_palette_45,
-               variable_to_plot = "Lesion_type_refined", legend_cols = 1,
+               variable_to_plot = "Sample_type", legend_cols = 1,
                variable_colours_available = T,
                num_top_species = 3,
                plot_arrows = F,arrow_alpha = .7, arrow_colour = "grey20",arrow_scalar = 2,arrow_thickness = .7,
@@ -840,8 +836,11 @@ genus_interaction_patient_permanova_results <- data.frame()
 otu_within_cohort_permanova_results <- data.frame()
 genus_within_cohort_permanova_results <- data.frame()
 
+otu_interaction_patient_within_cohort_permanova_results <- data.frame()
+genus_interaction_patient_within_cohort_permanova_results <- data.frame()
+
 # run_permanova_custom(my_metadata = metadata.df,
-#                      my_formula = as.formula(paste0("t(genus_clr_subset.m)~Patient+Cohort+Lesion_type_refined+Patient:Lesion_type_refined + Cohort:Lesion_type_refined")),
+#                      my_formula = as.formula(paste0("t(genus_clr_subset.m)~Patient+Cohort+Sample_type+Patient:Sample_type + Cohort:Sample_type")),
 #                      my_method = "euclidean",label = "CLR",permutations = 999)
 
 # Compare groups for each variable
@@ -894,6 +893,23 @@ for (myvar in discrete_variables){
     
     number_of_samples <- nrow(metadata_subset.df)
     
+    # Include an interaction with Patient in the model
+    if (myvar != "Patient"){
+      temp <- run_permanova_custom(my_metadata = metadata_subset.df, 
+                                   my_formula = as.formula(paste0("t(otu_clr_subset.m)~Patient+", myvar, "+Patient:",myvar)),
+                                   my_method = "euclidean",label = "CLR",permutations = 999)
+      temp$Cohort <- cohort
+      temp$Number_of_samples <- number_of_samples
+      otu_interaction_patient_within_cohort_permanova_results <- rbind(otu_interaction_patient_within_cohort_permanova_results, temp)
+      
+      temp <- run_permanova_custom(my_metadata = metadata_subset.df, 
+                                   my_formula = as.formula(paste0("t(genus_clr_subset.m)~Patient+", myvar, "+Patient:",myvar)),
+                                   my_method = "euclidean",label = "CLR",permutations = 999)
+      temp$Cohort <- cohort
+      temp$Number_of_samples <- number_of_samples
+      genus_interaction_patient_within_cohort_permanova_results <- rbind(genus_interaction_patient_within_cohort_permanova_results, temp)
+    }
+    
     temp <- run_permanova_custom(my_metadata = metadata_subset.df, 
                                  my_formula = as.formula(paste0("t(otu_clr_subset.m)~", myvar)),
                                  my_method = "euclidean",label = "CLR",permutations = 999)
@@ -921,13 +937,16 @@ write.csv(genus_within_cohort_permanova_results, file = "Result_tables/stats_var
 write.csv(otu_interaction_patient_permanova_results, file = "Result_tables/stats_various/otu_interaction_patient_PERMANOVA.csv", row.names = F, quote = F)
 write.csv(genus_interaction_patient_permanova_results, file = "Result_tables/stats_various/genus_interaction_patient_PERMANOVA.csv", row.names = F, quote = F)
 
+write.csv(otu_interaction_patient_within_cohort_permanova_results, file = "Result_tables/stats_various/otu_interaction_patient_within_cohort_PERMANOVA.csv", row.names = F, quote = F)
+write.csv(genus_interaction_patient_within_cohort_permanova_results, file = "Result_tables/stats_various/genus_interaction_patient_within_cohort_PERMANOVA.csv", row.names = F, quote = F)
+
 # ---------------------------------------------
 # PERMDISP (betadisper)
 # See: https://www.nicholas-ollberding.com/post/introduction-to-the-statistical-analysis-of-microbiome-data-in-r/
 # "Test the homogeneity of within-group multivariate dispersions on the basis of any resemblance measure."
 # temp_meta.df <- metadata.df
-# temp_meta.df$Lesion_type_refined_Cohort <- with(temp_meta.df, paste0(Lesion_type_refined, "__", Cohort))
-temp <- with(metadata.df, betadisper(vegdist(t(genus_clr.m), method = "euclidean"), group = Lesion_type))
+# temp_meta.df$Sample_type_Cohort <- with(temp_meta.df, paste0(Sample_type, "__", Cohort))
+temp <- with(metadata.df, betadisper(vegdist(t(genus_clr.m), method = "euclidean"), group = Sample_type))
 plot(temp, main = "Ordination Centroids and Dispersion Labeled: Aitchison Distance", sub = "")
 boxplot(temp, main = "", xlab = "")
 vegan::permutest(temp, permutations = 999, parallel = 2)
@@ -936,7 +955,7 @@ vegan::permutest(temp, permutations = 999, parallel = 2)
 # ord_unifrac_un <- phyloseq::ordinate(t(genus_clr.m), method = "PCoA", distance = "unifrac")   
 # temp <- run_permdisp_custom(metadata.df, 
 #                     my_data = genus_clr.m,
-#                     my_group = "Lesion_type_refined",
+#                     my_group = "Sample_type",
 #                     my_method = "euclidean",
 #                     permutations = 999, label = NULL)
 

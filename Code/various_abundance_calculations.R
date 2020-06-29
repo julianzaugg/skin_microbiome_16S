@@ -82,7 +82,8 @@ rownames(metadata.df) <- metadata.df$Index
 
 # Factorise discrete columns
 metadata.df$Patient <- factor(metadata.df$Patient)
-metadata.df$Lesion_type_refined <- factor(metadata.df$Lesion_type_refined, levels = c("C", "C_P", "AK", "SCC_PL", "SCC"))
+# metadata.df$Sample_type <- factor(metadata.df$Sample_type, levels = c("C", "C_P", "AK", "SCC_PL", "SCC"))
+metadata.df$Sample_type <- factor(metadata.df$Sample_type, levels = c("HS", "PDS", "AK", "SCC_PL", "SCC"))
 metadata.df$Cohort <- factor(metadata.df$Cohort)
 metadata.df$Length_of_immunosuppression_group_1 <- factor(metadata.df$Length_of_immunosuppression_group_1)
 metadata.df$Length_of_immunosuppression_group_2 <- factor(metadata.df$Length_of_immunosuppression_group_2)
@@ -105,10 +106,13 @@ genus_data.df <- subset(genus_data.df, Cohort == "immunosuppressed" | Snapshot_s
 family_data.df <- subset(family_data.df, Cohort == "immunosuppressed" | Snapshot_sample_5 == "yes")
 
 # Set levels
-species_data.df$Lesion_type_refined <- factor(species_data.df$Lesion_type_refined, levels = c("C", "C_P", "AK","SCC_PL","SCC"))
-genus_data.df$Lesion_type_refined <- factor(genus_data.df$Lesion_type_refined, levels = c("C", "C_P", "AK","SCC_PL","SCC"))
-family_data.df$Lesion_type_refined <- factor(family_data.df$Lesion_type_refined, levels = c("C", "C_P", "AK","SCC_PL","SCC"))
+# species_data.df$Sample_type <- factor(species_data.df$Sample_type, levels = c("C", "C_P", "AK","SCC_PL","SCC"))
+# genus_data.df$Sample_type <- factor(genus_data.df$Sample_type, levels = c("C", "C_P", "AK","SCC_PL","SCC"))
+# family_data.df$Sample_type <- factor(family_data.df$Sample_type, levels = c("C", "C_P", "AK","SCC_PL","SCC"))
 
+species_data.df$Sample_type <- factor(species_data.df$Sample_type, levels = c("HS", "PDS", "AK", "SCC_PL", "SCC"))
+genus_data.df$Sample_type <- factor(genus_data.df$Sample_type, levels = c("HS", "PDS", "AK", "SCC_PL", "SCC"))
+family_data.df$Sample_type <- factor(family_data.df$Sample_type, levels = c("HS", "PDS", "AK", "SCC_PL", "SCC"))
 
 # Create cohort specific data sets
 immunosuppressed_metadata.df <- metadata.df[metadata.df$Cohort == "immunosuppressed",]
@@ -197,6 +201,48 @@ calculate_taxa_significances_multiple <- function(mydata, variable_column, value
 # Cohort
 
 # Summarise the data
+# ********************************
+# TESTING
+# head(genus_data.df)
+# genus_data.df %>% group_by(Cohort) %>% tally(n_distinct(Sample))
+# temp <- read.csv("Result_tables/relative_abundance_tables/Genus_relative_abundances.csv", header = T)
+# IC_samples <- as.character(subset(metadata.df, Cohort  == "immunocompetent")$Index)
+# temp <- df2matrix(temp[,c("taxonomy_genus", IC_samples)])
+# apply(temp[grepl("g__Cutibac", rownames(temp)),,drop =F],1,mean)
+# 
+# cohort_genus_summary.df <- genus_data.df %>% 
+#   select(Cohort, Sample, taxonomy_genus, Relative_abundance) %>% 
+#   group_by(Cohort) %>% 
+#   dplyr::mutate(Total_N_Samples = n_distinct(Sample)) %>% # number of unique samples/index
+#   group_by(Cohort, taxonomy_genus) %>% 
+#   dplyr::summarise(Total_N_Samples = max(Total_N_Samples), 
+#                    Mean_relative_abundance = sum(Relative_abundance)/max(Total_N_Samples),
+#                    Mean_relative_abundance2 = mean(Relative_abundance),
+#                    Sum_relative_abundance = sum(Relative_abundance)) %>% 
+#   as.data.frame()
+# ********************************
+# Just values for samples
+sample_genus_summary.df <- generate_taxa_summary(genus_data.df,
+                                                 taxa_column = "taxonomy_genus", 
+                                                 group_by_columns = c("Sample", "Cohort", "Sample_type", "Patient"))
+
+# Get top taxa per group
+sample_genus_summary_top.df <- filter_summary_to_top_n(taxa_summary = sample_genus_summary.df, 
+                                                       grouping_variables = c("Sample"), 
+                                                       abundance_column = "Mean_relative_abundance", 
+                                                       my_top_n = 20)
+sample_genus_summary.df <- sample_genus_summary.df[,c("Sample", "Cohort", "Sample_type", "Patient", "taxonomy_genus", "Mean_relative_abundance")]
+sample_genus_summary_top.df <- sample_genus_summary_top.df[,c("Sample", "Cohort", "Sample_type", "Patient", "taxonomy_genus", "Mean_relative_abundance")]
+
+# genus_data.df[,c("Sample", "Cohort", "Sample_type", "Patient", "taxonomy_genus", "Relative_abundance")]
+write.csv(genus_data.df[,c("Sample", "Cohort", "Sample_type", "Patient", "taxonomy_genus", "Relative_abundance")], 
+          "Result_tables/abundance_analysis_tables/sample_genus_abundances.csv", row.names = F, quote = F)
+
+write.csv(sample_genus_summary_top.df, 
+          "Result_tables/abundance_analysis_tables/sample_top_20_genus.csv", row.names = F, quote = F)
+
+
+# ********************************
 cohort_genus_summary.df <- generate_taxa_summary(genus_data.df,
                                                   taxa_column = "taxonomy_genus", 
                                                   group_by_columns = c("Cohort"))
@@ -230,7 +276,7 @@ cohort_genus_summary_all_significances.df <- calculate_taxa_significances(mydata
 
 cohort_genus_summary_top_significances_filtered.df <- cohort_genus_summary_top_significances.df[which(cohort_genus_summary_top_significances.df$MannW_pvalue <= 0.05 | cohort_genus_summary_top_significances.df$MannW_padj <= 0.05),]
 cohort_genus_summary_all_significances_filtered.df <- cohort_genus_summary_all_significances.df[which(cohort_genus_summary_all_significances.df$MannW_pvalue <= 0.05 | cohort_genus_summary_all_significances.df$MannW_padj <= 0.05),]
-write.csv(cohort_genus_summary_all_significances_filtered.df,"Result_tables/abundance_analysis_tables/cohort__genus_wilcox.csv", row.names = F)
+write.csv(cohort_genus_summary_all_significances_filtered.df,"Result_tables/abundance_analysis_tables/cohort__genus_dunn.csv", row.names = F)
 
 source("Code/helper_functions.R")
 # Make individual boxplots for the top taxa
@@ -264,59 +310,59 @@ source("Code/helper_functions.R")
 # }
 
 # ---------------------------------------------------------------------------------------------
-# Lesion type
+# Sample type
 
-lesion_type_genus_summary.df <- generate_taxa_summary(genus_data.df,
+sample_type_genus_summary.df <- generate_taxa_summary(genus_data.df,
                                                       taxa_column = "taxonomy_genus", 
-                                                      group_by_columns = c("Lesion_type_refined"))
+                                                      group_by_columns = c("Sample_type"))
 
-lesion_type_genus_summary_top.df <- filter_summary_to_top_n(taxa_summary = lesion_type_genus_summary.df, 
-                                                            grouping_variables = c("Lesion_type_refined"), 
+sample_type_genus_summary_top.df <- filter_summary_to_top_n(taxa_summary = sample_type_genus_summary.df, 
+                                                            grouping_variables = c("Sample_type"), 
                                                             abundance_column = "Mean_relative_abundance", 
                                                             my_top_n = 20)
 
-lesion_type_genus_summary_filtered.df <- subset(lesion_type_genus_summary.df, Mean_relative_abundance > 0.005)
-genus_data_filtered_top_abundant_lesion_type.df <- subset(genus_data.df, taxonomy_genus %in% lesion_type_genus_summary_top.df$taxonomy_genus)
-genus_data_filtered_lesion_type.df <- subset(genus_data.df, taxonomy_genus %in% lesion_type_genus_summary_filtered.df$taxonomy_genus)
+sample_type_genus_summary_filtered.df <- subset(sample_type_genus_summary.df, Mean_relative_abundance > 0.005)
+genus_data_filtered_top_abundant_sample_type.df <- subset(genus_data.df, taxonomy_genus %in% sample_type_genus_summary_top.df$taxonomy_genus)
+genus_data_filtered_sample_type.df <- subset(genus_data.df, taxonomy_genus %in% sample_type_genus_summary_filtered.df$taxonomy_genus)
 # 
-# lesion_type_genus_summary_top_significances.df <- calculate_taxa_significances(mydata = genus_data_filtered_top_abundant_lesion_type.df,
-#                                                                                variable_column = "Lesion_type_refined",
+# sample_type_genus_summary_top_significances.df <- calculate_taxa_significances(mydata = genus_data_filtered_top_abundant_sample_type.df,
+#                                                                                variable_column = "Sample_type",
 #                                                                                value_column = "Relative_abundance",
 #                                                                                taxonomy_column = "taxonomy_genus")
 
-lesion_type_genus_summary_top_significances.df <- calculate_taxa_significances_multiple(mydata = genus_data_filtered_top_abundant_lesion_type.df,
-                                                                                   variable_column = "Lesion_type_refined",
+sample_type_genus_summary_top_significances.df <- calculate_taxa_significances_multiple(mydata = genus_data_filtered_top_abundant_sample_type.df,
+                                                                                   variable_column = "Sample_type",
                                                                                    value_column = "Relative_abundance",
                                                                                    taxonomy_column = "taxonomy_genus")
 
-# lesion_type_genus_summary_all_significances.df <- calculate_taxa_significances(mydata = genus_data_filtered_lesion_type.df,
-#                                                                                variable_column = "Lesion_type_refined",
+# sample_type_genus_summary_all_significances.df <- calculate_taxa_significances(mydata = genus_data_filtered_sample_type.df,
+#                                                                                variable_column = "Sample_type",
 #                                                                                value_column = "Relative_abundance",
 #                                                                                taxonomy_column = "taxonomy_genus")
-lesion_type_genus_summary_all_significances.df <- calculate_taxa_significances_multiple(mydata = genus_data_filtered_lesion_type.df,
-                                                                                        variable_column = "Lesion_type_refined",
+sample_type_genus_summary_all_significances.df <- calculate_taxa_significances_multiple(mydata = genus_data_filtered_sample_type.df,
+                                                                                        variable_column = "Sample_type",
                                                                                         value_column = "Relative_abundance",
                                                                                         taxonomy_column = "taxonomy_genus")
 
-# lesion_type_genus_summary_top_significances_filtered.df <- lesion_type_genus_summary_top_significances.df[which(lesion_type_genus_summary_top_significances.df$MannW_pvalue <= 0.05 | lesion_type_genus_summary_top_significances.df$MannW_padj <= 0.05),]
-# lesion_type_genus_summary_all_significances_filtered.df <- lesion_type_genus_summary_all_significances.df[which(lesion_type_genus_summary_all_significances.df$MannW_pvalue <= 0.05 | lesion_type_genus_summary_all_significances.df$MannW_padj <= 0.05),]
-# write.csv(lesion_type_genus_summary_all_significances_filtered.df,"Result_tables/abundance_analysis_tables/lesion_type__genus_wilcox.csv", row.names = F)
-lesion_type_genus_summary_top_significances_filtered.df <- lesion_type_genus_summary_top_significances.df[which((lesion_type_genus_summary_top_significances.df$Dunn_pvalue <= 0.05 | 
-                                                       lesion_type_genus_summary_top_significances.df$Dunn_padj <= 0.05) &
-                                                       lesion_type_genus_summary_top_significances.df$KrusW_pvalue <= 0.05),]
+# sample_type_genus_summary_top_significances_filtered.df <- sample_type_genus_summary_top_significances.df[which(sample_type_genus_summary_top_significances.df$MannW_pvalue <= 0.05 | sample_type_genus_summary_top_significances.df$MannW_padj <= 0.05),]
+# sample_type_genus_summary_all_significances_filtered.df <- sample_type_genus_summary_all_significances.df[which(sample_type_genus_summary_all_significances.df$MannW_pvalue <= 0.05 | sample_type_genus_summary_all_significances.df$MannW_padj <= 0.05),]
+# write.csv(sample_type_genus_summary_all_significances_filtered.df,"Result_tables/abundance_analysis_tables/sample_type__genus_wilcox.csv", row.names = F)
+sample_type_genus_summary_top_significances_filtered.df <- sample_type_genus_summary_top_significances.df[which((sample_type_genus_summary_top_significances.df$Dunn_pvalue <= 0.05 | 
+                                                       sample_type_genus_summary_top_significances.df$Dunn_padj <= 0.05) &
+                                                       sample_type_genus_summary_top_significances.df$KrusW_pvalue <= 0.05),]
 
-lesion_type_genus_summary_all_significances_filtered.df <- lesion_type_genus_summary_all_significances.df[which((lesion_type_genus_summary_all_significances.df$Dunn_pvalue <= 0.05 | 
-                                                                                                                   lesion_type_genus_summary_all_significances.df$Dunn_padj <= 0.05) &
-                                                                                                                  lesion_type_genus_summary_all_significances.df$KrusW_pvalue <= 0.05),]
-
-
-write.csv(lesion_type_genus_summary_top_significances_filtered.df,"Result_tables/abundance_analysis_tables/lesion_type__top_genus_dunn.csv", row.names = F)
-write.csv(lesion_type_genus_summary_all_significances_filtered.df,"Result_tables/abundance_analysis_tables/lesion_type__genus_dunn.csv", row.names = F)
+sample_type_genus_summary_all_significances_filtered.df <- sample_type_genus_summary_all_significances.df[which((sample_type_genus_summary_all_significances.df$Dunn_pvalue <= 0.05 | 
+                                                                                                                   sample_type_genus_summary_all_significances.df$Dunn_padj <= 0.05) &
+                                                                                                                  sample_type_genus_summary_all_significances.df$KrusW_pvalue <= 0.05),]
 
 
-# for (taxa in as.character(unique(lesion_type_genus_summary_top.df$taxonomy_genus))){
-#   significances_subset <- subset(lesion_type_genus_summary_top_significances_filtered.df, Taxonomy == taxa)
-#   # significances_subset <- subset(lesion_type_genus_summary_all_significances_filtered.df, Taxonomy == taxa)
+write.csv(sample_type_genus_summary_top_significances_filtered.df,"Result_tables/abundance_analysis_tables/sample_type__top_genus_dunn.csv", row.names = F)
+write.csv(sample_type_genus_summary_all_significances_filtered.df,"Result_tables/abundance_analysis_tables/sample_type__genus_dunn.csv", row.names = F)
+
+
+# for (taxa in as.character(unique(sample_type_genus_summary_top.df$taxonomy_genus))){
+#   significances_subset <- subset(sample_type_genus_summary_top_significances_filtered.df, Taxonomy == taxa)
+#   # significances_subset <- subset(sample_type_genus_summary_all_significances_filtered.df, Taxonomy == taxa)
 #   if (dim(significances_subset)[1] == 0){
 #     print(paste0(taxa, " not significant"))
 #     next()
@@ -324,7 +370,7 @@ write.csv(lesion_type_genus_summary_all_significances_filtered.df,"Result_tables
 #   taxa_title <- genus_relabeller_function(taxa)
 #   data_subset <- subset(genus_data.df, taxonomy_genus == taxa)
 #   myplot <- generate_significance_boxplots(mydata.df = data_subset,
-#                                            variable_column = "Lesion_type_refined",
+#                                            variable_column = "Sample_type",
 #                                            value_column = "Relative_abundance",
 #                                            variable_colours_available = T,
 #                                            significances.df = significances_subset,
@@ -335,7 +381,7 @@ write.csv(lesion_type_genus_summary_all_significances_filtered.df,"Result_tables
 #   
 #   print(taxa_title)
 #   
-#   ggsave(filename = paste0("Result_figures/abundance_analysis_plots/boxplots/Lesion_type_refined/genus/",taxa_title,".pdf"),
+#   ggsave(filename = paste0("Result_figures/abundance_analysis_plots/boxplots/Sample_type/genus/",taxa_title,".pdf"),
 #          device = "pdf",
 #          plot = myplot,
 #          width = 5,
@@ -343,79 +389,79 @@ write.csv(lesion_type_genus_summary_all_significances_filtered.df,"Result_tables
 # }
 
 # ---------------------------------------------------------------------------------------------
-# Lesion type, immunosuppressed
-immunosuppressed_lesion_type_species_summary.df <- generate_taxa_summary(immunosuppressed_species_data.df,
+# Sample type, immunosuppressed
+immunosuppressed_sample_type_species_summary.df <- generate_taxa_summary(immunosuppressed_species_data.df,
                                                         taxa_column = "taxonomy_species", 
-                                                        group_by_columns = c("Lesion_type_refined"))
+                                                        group_by_columns = c("Sample_type"))
 
-immunosuppressed_lesion_type_species_summary_top.df <- filter_summary_to_top_n(taxa_summary = immunosuppressed_lesion_type_species_summary.df, 
-                                                                             grouping_variables = c("Lesion_type_refined"), 
+immunosuppressed_sample_type_species_summary_top.df <- filter_summary_to_top_n(taxa_summary = immunosuppressed_sample_type_species_summary.df, 
+                                                                             grouping_variables = c("Sample_type"), 
                                                                              abundance_column = "Mean_relative_abundance", 
                                                                              my_top_n = 10)
 # Create summary of taxa abundances within each group
-immunosuppressed_lesion_type_genus_summary.df <- generate_taxa_summary(immunosuppressed_genus_data.df,
+immunosuppressed_sample_type_genus_summary.df <- generate_taxa_summary(immunosuppressed_genus_data.df,
                                                       taxa_column = "taxonomy_genus", 
-                                                      group_by_columns = c("Lesion_type_refined"))
+                                                      group_by_columns = c("Sample_type"))
 
 # Filter summary to top taxa by mean relative abundance
-immunosuppressed_lesion_type_genus_summary_top.df <- filter_summary_to_top_n(taxa_summary = immunosuppressed_lesion_type_genus_summary.df, 
-                                                            grouping_variables = c("Lesion_type_refined"), 
+immunosuppressed_sample_type_genus_summary_top.df <- filter_summary_to_top_n(taxa_summary = immunosuppressed_sample_type_genus_summary.df, 
+                                                            grouping_variables = c("Sample_type"), 
                                                             abundance_column = "Mean_relative_abundance", 
                                                             my_top_n = 20)
 
 # Filter main sample data to top taxa
-immunosuppressed_species_data_filtered_top_abundant_lesion_type.df <- subset(immunosuppressed_species_data.df, taxonomy_species %in% immunosuppressed_lesion_type_species_summary_top.df$taxonomy_species)
-immunosuppressed_genus_data_filtered_top_abundant_lesion_type.df <- subset(immunosuppressed_genus_data.df, taxonomy_genus %in% immunosuppressed_lesion_type_genus_summary_top.df$taxonomy_genus)
+immunosuppressed_species_data_filtered_top_abundant_sample_type.df <- subset(immunosuppressed_species_data.df, taxonomy_species %in% immunosuppressed_sample_type_species_summary_top.df$taxonomy_species)
+immunosuppressed_genus_data_filtered_top_abundant_sample_type.df <- subset(immunosuppressed_genus_data.df, taxonomy_genus %in% immunosuppressed_sample_type_genus_summary_top.df$taxonomy_genus)
 
 # Also create summary data limited to taxa with greater than 0.05% abundance
-immunosuppressed_lesion_type_genus_summary_filtered.df <- subset(immunosuppressed_lesion_type_genus_summary.df, Mean_relative_abundance > 0.005)
+immunosuppressed_sample_type_genus_summary_filtered.df <- subset(immunosuppressed_sample_type_genus_summary.df, Mean_relative_abundance > 0.005)
 # And create a version of the main sample data to this subset of taxa
-immunosuppressed_genus_data_filtered_lesion_type.df <- subset(immunosuppressed_genus_data.df, taxonomy_genus %in% immunosuppressed_lesion_type_genus_summary_filtered.df$taxonomy_genus)
+immunosuppressed_genus_data_filtered_sample_type.df <- subset(immunosuppressed_genus_data.df, taxonomy_genus %in% immunosuppressed_sample_type_genus_summary_filtered.df$taxonomy_genus)
 
 
 # Calculate the significances of each taxa across all groups
-immunosuppressed_lesion_type_species_summary_top_significances.df <- calculate_taxa_significances_multiple(mydata = immunosuppressed_species_data_filtered_top_abundant_lesion_type.df,
-                                                                                                         variable_column = "Lesion_type_refined",
+immunosuppressed_sample_type_species_summary_top_significances.df <- calculate_taxa_significances_multiple(mydata = immunosuppressed_species_data_filtered_top_abundant_sample_type.df,
+                                                                                                         variable_column = "Sample_type",
                                                                                                          value_column = "Relative_abundance",
                                                                                                          taxonomy_column = "taxonomy_species")
 
 
-immunosuppressed_lesion_type_genus_summary_top_significances.df <- calculate_taxa_significances_multiple(mydata = immunosuppressed_genus_data_filtered_top_abundant_lesion_type.df,
-                                                                                        variable_column = "Lesion_type_refined",
+immunosuppressed_sample_type_genus_summary_top_significances.df <- calculate_taxa_significances_multiple(mydata = immunosuppressed_genus_data_filtered_top_abundant_sample_type.df,
+                                                                                        variable_column = "Sample_type",
                                                                                         value_column = "Relative_abundance",
                                                                                         taxonomy_column = "taxonomy_genus")
 
-# immunosuppressed_lesion_type_genus_summary_all_significances.df <- calculate_taxa_significances(mydata = immunosuppressed_genus_data_filtered_lesion_type.df,
-#                                                                                variable_column = "Lesion_type_refined",
+# immunosuppressed_sample_type_genus_summary_all_significances.df <- calculate_taxa_significances(mydata = immunosuppressed_genus_data_filtered_sample_type.df,
+#                                                                                variable_column = "Sample_type",
 #                                                                                value_column = "Relative_abundance",
 #                                                                                taxonomy_column = "taxonomy_genus")
 
-immunosuppressed_lesion_type_genus_summary_all_significances.df <- calculate_taxa_significances_multiple(mydata = immunosuppressed_genus_data_filtered_lesion_type.df,
-                                                                                                         variable_column = "Lesion_type_refined",
+immunosuppressed_sample_type_genus_summary_all_significances.df <- calculate_taxa_significances_multiple(mydata = immunosuppressed_genus_data_filtered_sample_type.df,
+                                                                                                         variable_column = "Sample_type",
                                                                                                          value_column = "Relative_abundance",
                                                                                                          taxonomy_column = "taxonomy_genus")
 
 # Filter the significance results to only those of interest
-# immunosuppressed_lesion_type_genus_summary_top_significances_filtered.df <- immunosuppressed_lesion_type_genus_summary_top_significances.df[which(immunosuppressed_lesion_type_genus_summary_top_significances.df$MannW_pvalue <= 0.05 | immunosuppressed_lesion_type_genus_summary_top_significances.df$MannW_padj <= 0.05),]
-# immunosuppressed_lesion_type_genus_summary_all_significances_filtered.df <- immunosuppressed_lesion_type_genus_summary_all_significances.df[which(immunosuppressed_lesion_type_genus_summary_all_significances.df$MannW_pvalue <= 0.05 | immunosuppressed_lesion_type_genus_summary_all_significances.df$MannW_padj <= 0.05),]
-# write.csv(immunosuppressed_lesion_type_genus_summary_all_significances_filtered.df,"Result_tables/abundance_analysis_tables/immunosuppressed_lesion_type__genus_wilcox.csv", row.names = F)
+# immunosuppressed_sample_type_genus_summary_top_significances_filtered.df <- immunosuppressed_sample_type_genus_summary_top_significances.df[which(immunosuppressed_sample_type_genus_summary_top_significances.df$MannW_pvalue <= 0.05 | immunosuppressed_sample_type_genus_summary_top_significances.df$MannW_padj <= 0.05),]
+# immunosuppressed_sample_type_genus_summary_all_significances_filtered.df <- immunosuppressed_sample_type_genus_summary_all_significances.df[which(immunosuppressed_sample_type_genus_summary_all_significances.df$MannW_pvalue <= 0.05 | immunosuppressed_sample_type_genus_summary_all_significances.df$MannW_padj <= 0.05),]
+# write.csv(immunosuppressed_sample_type_genus_summary_all_significances_filtered.df,"Result_tables/abundance_analysis_tables/immunosuppressed_sample_type__genus_wilcox.csv", row.names = F)
 
-immunosuppressed_lesion_type_species_summary_top_significances_filtered.df <- immunosuppressed_lesion_type_species_summary_top_significances.df[which(immunosuppressed_lesion_type_species_summary_top_significances.df$Dunn_pvalue <= 0.05 | immunosuppressed_lesion_type_species_summary_top_significances.df$Dunn_padj <= 0.05),]
+immunosuppressed_sample_type_species_summary_top_significances_filtered.df <- immunosuppressed_sample_type_species_summary_top_significances.df[which(immunosuppressed_sample_type_species_summary_top_significances.df$Dunn_pvalue <= 0.05 | immunosuppressed_sample_type_species_summary_top_significances.df$Dunn_padj <= 0.05),]
 
-immunosuppressed_lesion_type_genus_summary_top_significances_filtered.df <- immunosuppressed_lesion_type_genus_summary_top_significances.df[which((immunosuppressed_lesion_type_genus_summary_top_significances.df$Dunn_pvalue <= 0.05 | 
-                                                                                                                                                     immunosuppressed_lesion_type_genus_summary_top_significances.df$Dunn_padj <= 0.05) &
-                                                                                                                                                    immunosuppressed_lesion_type_genus_summary_top_significances.df$KrusW_pvalue <= 0.05),]
+immunosuppressed_sample_type_genus_summary_top_significances_filtered.df <- immunosuppressed_sample_type_genus_summary_top_significances.df[which((immunosuppressed_sample_type_genus_summary_top_significances.df$Dunn_pvalue <= 0.05 | 
+                                                                                                                                                     immunosuppressed_sample_type_genus_summary_top_significances.df$Dunn_padj <= 0.05) &
+                                                                                                                                                    immunosuppressed_sample_type_genus_summary_top_significances.df$KrusW_pvalue <= 0.05),]
 
-immunosuppressed_lesion_type_genus_summary_all_significances_filtered.df <- immunosuppressed_lesion_type_genus_summary_all_significances.df[which((immunosuppressed_lesion_type_genus_summary_all_significances.df$Dunn_pvalue <= 0.05 | 
-                                                                                                                                                     immunosuppressed_lesion_type_genus_summary_all_significances.df$Dunn_padj <= 0.05) &
-                                                                                                                                                    immunosuppressed_lesion_type_genus_summary_all_significances.df$KrusW_pvalue <= 0.05),]
+immunosuppressed_sample_type_genus_summary_all_significances_filtered.df <- immunosuppressed_sample_type_genus_summary_all_significances.df[which((immunosuppressed_sample_type_genus_summary_all_significances.df$Dunn_pvalue <= 0.05 | 
+                                                                                                                                                     immunosuppressed_sample_type_genus_summary_all_significances.df$Dunn_padj <= 0.05) &
+                                                                                                                                                    immunosuppressed_sample_type_genus_summary_all_significances.df$KrusW_pvalue <= 0.05),]
 
-write.csv(immunosuppressed_lesion_type_genus_summary_top_significances_filtered.df,"Result_tables/abundance_analysis_tables/immunosuppressed_lesion_type__top_genus_dunn.csv", row.names = F)
-write.csv(immunosuppressed_lesion_type_genus_summary_all_significances_filtered.df,"Result_tables/abundance_analysis_tables/immunosuppressed_lesion_type__genus_dunn.csv", row.names = F)
+write.csv(immunosuppressed_sample_type_genus_summary_top_significances_filtered.df,"Result_tables/abundance_analysis_tables/immunosuppressed_sample_type__top_genus_dunn.csv", row.names = F)
+write.csv(immunosuppressed_sample_type_genus_summary_all_significances_filtered.df,"Result_tables/abundance_analysis_tables/immunosuppressed_sample_type__genus_dunn.csv", row.names = F)
 
-# for (taxa in as.character(unique(immunosuppressed_lesion_type_genus_summary_top.df$taxonomy_genus))){
-#   significances_subset <- subset(immunosuppressed_lesion_type_genus_summary_top_significances_filtered.df, Taxonomy == taxa)
-#   # significances_subset <- subset(immunosuppressed_lesion_type_genus_summary_all_significances_filtered.df, Taxonomy == taxa)
+# for (taxa in as.character(unique(immunosuppressed_sample_type_genus_summary_top.df$taxonomy_genus))){
+#   significances_subset <- subset(immunosuppressed_sample_type_genus_summary_top_significances_filtered.df, Taxonomy == taxa)
+#   # significances_subset <- subset(immunosuppressed_sample_type_genus_summary_all_significances_filtered.df, Taxonomy == taxa)
 #   if (dim(significances_subset)[1] == 0){
 #     print(paste0(taxa, " not significant"))
 #     next()
@@ -424,7 +470,7 @@ write.csv(immunosuppressed_lesion_type_genus_summary_all_significances_filtered.
 #   taxa_title <- genus_relabeller_function(taxa)
 #   data_subset <- subset(immunosuppressed_genus_data.df, taxonomy_genus == taxa)
 #   myplot <- generate_significance_boxplots(mydata.df = data_subset,
-#                                            variable_column = "Lesion_type_refined",
+#                                            variable_column = "Sample_type",
 #                                            value_column = "Relative_abundance",
 #                                            variable_colours_available = T,
 #                                            significances.df = significances_subset,
@@ -434,67 +480,67 @@ write.csv(immunosuppressed_lesion_type_genus_summary_all_significances_filtered.
 #     labs(title = "Immunosuppressed",subtitle = taxa_title) + theme(plot.title = element_text(size = 8),plot.subtitle = element_text(size = 5,hjust = .5))+
 #     ylab("Relative abundance") + scale_y_continuous( breaks = seq(0,1,.1), limits = c(0,1.4))
 #   
-#   ggsave(filename = paste0("Result_figures/abundance_analysis_plots/boxplots/immunosuppressed/Lesion_type_refined/genus/",taxa_title,".pdf"),
+#   ggsave(filename = paste0("Result_figures/abundance_analysis_plots/boxplots/immunosuppressed/Sample_type/genus/",taxa_title,".pdf"),
 #          device = "pdf",
 #          plot = myplot,
 #          width = 5,
 #          height = 5)
 # }
 # ---------------------------------------------------------------------------------------------
-# Lesion type, immunocompetent
+# Sample type, immunocompetent
 
 
-immunocompetent_lesion_type_genus_summary.df <- generate_taxa_summary(immunocompetent_genus_data.df,
+immunocompetent_sample_type_genus_summary.df <- generate_taxa_summary(immunocompetent_genus_data.df,
                                                                       taxa_column = "taxonomy_genus", 
-                                                                      group_by_columns = c("Lesion_type_refined"))
+                                                                      group_by_columns = c("Sample_type"))
 
-immunocompetent_lesion_type_genus_summary_top.df <- filter_summary_to_top_n(taxa_summary = immunocompetent_lesion_type_genus_summary.df, 
-                                                                            grouping_variables = c("Lesion_type_refined"), 
+immunocompetent_sample_type_genus_summary_top.df <- filter_summary_to_top_n(taxa_summary = immunocompetent_sample_type_genus_summary.df, 
+                                                                            grouping_variables = c("Sample_type"), 
                                                                             abundance_column = "Mean_relative_abundance", 
                                                                             my_top_n = 20)
 
-immunocompetent_genus_data_filtered_top_abundant_lesion_type.df <- subset(immunocompetent_genus_data.df, taxonomy_genus %in% immunocompetent_lesion_type_genus_summary_top.df$taxonomy_genus)
-immunocompetent_lesion_type_genus_summary_filtered.df <- subset(immunocompetent_lesion_type_genus_summary.df, Mean_relative_abundance > 0.005)
-immunocompetent_genus_data_filtered_lesion_type.df <- subset(immunocompetent_genus_data.df, taxonomy_genus %in% immunocompetent_lesion_type_genus_summary_filtered.df$taxonomy_genus)
+immunocompetent_genus_data_filtered_top_abundant_sample_type.df <- subset(immunocompetent_genus_data.df, taxonomy_genus %in% immunocompetent_sample_type_genus_summary_top.df$taxonomy_genus)
+immunocompetent_sample_type_genus_summary_filtered.df <- subset(immunocompetent_sample_type_genus_summary.df, Mean_relative_abundance > 0.005)
+immunocompetent_genus_data_filtered_sample_type.df <- subset(immunocompetent_genus_data.df, taxonomy_genus %in% immunocompetent_sample_type_genus_summary_filtered.df$taxonomy_genus)
 
-# immunocompetent_lesion_type_genus_summary_top_significances.df <- calculate_taxa_significances(mydata = immunocompetent_genus_data_filtered_top_abundant_lesion_type.df,
-#                                                                                                variable_column = "Lesion_type_refined",
+# immunocompetent_sample_type_genus_summary_top_significances.df <- calculate_taxa_significances(mydata = immunocompetent_genus_data_filtered_top_abundant_sample_type.df,
+#                                                                                                variable_column = "Sample_type",
 #                                                                                                value_column = "Relative_abundance",
 #                                                                                                taxonomy_column = "taxonomy_genus")
 
-immunocompetent_lesion_type_genus_summary_top_significances.df <- calculate_taxa_significances_multiple(mydata = immunocompetent_genus_data_filtered_top_abundant_lesion_type.df,
-                                                                                                        variable_column = "Lesion_type_refined",
+immunocompetent_sample_type_genus_summary_top_significances.df <- calculate_taxa_significances_multiple(mydata = immunocompetent_genus_data_filtered_top_abundant_sample_type.df,
+                                                                                                        variable_column = "Sample_type",
                                                                                                         value_column = "Relative_abundance",
                                                                                                         taxonomy_column = "taxonomy_genus")
 
-# immunocompetent_lesion_type_genus_summary_all_significances.df <- calculate_taxa_significances(mydata = immunocompetent_genus_data_filtered_lesion_type.df,
-#                                                                                                variable_column = "Lesion_type_refined",
+# immunocompetent_sample_type_genus_summary_all_significances.df <- calculate_taxa_significances(mydata = immunocompetent_genus_data_filtered_sample_type.df,
+#                                                                                                variable_column = "Sample_type",
 #                                                                                                value_column = "Relative_abundance",
 #                                                                                                taxonomy_column = "taxonomy_genus")
 
-immunocompetent_lesion_type_genus_summary_all_significances.df <- calculate_taxa_significances_multiple(mydata = immunocompetent_genus_data_filtered_lesion_type.df,
-                                                                                                         variable_column = "Lesion_type_refined",
+immunocompetent_sample_type_genus_summary_all_significances.df <- calculate_taxa_significances_multiple(mydata = immunocompetent_genus_data_filtered_sample_type.df,
+                                                                                                         variable_column = "Sample_type",
                                                                                                          value_column = "Relative_abundance",
                                                                                                          taxonomy_column = "taxonomy_genus")
 
-# immunocompetent_lesion_type_genus_summary_top_significances_filtered.df <- immunocompetent_lesion_type_genus_summary_top_significances.df[which(immunocompetent_lesion_type_genus_summary_top_significances.df$MannW_pvalue <= 0.05 | immunocompetent_lesion_type_genus_summary_top_significances.df$MannW_padj <= 0.05),]
-# immunocompetent_lesion_type_genus_summary_all_significances_filtered.df <- immunocompetent_lesion_type_genus_summary_all_significances.df[which(immunocompetent_lesion_type_genus_summary_all_significances.df$MannW_pvalue <= 0.05 | immunocompetent_lesion_type_genus_summary_all_significances.df$MannW_padj <= 0.05),]
-# write.csv(immunocompetent_lesion_type_genus_summary_all_significances_filtered.df,"Result_tables/abundance_analysis_tables/immunocompetent_lesion_type__genus_wilcox.csv", row.names = F)
-immunocompetent_lesion_type_genus_summary_top_significances_filtered.df <- immunocompetent_lesion_type_genus_summary_top_significances.df[which((immunocompetent_lesion_type_genus_summary_top_significances.df$Dunn_pvalue <= 0.05 | 
-                                                                                                                                                   immunocompetent_lesion_type_genus_summary_top_significances.df$Dunn_padj <= 0.05) &
-                                                                                                                                                  immunocompetent_lesion_type_genus_summary_top_significances.df$KrusW_pvalue <= 0.05),]
+# immunocompetent_sample_type_genus_summary_top_significances_filtered.df <- immunocompetent_sample_type_genus_summary_top_significances.df[which(immunocompetent_sample_type_genus_summary_top_significances.df$MannW_pvalue <= 0.05 | immunocompetent_sample_type_genus_summary_top_significances.df$MannW_padj <= 0.05),]
+# immunocompetent_sample_type_genus_summary_all_significances_filtered.df <- immunocompetent_sample_type_genus_summary_all_significances.df[which(immunocompetent_sample_type_genus_summary_all_significances.df$MannW_pvalue <= 0.05 | immunocompetent_sample_type_genus_summary_all_significances.df$MannW_padj <= 0.05),]
+# write.csv(immunocompetent_sample_type_genus_summary_all_significances_filtered.df,"Result_tables/abundance_analysis_tables/immunocompetent_sample_type__genus_wilcox.csv", row.names = F)
+immunocompetent_sample_type_genus_summary_top_significances_filtered.df <- immunocompetent_sample_type_genus_summary_top_significances.df[which((immunocompetent_sample_type_genus_summary_top_significances.df$Dunn_pvalue <= 0.05 | 
+                                                                                                                                                   immunocompetent_sample_type_genus_summary_top_significances.df$Dunn_padj <= 0.05) &
+                                                                                                                                                  immunocompetent_sample_type_genus_summary_top_significances.df$KrusW_pvalue <= 0.05),]
 
-immunocompetent_lesion_type_genus_summary_all_significances_filtered.df <- immunocompetent_lesion_type_genus_summary_all_significances.df[which((immunocompetent_lesion_type_genus_summary_all_significances.df$Dunn_pvalue <= 0.05 | 
-                                                                                                                                                   immunocompetent_lesion_type_genus_summary_all_significances.df$Dunn_padj <= 0.05) &
-                                                                                                                                                  immunocompetent_lesion_type_genus_summary_all_significances.df$KrusW_pvalue <= 0.05),]
+immunocompetent_sample_type_genus_summary_all_significances_filtered.df <- immunocompetent_sample_type_genus_summary_all_significances.df[which((immunocompetent_sample_type_genus_summary_all_significances.df$Dunn_pvalue <= 0.05 | 
+                                                                                                                                                   immunocompetent_sample_type_genus_summary_all_significances.df$Dunn_padj <= 0.05) &
+                                                                                                                                                  immunocompetent_sample_type_genus_summary_all_significances.df$KrusW_pvalue <= 0.05),]
 
-write.csv(immunocompetent_lesion_type_genus_summary_top_significances_filtered.df,"Result_tables/abundance_analysis_tables/immunocompetent_lesion_type__top_genus_dunn.csv", row.names = F)
-write.csv(immunocompetent_lesion_type_genus_summary_all_significances_filtered.df,"Result_tables/abundance_analysis_tables/immunocompetent_lesion_type__genus_dunn.csv", row.names = F)
+write.csv(immunocompetent_sample_type_genus_summary_top_significances_filtered.df,"Result_tables/abundance_analysis_tables/immunocompetent_sample_type__top_genus_dunn.csv", row.names = F)
+write.csv(immunocompetent_sample_type_genus_summary_all_significances_filtered.df,"Result_tables/abundance_analysis_tables/immunocompetent_sample_type__genus_dunn.csv", row.names = F)
 
 
-# for (taxa in as.character(unique(immunocompetent_lesion_type_genus_summary_top.df$taxonomy_genus))){
-#   significances_subset <- subset(immunocompetent_lesion_type_genus_summary_top_significances_filtered.df, Taxonomy == taxa)
-#   # significances_subset <- subset(immunocompetent_lesion_type_genus_summary_all_significances_filtered.df, Taxonomy == taxa)
+# for (taxa in as.character(unique(immunocompetent_sample_type_genus_summary_top.df$taxonomy_genus))){
+#   significances_subset <- subset(immunocompetent_sample_type_genus_summary_top_significances_filtered.df, Taxonomy == taxa)
+#   # significances_subset <- subset(immunocompetent_sample_type_genus_summary_all_significances_filtered.df, Taxonomy == taxa)
 #   if (dim(significances_subset)[1] == 0){
 #     print(paste0(taxa, " not significant"))
 #     next()
@@ -502,7 +548,7 @@ write.csv(immunocompetent_lesion_type_genus_summary_all_significances_filtered.d
 #   taxa_title <- genus_relabeller_function(taxa)
 #   data_subset <- subset(immunocompetent_genus_data.df, taxonomy_genus == taxa)
 #   myplot <- generate_significance_boxplots(mydata.df = data_subset,
-#                                            variable_column = "Lesion_type_refined",
+#                                            variable_column = "Sample_type",
 #                                            value_column = "Relative_abundance",
 #                                            variable_colours_available = T,
 #                                            significances.df = significances_subset,
@@ -513,15 +559,109 @@ write.csv(immunocompetent_lesion_type_genus_summary_all_significances_filtered.d
 #   
 #   print(taxa_title)
 #   
-#   ggsave(filename = paste0("Result_figures/abundance_analysis_plots/boxplots/immunocompetent/Lesion_type_refined/genus/",taxa_title,".pdf"),
+#   ggsave(filename = paste0("Result_figures/abundance_analysis_plots/boxplots/immunocompetent/Sample_type/genus/",taxa_title,".pdf"),
 #          device = "pdf",
 #          plot = myplot,
 #          width = 5,
 #          height = 5)
 # }
 
+# ---------------------------------------------------------------------------------------------
+# Sample type, each patient
+
+patient_sample_type_genus_summary.df <- generate_taxa_summary(genus_data.df,
+                                                              taxa_column = "taxonomy_genus", 
+                                                              group_by_columns = c("Patient","Sample_type"))
+
+patient_sample_type_genus_summary_top.df <- filter_summary_to_top_n(taxa_summary = patient_sample_type_genus_summary.df, 
+                                                                    grouping_variables = c("Sample_type"), 
+                                                                    abundance_column = "Mean_relative_abundance", 
+                                                                    my_top_n = 20)
+write.csv(patient_sample_type_genus_summary_top.df[c("Patient", "Sample_type", "taxonomy_genus", "Mean_relative_abundance", "N_samples")], 
+          "Result_tables/abundance_analysis_tables/patient_sample_type_top_20_genus.csv", row.names = F, quote = F)
+
+patient_sample_type_genus_data_filtered_top_abundant.df <- subset(genus_data.df, taxonomy_genus %in% patient_sample_type_genus_summary_top.df$taxonomy_genus)
+patient_sample_type_genus_summary_filtered.df <- subset(patient_sample_type_genus_summary.df, Mean_relative_abundance > 0.005)
+patient_sample_type_genus_data_filtered.df <- subset(genus_data.df, taxonomy_genus %in% patient_sample_type_genus_summary_filtered.df$taxonomy_genus)
+
+patient_sample_type_genus_summary_top_significances.df <- calculate_taxa_significances_multiple(mydata = patient_sample_type_genus_data_filtered_top_abundant.df,
+                                                                                                variable_column = "Sample_type",
+                                                                                                value_column = "Relative_abundance",
+                                                                                                taxonomy_column = "taxonomy_genus")
+
+patient_sample_type_genus_summary_all_significances.df <- calculate_taxa_significances_multiple(mydata = patient_sample_type_genus_data_filtered.df,
+                                                                                                variable_column = "Sample_type",
+                                                                                                value_column = "Relative_abundance",
+                                                                                                taxonomy_column = "taxonomy_genus")
+
+patient_sample_type_genus_summary_top_significances_filtered.df <- patient_sample_type_genus_summary_top_significances.df[which((patient_sample_type_genus_summary_top_significances.df$Dunn_pvalue <= 0.05 | 
+                                                                                                                                   patient_sample_type_genus_summary_top_significances.df$Dunn_padj <= 0.05) &
+                                                                                                                                  patient_sample_type_genus_summary_top_significances.df$KrusW_pvalue <= 0.05),]
+
+patient_sample_type_genus_summary_all_significances_filtered.df <- patient_sample_type_genus_summary_all_significances.df[which((patient_sample_type_genus_summary_all_significances.df$Dunn_pvalue <= 0.05 | 
+                                                                                                                                   patient_sample_type_genus_summary_all_significances.df$Dunn_padj <= 0.05) &
+                                                                                                                                  patient_sample_type_genus_summary_all_significances.df$KrusW_pvalue <= 0.05),]
+
+write.csv(patient_sample_type_genus_summary_top_significances_filtered.df,"Result_tables/abundance_analysis_tables/patient_sample_type__top_genus_dunn.csv", row.names = F)
+write.csv(patient_sample_type_genus_summary_all_significances_filtered.df,"Result_tables/abundance_analysis_tables/patient_sample_type__genus_dunn.csv", row.names = F)
+
+# ---------------------------------------------------------------------------------------------
+# Between cohorts, same sample type
+
+# First calculate top genera for each cohort
+# Create summary of taxa abundances within each group
+immunosuppressed_sample_type_genus_summary.df <- generate_taxa_summary(immunosuppressed_genus_data.df,
+                                                                       taxa_column = "taxonomy_genus", 
+                                                                       group_by_columns = c("Sample_type"))
+immunosuppressed_sample_type_genus_summary_top.df <- filter_summary_to_top_n(taxa_summary = immunosuppressed_sample_type_genus_summary.df, 
+                                                                             grouping_variables = c("Sample_type"), 
+                                                                             abundance_column = "Mean_relative_abundance", 
+                                                                             my_top_n = 20)
+
+immunocompetent_sample_type_genus_summary.df <- generate_taxa_summary(immunocompetent_genus_data.df,
+                                                                      taxa_column = "taxonomy_genus", 
+                                                                      group_by_columns = c("Sample_type"))
+
+immunocompetent_sample_type_genus_summary_top.df <- filter_summary_to_top_n(taxa_summary = immunocompetent_sample_type_genus_summary.df, 
+                                                                            grouping_variables = c("Sample_type"), 
+                                                                            abundance_column = "Mean_relative_abundance", 
+                                                                            my_top_n = 20)
+both_cohorts_top_genus <- base::union(immunosuppressed_sample_type_genus_summary_top.df$taxonomy_genus, immunocompetent_sample_type_genus_summary_top.df$taxonomy_genus)
+
+both_cohorts_sample_type_genus_data_filtered_top_abundant.df <- subset(genus_data.df, taxonomy_genus %in% both_cohorts_top_genus)
+
+both_cohorts_sample_type_genus_data_filtered_top_abundant.df$Cohort_Sample_type <- with(both_cohorts_sample_type_genus_data_filtered_top_abundant.df, 
+                                                                                        paste0(Cohort, "_", Sample_type))
+
+both_cohorts_sample_type_genus_summary_top_significances.df <- calculate_taxa_significances_multiple(mydata = both_cohorts_sample_type_genus_data_filtered_top_abundant.df,
+                                                                                                variable_column = "Cohort_Sample_type",
+                                                                                                value_column = "Relative_abundance",
+                                                                                                taxonomy_column = "taxonomy_genus")
+
+both_cohorts_sample_type_genus_summary_top_significances.df$Group_1_sample_type <- gsub("(immunocompetent|immunosuppressed)_", "",both_cohorts_sample_type_genus_summary_top_significances.df$Group_1)
+both_cohorts_sample_type_genus_summary_top_significances.df$Group_2_sample_type <- gsub("(immunocompetent|immunosuppressed)_", "",both_cohorts_sample_type_genus_summary_top_significances.df$Group_2)
+both_cohorts_sample_type_genus_summary_top_significances.df <- both_cohorts_sample_type_genus_summary_top_significances.df[with(both_cohorts_sample_type_genus_summary_top_significances.df, Group_1_sample_type == Group_2_sample_type),]
+both_cohorts_sample_type_genus_summary_top_significances.df$Group_1_sample_type <- NULL
+both_cohorts_sample_type_genus_summary_top_significances.df$Group_2_sample_type <- NULL
+
+both_cohorts_sample_type_genus_summary_top_significances_filtered.df <- both_cohorts_sample_type_genus_summary_top_significances.df[which((both_cohorts_sample_type_genus_summary_top_significances.df$Dunn_pvalue <= 0.05 | 
+                                                                                                                                             both_cohorts_sample_type_genus_summary_top_significances.df$Dunn_padj <= 0.05) &
+                                                                                                                                            both_cohorts_sample_type_genus_summary_top_significances.df$KrusW_pvalue <= 0.05),]
+
+write.csv(both_cohorts_sample_type_genus_summary_top_significances_filtered.df,"Result_tables/abundance_analysis_tables/both_cohorts_sample_type__top_genus_dunn.csv", row.names = F)
 
 
+cohort_type_genus_summary.df <- generate_taxa_summary(genus_data.df,
+                                                      taxa_column = "taxonomy_genus", 
+                                                      group_by_columns = c("Cohort", "Sample_type"))
+cohort_sample_type_genus_summary_top.df <- filter_summary_to_top_n(taxa_summary = cohort_type_genus_summary.df, 
+                                                            grouping_variables = c("Cohort", "Sample_type"), 
+                                                            abundance_column = "Mean_relative_abundance", 
+                                                            my_top_n = 20)
+# cohort_sample_type_genus_summary_top.df$taxonomy_genus %in% both_cohorts_top_genus
+
+write.csv(cohort_sample_type_genus_summary_top.df[c("Cohort", "Sample_type", "taxonomy_genus", "Mean_relative_abundance", "N_samples")], 
+          "Result_tables/abundance_analysis_tables/cohort_sample_type_top_20_genus.csv", row.names = F, quote = F)
 
 # ---------------------------------------------------------------------------------------------
 # ---------------------------------------------------------------------------------------------
@@ -529,11 +669,11 @@ write.csv(immunocompetent_lesion_type_genus_summary_all_significances_filtered.d
 # Publication figures
 
 # Based on those taxa that we are interested in, e.g.:
-unique(unique(subset(immunosuppressed_lesion_type_genus_summary_top_significances_filtered.df,Dunn_padj <= 0.05 & KrusW_pvalue <= 0.05)$Taxonomy),
-unique(subset(immunocompetent_lesion_type_genus_summary_top_significances_filtered.df,Dunn_padj <= 0.05 & KrusW_pvalue <= 0.05)$Taxonomy))
+unique(unique(subset(immunosuppressed_sample_type_genus_summary_top_significances_filtered.df,Dunn_padj <= 0.05 & KrusW_pvalue <= 0.05)$Taxonomy),
+unique(subset(immunocompetent_sample_type_genus_summary_top_significances_filtered.df,Dunn_padj <= 0.05 & KrusW_pvalue <= 0.05)$Taxonomy))
 
 source("Code/helper_functions.R")
-make_publication_plot <- function(taxa, 
+make_publication_plot <- function(taxa,
                                   sample_data.df,
                                   significances_IS.df,
                                   significances_IC.df,
@@ -547,10 +687,10 @@ make_publication_plot <- function(taxa,
   significances_subset_immunosuppressed.df <- significances_IS.df[grepl(taxa,significances_IS.df$Taxonomy),]
   significances_subset_immunocompetent.df <- significances_IC.df[grepl(taxa,significances_IC.df$Taxonomy),]
   
-  # significances_subset_immunosuppressed <- immunosuppressed_lesion_type_genus_summary_top_significances_filtered.df[grepl(taxa,immunosuppressed_lesion_type_genus_summary_top_significances_filtered.df$Taxonomy),]
-  # significances_subset_immunocompetent <- immunocompetent_lesion_type_genus_summary_top_significances_filtered.df[grepl(taxa,immunocompetent_lesion_type_genus_summary_top_significances_filtered.df$Taxonomy),]
-  # significances_subset_immunosuppressed <- immunosuppressed_lesion_type_genus_summary_all_significances.df[grepl(taxa,immunosuppressed_lesion_type_genus_summary_all_significances.df$Taxonomy),]
-  # significances_subset_immunocompetent <- immunocompetent_lesion_type_genus_summary_all_significances.df[grepl(taxa,immunocompetent_lesion_type_genus_summary_all_significances.df$Taxonomy),]
+  # significances_subset_immunosuppressed <- immunosuppressed_sample_type_genus_summary_top_significances_filtered.df[grepl(taxa,immunosuppressed_sample_type_genus_summary_top_significances_filtered.df$Taxonomy),]
+  # significances_subset_immunocompetent <- immunocompetent_sample_type_genus_summary_top_significances_filtered.df[grepl(taxa,immunocompetent_sample_type_genus_summary_top_significances_filtered.df$Taxonomy),]
+  # significances_subset_immunosuppressed <- immunosuppressed_sample_type_genus_summary_all_significances.df[grepl(taxa,immunosuppressed_sample_type_genus_summary_all_significances.df$Taxonomy),]
+  # significances_subset_immunocompetent <- immunocompetent_sample_type_genus_summary_all_significances.df[grepl(taxa,immunocompetent_sample_type_genus_summary_all_significances.df$Taxonomy),]
 
   data_subset_immunosuppressed.df <- subset(sample_data.df, Cohort == "immunosuppressed")
   data_subset_immunosuppressed.df <- data_subset_immunosuppressed.df[grepl(taxa,data_subset_immunosuppressed.df[,taxonomy_level]),]
@@ -570,14 +710,14 @@ make_publication_plot <- function(taxa,
   }
   
   IS_plot <-  generate_significance_boxplots(mydata.df = data_subset_immunosuppressed.df,
-                                             variable_column = "Lesion_type_refined",
+                                             variable_column = "Sample_type",
                                              value_column = value_column,
                                              variable_colours_available = T,
                                              significances.df = significances_subset_immunosuppressed.df,
                                              p_value_column = p_value_column,
                                              sig_threshold = 0.05, ...) +
     labs(title = "Immunosuppressed") +
-    xlab("Lesion type") + 
+    xlab("Sample type") + 
     ylab(gsub("_", " ", value_column)) + 
     scale_y_continuous(breaks = seq(ymin_break,ymax_break,ybreak), limits = c(0,ymax_limit)) +
     theme(plot.title = element_text(size = 8),
@@ -585,14 +725,14 @@ make_publication_plot <- function(taxa,
           plot.margin = unit(c(0, 0, 0, 0), "cm")) 
   
   IC_plot <- generate_significance_boxplots(mydata.df = data_subset_immunocompetent.df,
-                                            variable_column = "Lesion_type_refined",
+                                            variable_column = "Sample_type",
                                             value_column = value_column,
                                             variable_colours_available = T,
                                             significances.df = significances_subset_immunocompetent.df,
                                             p_value_column = p_value_column,
                                             sig_threshold = 0.05,...) +
     labs(title = "Immunocompetent") +
-    xlab("Lesion type") + 
+    xlab("Sample type") + 
     ylab("") +
     # scale_y_continuous( breaks = seq(0,1,.1), limits = c(0,1.4)) +
     scale_y_continuous(breaks = seq(ymin_break,ymax_break,ybreak), limits = c(0,ymax_limit)) +
@@ -620,8 +760,8 @@ make_publication_plot <- function(taxa,
 # ---------------------------------------------
 # g__Rothia
 myplot <- make_publication_plot(taxa = "g__Rothia",
-                                significances_IS.df = immunosuppressed_lesion_type_genus_summary_top_significances_filtered.df,
-                                significances_IC.df = immunocompetent_lesion_type_genus_summary_top_significances_filtered.df,
+                                significances_IS.df = immunosuppressed_sample_type_genus_summary_top_significances_filtered.df,
+                                significances_IC.df = immunocompetent_sample_type_genus_summary_top_significances_filtered.df,
                                 taxonomy_level = "taxonomy_genus",
                                 sample_data.df = genus_data.df,
                                 relabeller_function = genus_relabeller_function,
@@ -630,8 +770,8 @@ ggsave(plot = myplot, filename = "Result_figures/abundance_analysis_plots/boxplo
 # ---------------------------------------------
 # g__Staphylococcus
 myplot <- make_publication_plot(taxa = "g__Staphylococcus",
-                                significances_IS.df = immunosuppressed_lesion_type_genus_summary_top_significances_filtered.df,
-                                significances_IC.df = immunocompetent_lesion_type_genus_summary_top_significances_filtered.df,
+                                significances_IS.df = immunosuppressed_sample_type_genus_summary_top_significances_filtered.df,
+                                significances_IC.df = immunocompetent_sample_type_genus_summary_top_significances_filtered.df,
                                 taxonomy_level = "taxonomy_genus",
                                 sample_data.df = genus_data.df,
                                 relabeller_function = genus_relabeller_function,
@@ -640,8 +780,8 @@ myplot <- make_publication_plot(taxa = "g__Staphylococcus",
 ggsave(plot = myplot, filename = "Result_figures/abundance_analysis_plots/boxplots/g__Staphylococcus.pdf",width = 15,height = 12,units = "cm")
 
 myplot <- make_publication_plot(taxa = "g__Staphylococcus",
-                                significances_IS.df = immunosuppressed_lesion_type_genus_summary_top_significances_filtered.df,
-                                significances_IC.df = immunocompetent_lesion_type_genus_summary_top_significances_filtered.df,
+                                significances_IS.df = immunosuppressed_sample_type_genus_summary_top_significances_filtered.df,
+                                significances_IC.df = immunocompetent_sample_type_genus_summary_top_significances_filtered.df,
                                 taxonomy_level = "taxonomy_genus",
                                 sample_data.df = genus_data.df,
                                 value_column = "Read_count_logged",
@@ -652,8 +792,8 @@ myplot
 # ---------------------------------------------
 # g__Malassezia 
 myplot <- make_publication_plot(taxa = "g__Malassezia",
-                                significances_IS.df = immunosuppressed_lesion_type_genus_summary_top_significances_filtered.df,
-                                significances_IC.df = immunocompetent_lesion_type_genus_summary_top_significances_filtered.df,
+                                significances_IS.df = immunosuppressed_sample_type_genus_summary_top_significances_filtered.df,
+                                significances_IC.df = immunocompetent_sample_type_genus_summary_top_significances_filtered.df,
                                 taxonomy_level = "taxonomy_genus",
                                 sample_data.df = genus_data.df,
                                 relabeller_function = genus_relabeller_function,
@@ -662,8 +802,8 @@ ggsave(plot = myplot, filename = "Result_figures/abundance_analysis_plots/boxplo
 # ---------------------------------------------
 # g__Aspergillus
 myplot <- make_publication_plot(taxa = "g__Aspergillus",
-                                significances_IS.df = immunosuppressed_lesion_type_genus_summary_top_significances_filtered.df,
-                                significances_IC.df = immunocompetent_lesion_type_genus_summary_top_significances_filtered.df,
+                                significances_IS.df = immunosuppressed_sample_type_genus_summary_top_significances_filtered.df,
+                                significances_IC.df = immunocompetent_sample_type_genus_summary_top_significances_filtered.df,
                                 taxonomy_level = "taxonomy_genus",
                                 sample_data.df = genus_data.df,
                                 relabeller_function = genus_relabeller_function,
@@ -672,8 +812,8 @@ ggsave(plot = myplot, filename = "Result_figures/abundance_analysis_plots/boxplo
 # ---------------------------------------------
 # g__Pseudomonas
 myplot <- make_publication_plot(taxa = "g__Pseudomonas",
-                                significances_IS.df = immunosuppressed_lesion_type_genus_summary_top_significances_filtered.df,
-                                significances_IC.df = immunocompetent_lesion_type_genus_summary_top_significances_filtered.df,
+                                significances_IS.df = immunosuppressed_sample_type_genus_summary_top_significances_filtered.df,
+                                significances_IC.df = immunocompetent_sample_type_genus_summary_top_significances_filtered.df,
                                 taxonomy_level = "taxonomy_genus",
                                 sample_data.df = genus_data.df,
                                 relabeller_function = genus_relabeller_function,
@@ -682,8 +822,8 @@ ggsave(plot = myplot, filename = "Result_figures/abundance_analysis_plots/boxplo
 # ---------------------------------------------
 # g__Acinetobacter
 myplot <- make_publication_plot(taxa = "g__Acinetobacter",
-                                significances_IS.df = immunosuppressed_lesion_type_genus_summary_top_significances_filtered.df,
-                                significances_IC.df = immunocompetent_lesion_type_genus_summary_top_significances_filtered.df,
+                                significances_IS.df = immunosuppressed_sample_type_genus_summary_top_significances_filtered.df,
+                                significances_IC.df = immunocompetent_sample_type_genus_summary_top_significances_filtered.df,
                                 taxonomy_level = "taxonomy_genus",
                                 sample_data.df = genus_data.df,
                                 relabeller_function = genus_relabeller_function,
@@ -692,8 +832,8 @@ ggsave(plot = myplot, filename = "Result_figures/abundance_analysis_plots/boxplo
 # ---------------------------------------------
 # g__Anaerococcus
 myplot <- make_publication_plot(taxa = "g__Anaerococcus",
-                                significances_IS.df = immunosuppressed_lesion_type_genus_summary_top_significances_filtered.df,
-                                significances_IC.df = immunocompetent_lesion_type_genus_summary_top_significances_filtered.df,
+                                significances_IS.df = immunosuppressed_sample_type_genus_summary_top_significances_filtered.df,
+                                significances_IC.df = immunocompetent_sample_type_genus_summary_top_significances_filtered.df,
                                 taxonomy_level = "taxonomy_genus",
                                 sample_data.df = genus_data.df,
                                 relabeller_function = genus_relabeller_function,
@@ -701,8 +841,8 @@ myplot <- make_publication_plot(taxa = "g__Anaerococcus",
 ggsave(plot = myplot, filename = "Result_figures/abundance_analysis_plots/boxplots/g__Anaerococcus.pdf",width = 15,height = 12,units = "cm")
 
 # myplot <- make_publication_plot(taxa = "g__Anaerococcus",
-#                                 significances_IS.df = immunosuppressed_lesion_type_genus_summary_top_significances_filtered.df,
-#                                 significances_IC.df = immunocompetent_lesion_type_genus_summary_top_significances_filtered.df,
+#                                 significances_IS.df = immunosuppressed_sample_type_genus_summary_top_significances_filtered.df,
+#                                 significances_IC.df = immunocompetent_sample_type_genus_summary_top_significances_filtered.df,
 #                                 taxonomy_level = "taxonomy_genus",
 #                                 sample_data.df = genus_data.df,
 #                                 relabeller_function = genus_relabeller_function,
@@ -712,8 +852,8 @@ ggsave(plot = myplot, filename = "Result_figures/abundance_analysis_plots/boxplo
 # ---------------------------------------------
 # g__Brevundimonas
 myplot <- make_publication_plot(taxa = "g__Brevundimonas",
-                                significances_IS.df = immunosuppressed_lesion_type_genus_summary_top_significances_filtered.df,
-                                significances_IC.df = immunocompetent_lesion_type_genus_summary_top_significances_filtered.df,
+                                significances_IS.df = immunosuppressed_sample_type_genus_summary_top_significances_filtered.df,
+                                significances_IC.df = immunocompetent_sample_type_genus_summary_top_significances_filtered.df,
                                 taxonomy_level = "taxonomy_genus",
                                 sample_data.df = genus_data.df,
                                 relabeller_function = genus_relabeller_function,
@@ -722,8 +862,8 @@ ggsave(plot = myplot, filename = "Result_figures/abundance_analysis_plots/boxplo
 # ---------------------------------------------
 # g__Paracoccus
 myplot <- make_publication_plot(taxa = "g__Paracoccus",
-                                significances_IS.df = immunosuppressed_lesion_type_genus_summary_top_significances_filtered.df,
-                                significances_IC.df = immunocompetent_lesion_type_genus_summary_top_significances_filtered.df,
+                                significances_IS.df = immunosuppressed_sample_type_genus_summary_top_significances_filtered.df,
+                                significances_IC.df = immunocompetent_sample_type_genus_summary_top_significances_filtered.df,
                                 taxonomy_level = "taxonomy_genus",
                                 sample_data.df = genus_data.df,
                                 relabeller_function = genus_relabeller_function,
@@ -732,8 +872,8 @@ ggsave(plot = myplot, filename = "Result_figures/abundance_analysis_plots/boxplo
 # ---------------------------------------------
 # g__Cutibacterium  (formerly Propionibacterium)
 myplot <- make_publication_plot(taxa = "g__Cutibacterium",
-                                significances_IS.df = immunosuppressed_lesion_type_genus_summary_top_significances_filtered.df,
-                                significances_IC.df = immunocompetent_lesion_type_genus_summary_top_significances_filtered.df,
+                                significances_IS.df = immunosuppressed_sample_type_genus_summary_top_significances_filtered.df,
+                                significances_IC.df = immunocompetent_sample_type_genus_summary_top_significances_filtered.df,
                                 taxonomy_level = "taxonomy_genus",
                                 sample_data.df = genus_data.df,
                                 relabeller_function = genus_relabeller_function,
@@ -742,8 +882,8 @@ ggsave(plot = myplot, filename = "Result_figures/abundance_analysis_plots/boxplo
 # ---------------------------------------------
 # g__Anaerococcus
 myplot <- make_publication_plot(taxa = "g__Anaerococcus",
-                                significances_IS.df = immunosuppressed_lesion_type_genus_summary_top_significances_filtered.df,
-                                significances_IC.df = immunocompetent_lesion_type_genus_summary_top_significances_filtered.df,
+                                significances_IS.df = immunosuppressed_sample_type_genus_summary_top_significances_filtered.df,
+                                significances_IC.df = immunocompetent_sample_type_genus_summary_top_significances_filtered.df,
                                 taxonomy_level = "taxonomy_genus",
                                 sample_data.df = genus_data.df,
                                 relabeller_function = genus_relabeller_function,
@@ -752,8 +892,8 @@ myplot
 ggsave(plot = myplot, filename = "Result_figures/abundance_analysis_plots/boxplots/g__Anaerococcus.pdf",width = 15,height = 12,units = "cm")
 
 myplot <- make_publication_plot(taxa = "g__Anaerococcus",
-                                significances_IS.df = immunosuppressed_lesion_type_genus_summary_top_significances_filtered.df,
-                                significances_IC.df = immunocompetent_lesion_type_genus_summary_top_significances_filtered.df,
+                                significances_IS.df = immunosuppressed_sample_type_genus_summary_top_significances_filtered.df,
+                                significances_IC.df = immunocompetent_sample_type_genus_summary_top_significances_filtered.df,
                                 taxonomy_level = "taxonomy_genus",
                                 sample_data.df = genus_data.df,
                                 relabeller_function = genus_relabeller_function,
@@ -763,8 +903,8 @@ myplot <- make_publication_plot(taxa = "g__Anaerococcus",
 # g__Micrococcus 
 mytitle <- genus_relabeller_function(as.character(unique(genus_data.df[grepl("g__Micrococcus", genus_data.df$taxonomy_genus),]$taxonomy_genus)[[1]]))
 myplot <- make_publication_plot(taxa = "g__Micrococcus",
-                                significances_IS.df = immunosuppressed_lesion_type_genus_summary_top_significances_filtered.df,
-                                significances_IC.df = immunocompetent_lesion_type_genus_summary_top_significances_filtered.df,
+                                significances_IS.df = immunosuppressed_sample_type_genus_summary_top_significances_filtered.df,
+                                significances_IC.df = immunocompetent_sample_type_genus_summary_top_significances_filtered.df,
                                 taxonomy_level = "taxonomy_genus",
                                 relabeller_function = genus_relabeller_function,
                                 sample_data.df = genus_data.df,
@@ -775,8 +915,8 @@ ggsave(plot = myplot, filename = "Result_figures/abundance_analysis_plots/boxplo
 # g__Corynebacterium
 mytitle <- genus_relabeller_function(as.character(unique(genus_data.df[grepl("g__Corynebacterium", genus_data.df$taxonomy_genus),]$taxonomy_genus)[[1]]))
 myplot <- make_publication_plot(taxa = "g__Corynebacterium",
-                                significances_IS.df = immunosuppressed_lesion_type_genus_summary_top_significances_filtered.df,
-                                significances_IC.df = immunocompetent_lesion_type_genus_summary_top_significances_filtered.df,
+                                significances_IS.df = immunosuppressed_sample_type_genus_summary_top_significances_filtered.df,
+                                significances_IC.df = immunocompetent_sample_type_genus_summary_top_significances_filtered.df,
                                 taxonomy_level = "taxonomy_genus",
                                 relabeller_function = genus_relabeller_function,
                                 sample_data.df = genus_data.df,
@@ -794,33 +934,33 @@ ggsave(plot = myplot, filename = "Result_figures/abundance_analysis_plots/boxplo
 # ---------------------------------------------------------------------------------------------
 # ---------------------------------------------------------------------------------------------
 # ---------------------------------------------------------------------------------------------
-# Heatmap, top # genera per lesion_type in each cohort
+# Heatmap, top # genera per sample_type in each cohort
 
 # ------- immunosuppressed
 
 # Summarise
-immunosuppressed_lesion_type_genus_summary.df <- generate_taxa_summary(immunosuppressed_genus_data.df,
+immunosuppressed_sample_type_genus_summary.df <- generate_taxa_summary(immunosuppressed_genus_data.df,
                                                                        taxa_column = "taxonomy_genus", 
-                                                                       group_by_columns = c("Lesion_type_refined"))
+                                                                       group_by_columns = c("Sample_type"))
 # Get top taxa
-immunosuppressed_lesion_type_genus_summary_top.df <- filter_summary_to_top_n(taxa_summary = immunosuppressed_lesion_type_genus_summary.df, 
-                                                                             grouping_variables = c("Lesion_type_refined"), 
+immunosuppressed_sample_type_genus_summary_top.df <- filter_summary_to_top_n(taxa_summary = immunosuppressed_sample_type_genus_summary.df, 
+                                                                             grouping_variables = c("Sample_type"), 
                                                                              abundance_column = "Mean_relative_abundance", 
                                                                              my_top_n = 10)
 
 # Make matrix
-heatmap.m <- genus_rel.m[as.character(unique(immunosuppressed_lesion_type_genus_summary_top.df$taxonomy_genus)),]
+heatmap.m <- genus_rel.m[as.character(unique(immunosuppressed_sample_type_genus_summary_top.df$taxonomy_genus)),]
 heatmap.m <- heatmap.m[,colnames(heatmap.m) %in% immunosuppressed_metadata.df$Index]
 
 myhm <- make_heatmap(heatmap.m*100, 
                      mymetadata = immunosuppressed_metadata.df, 
-                     variables = c("Lesion_type_refined"),
+                     variables = c("Sample_type"),
                      my_row_labels = data.frame(rownames(heatmap.m), genus_relabeller_function(rownames(heatmap.m))),
                      column_title = "Sample",
                      row_title = "Genus",
                      plot_height = 4,
                      plot_width = 25,
-                     cluster_columns = F,
+                     cluster_columns = T,
                      cluster_rows = T,
                      show_column_dend = T,
                      show_row_dend = F,
@@ -838,31 +978,31 @@ myhm <- make_heatmap(heatmap.m*100,
                      row_dend_width = unit(3, "cm"),
                      simple_anno_size = unit(.25, "cm"),
                      show_top_annotation = T,
-                     filename = paste0("Result_figures/abundance_analysis_plots/lesion_type_immunosuppressed_top_10_genus_heatmap.pdf"))
+                     filename = paste0("Result_figures/abundance_analysis_plots/sample_type_immunosuppressed_top_10_genus_heatmap.pdf"))
 
 # Summarise
-immunocompetent_lesion_type_genus_summary.df <- generate_taxa_summary(immunocompetent_genus_data.df,
+immunocompetent_sample_type_genus_summary.df <- generate_taxa_summary(immunocompetent_genus_data.df,
                                                                        taxa_column = "taxonomy_genus", 
-                                                                       group_by_columns = c("Lesion_type_refined"))
+                                                                       group_by_columns = c("Sample_type"))
 # Get top taxa
-immunocompetent_lesion_type_genus_summary_top.df <- filter_summary_to_top_n(taxa_summary = immunocompetent_lesion_type_genus_summary.df, 
-                                                                             grouping_variables = c("Lesion_type_refined"), 
+immunocompetent_sample_type_genus_summary_top.df <- filter_summary_to_top_n(taxa_summary = immunocompetent_sample_type_genus_summary.df, 
+                                                                             grouping_variables = c("Sample_type"), 
                                                                              abundance_column = "Mean_relative_abundance", 
                                                                              my_top_n = 10)
 
 # Make matrix
-heatmap.m <- genus_rel.m[as.character(unique(immunocompetent_lesion_type_genus_summary_top.df$taxonomy_genus)),]
+heatmap.m <- genus_rel.m[as.character(unique(immunocompetent_sample_type_genus_summary_top.df$taxonomy_genus)),]
 heatmap.m <- heatmap.m[,colnames(heatmap.m) %in% immunocompetent_metadata.df$Index]
 
 myhm <- make_heatmap(heatmap.m*100, 
                      mymetadata = immunocompetent_metadata.df, 
-                     variables = c("Lesion_type_refined"),
+                     variables = c("Sample_type"),
                      my_row_labels = data.frame(rownames(heatmap.m), genus_relabeller_function(rownames(heatmap.m))),
                      column_title = "Sample",
                      row_title = "Genus",
                      plot_height = 3,
                      plot_width = 25,
-                     cluster_columns = F,
+                     cluster_columns = T,
                      cluster_rows = T,
                      show_column_dend = T,
                      show_row_dend = F,
@@ -880,7 +1020,7 @@ myhm <- make_heatmap(heatmap.m*100,
                      row_dend_width = unit(3, "cm"),
                      simple_anno_size = unit(.25, "cm"),
                      show_top_annotation = T,
-                     filename = paste0("Result_figures/abundance_analysis_plots/lesion_type_immunocompetent_top_10_genus_heatmap.pdf"))
+                     filename = paste0("Result_figures/abundance_analysis_plots/sample_type_immunocompetent_top_10_genus_heatmap.pdf"))
 
 
 
@@ -888,17 +1028,17 @@ myhm <- make_heatmap(heatmap.m*100,
 
 # ---------------------------------------------------------------------------------------------
 # Heatmap, genera across both cohorts that were in the top 20 and were signfiicantly differentally abundant according to dunn
-temp <- genus_data.df[genus_data.df$taxonomy_genus %in% as.character(unique(immunosuppressed_lesion_type_genus_summary_top_significances_filtered.df$Taxonomy, immunosuppressed_lesion_type_genus_summary_top_significances_filtered.df$Taxonomy)),]
+temp <- genus_data.df[genus_data.df$taxonomy_genus %in% as.character(unique(immunosuppressed_sample_type_genus_summary_top_significances_filtered.df$Taxonomy, immunosuppressed_sample_type_genus_summary_top_significances_filtered.df$Taxonomy)),]
 temp <- dcast(temp, taxonomy_genus~Sample, value.var = "Relative_abundance",fill = 0)
 temp <- df2matrix(temp)
 temp <- temp * 100
 # temp_meta <- metadata.df[colnames(temp),]
 # Heatmap(temp)
-# metadata.df$Lesion_type_refined
+# metadata.df$Sample_type
 source("Code/helper_functions.R")
 myhm <- make_heatmap(temp,
              mymetadata = metadata.df,
-             variables = c("Lesion_type_refined", "Cohort"),
+             variables = c("Sample_type", "Cohort"),
              column_title = "Sample",
              row_title = "Genus",
              plot_height = 5,

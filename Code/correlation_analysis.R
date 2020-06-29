@@ -327,7 +327,7 @@ network_data <- generate_lesion_network_dataframes(mixomics_results = mixomics_i
                                                    correlations = immunosuppressed_scc_sccpl_genus_fastspar_cor.m,
                                                    pvalues = immunosuppressed_scc_sccpl_genus_fastspar_pval.m,
                                                    cor_filter = 0.1,
-                                                   pvalue_filter = 0.05)
+                                                   pvalue_filter = 0.01)
 network_data$nodes.df$label <- genus_relabeller_function(network_data$nodes.df$name)
 set.seed(1234)
 myplot <- generate_correlation_network2(
@@ -343,15 +343,15 @@ myplot <- generate_correlation_network2(
   label_size = 3,
   filename = "Result_figures/correlation_analysis/networks/immunosuppressed_scc_sccpl_genus_mixomics_filtered_correlation_graph.pdf",
   file_type = "pdf",
-  plot_height = 10,
-  plot_width = 10)
+  plot_height = 15,
+  plot_width = 15)
 
 # ------------------------------------------------
 network_data <- generate_lesion_network_dataframes(mixomics_results = mixomics_immunosuppressed_scc_sccpl_otu_Lesion_type_refined.df,
                                                    correlations = immunosuppressed_scc_sccpl_otu_fastspar_cor.m,
                                                    pvalues = immunosuppressed_scc_sccpl_otu_fastspar_pval.m,
                                                    cor_filter = 0.1,
-                                                   pvalue_filter = 0.05)
+                                                   pvalue_filter = 0.01)
 
 network_data$nodes.df$label <- feature_relabeller_function(network_data$nodes.df$name,include_feature_ID = F)
 # unlist(lapply(network_data$nodes.df$name, function(x) as.character(otu_taxonomy_map.df[otu_taxonomy_map.df$OTU.ID == x,"taxonomy_species"])))
@@ -406,7 +406,7 @@ network_data <- generate_lesion_network_dataframes(mixomics_results = mixomics_i
                                                    correlations = immunocompetent_scc_sccpl_otu_fastspar_cor.m,
                                                    pvalues = immunocompetent_scc_sccpl_otu_fastspar_pval.m,
                                                    cor_filter = 0.1,
-                                                   pvalue_filter = 0.05)
+                                                   pvalue_filter = 0.01)
 
 network_data$nodes.df$label <- feature_relabeller_function(network_data$nodes.df$name,include_feature_ID = F)
 # unlist(lapply(network_data$nodes.df$name, function(x) as.character(otu_taxonomy_map.df[otu_taxonomy_map.df$OTU.ID == x,"taxonomy_species"])))
@@ -434,6 +434,74 @@ myplot <- generate_correlation_network2(
 # ------------------------------------------------------------------------------------------------------------
 # ------------------------------------------------------------------------------------------------------------
 # ------------------------------------------------------------------------------------------------------------
+
+# heatmap(immunosuppressed_scc_sccpl_genus_fastspar_cor.m)
+
+
+plot_corrplot(correlation_matrix = immunosuppressed_scc_sccpl_genus_fastspar_cor.m,
+              p_value_matrix = immunosuppressed_scc_sccpl_genus_fastspar_pval.m,
+              method = "shade",
+              label_size = .7,
+              p_value_threshold = .01,
+              plot_title_size = 3,plot_height = 30, plot_width = 30,
+              
+              insig = "blank", insig_pch_col = "grey20",plot_title = "immunosuppressed, genus fastspar correlations, SCC and SCC_PL, p <= 0.01", insig_pch = 4,
+              file_type = "pdf",
+              make_insig_na = F,
+              colour_label_size = 3,
+              outline = T,
+              grid_colour = "grey",
+              relabeller_function = genus_relabeller_function,
+              filename = "Result_figures/correlation_analysis/corrplots/immunosuppressed_scc_sccpl_genus_corrplot.pdf")
+
+
+plot_corrplot(correlation_matrix = immunosuppressed_scc_sccpl_otu_fastspar_cor.m,
+              p_value_matrix = immunosuppressed_scc_sccpl_otu_fastspar_pval.m,
+              method = "shade",
+              label_size = .7,
+              p_value_threshold = .01,
+              plot_title_size = .6,plot_height = 30, plot_width = 30,
+              insig = "blank", insig_pch_col = "grey20",plot_title = "immunosuppressed, feature fastspar correlations, SCC and SCC_PL, p <= 0.01", insig_pch = 4,
+              file_type = "pdf",
+              make_insig_na = F,
+              colour_label_size = 3,
+              outline = T,
+              grid_colour = "grey",
+              relabeller_function = feature_relabeller_function,
+              filename = "Result_figures/correlation_analysis/corrplots/immunosuppressed_scc_sccpl_feature_corrplot.pdf")
+
+
+plot_corrplot(correlation_matrix = immunocompetent_scc_sccpl_genus_fastspar_cor.m,
+              p_value_matrix = immunocompetent_scc_sccpl_genus_fastspar_pval.m,
+              method = "shade",
+              label_size = .7,
+              p_value_threshold = .01,
+              plot_title_size = 3,plot_height = 30, plot_width = 30,
+              
+              insig = "blank", insig_pch_col = "grey20",plot_title = "immunocompetent, genus fastspar correlations, SCC and SCC_PL, p <= 0.01", insig_pch = 4,
+              file_type = "pdf",
+              make_insig_na = F,
+              colour_label_size = 3,
+              outline = T,
+              grid_colour = "grey",
+              relabeller_function = genus_relabeller_function,
+              filename = "Result_figures/correlation_analysis/corrplots/immunocompetent_scc_sccpl_genus_corrplot.pdf")
+
+
+plot_corrplot(correlation_matrix = immunocompetent_scc_sccpl_otu_fastspar_cor.m,
+              p_value_matrix = immunocompetent_scc_sccpl_otu_fastspar_pval.m,
+              method = "shade",
+              label_size = .7,
+              p_value_threshold = .01,
+              plot_title_size = 1,plot_height = 30, plot_width = 30,
+              insig = "blank", insig_pch_col = "grey20",plot_title = "immunocompetent, feature fastspar correlations, SCC and SCC_PL, p <= 0.01", insig_pch = 4,
+              file_type = "pdf",
+              make_insig_na = F,
+              colour_label_size = 3,
+              outline = T,
+              grid_colour = "grey",
+              relabeller_function = feature_relabeller_function,
+              filename = "Result_figures/correlation_analysis/corrplots/immunocompetent_scc_sccpl_feature_corrplot.pdf")
 
 
 
