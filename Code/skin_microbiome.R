@@ -632,10 +632,6 @@ metadata_unfiltered.df %>% group_by(Cohort, Sample_type_original) %>% tally()
 metadata_unfiltered.df %>% group_by(Cohort) %>% tally()
 
 
-# Metadata and feature data after consolidating samples. This should be everything needed from this point on!
-write.csv(metadata.df,file = "Result_tables/other/metadata_consolidated.csv", row.names = F, quote = F)
-write.csv(project_otu_table.df,file = "Result_tables/other/feature_data_consolidated.csv", row.names = F, quote = F)
-
 # sample_ids <- grep("R[0-9].*|S[AB][0-9].*|S[0-9].*", names(project_otu_table.df), value = T)
 # ------------------------------------------------------------------------------------------------
 # ------------------------------------------------------------------------------------------------
@@ -724,6 +720,10 @@ metadata.df$Gender_colour <- all_gender_colours
 # all_fst_colours <- as.character(lapply(as.character(metadata.df$Fitzpatrick_skin_type), function(x) fst_colours[x]))
 # metadata.df$Fitzpatrick_skin_type_colour <- all_fst_colours
 
+# ------------------------------------------------
+# Metadata and feature data after consolidating samples. This should be everything needed from this point on!
+write.csv(metadata.df,file = "Result_tables/other/metadata_consolidated.csv", row.names = F, quote = F)
+write.csv(project_otu_table.df,file = "Result_tables/other/feature_data_consolidated.csv", row.names = F, quote = F)
 
 # ------------------------------------------------
 # ------------------------------------------------
