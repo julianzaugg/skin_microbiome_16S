@@ -76,6 +76,17 @@ lesion_palette_10 <- c("#d4a33e","#5ca876","#687fc9","#ce5944","#51b2d0","#9b62c
 #c93434 red lighter
 cohort_palette_2 <- c("#61b4c1", "#c93434")
 
+# Sample_type palette final
+sampletype_negative_col <- rgb(red=154,green=154,blue=154,maxColorValue = 255)
+sampletype_hs_col <- rgb(red=121,green=168,blue=122,maxColorValue = 255)
+sampletype_pds_col <- rgb(red=121,green=175,blue=201,maxColorValue = 255)
+sampletype_ak_col <- rgb(red=255,green=196,blue=0,maxColorValue = 255)
+sampletype_sccpl_col <- rgb(red=240,green=110,blue=123,maxColorValue = 255)
+sampletype_scc_col <- rgb(red=179,green=19,blue=19,maxColorValue = 255)
+sample_type_palette_final <- setNames(c(sampletype_negative_col, sampletype_hs_col, sampletype_pds_col, sampletype_ak_col, sampletype_sccpl_col,sampletype_scc_col),
+                                      c("negative", "HS", "PDS", "AK", "SCC_PL", "SCC"))
+
+
 # Length of suppression pallete
 length_of_suppression_palette <- c("#78a34a","#a464c4","#ce624c")
 
@@ -655,8 +666,9 @@ metadata.df$Sample_type_original_colour <- all_sample_colours
 
 # For Sample_type (final) Same Sampletype colours defined above
 sample_type_values <- sort(factor(as.character(unique(metadata.df$Sample_type)), levels = sort(unique(as.character(metadata.df$Sample_type)))))
-sample_type_colours <- setNames(lesion_palette_10[1:length(sample_type_values)], sample_type_values)
-all_sample_colours <- as.character(lapply(as.character(metadata.df$Sample_type), function(x) sample_type_colours[x]))
+# sample_type_colours <- setNames(lesion_palette_10[1:length(sample_type_values)], sample_type_values)
+# sample_type_colours <- sample_type_palette_final
+all_sample_colours <- as.character(lapply(as.character(metadata.df$Sample_type), function(x) sample_type_palette_final[x]))
 metadata.df$Sample_type_colour <- all_sample_colours
 
 # For Cohort
@@ -1557,55 +1569,56 @@ sample_ids <- colnames(otu.m)
 # -------------------------------------------------------------------------------------------------------------------------------------
 # -------------------------------------------------------------------------------------------------------------------------------------
 # Get the most abundant unassigned features
+# Comment out to speed up processing
 
 # Project table with just unassigned features
-unassigned_project_otu_table_unfiltered.df <- project_otu_table_unfiltered.df[project_otu_table_unfiltered.df$Domain == "Unassigned",]
-rownames(unassigned_project_otu_table_unfiltered.df) <- unassigned_project_otu_table_unfiltered.df$OTU.ID
-
-# Convert to dataframe
-unassigned_otu_unfiltered_rel.df <- m2df(otu_unfiltered_rel.m[as.character(unassigned_project_otu_table_unfiltered.df$OTU.ID),,drop =F],
-                                         column_name = "OTU.ID")
-
-# Melt
-unassigned_otu_unfiltered_rel.df <- melt(unassigned_otu_unfiltered_rel.df, variable.name = "Sample", value.name = "Relative_abundance")
-
-if (max(unassigned_otu_unfiltered_rel.df$Relative_abundance) != 0){
-  
-  # Get the top most abundant unassigned features per sample
-  most_abundant_unassigned.df <- unassigned_otu_unfiltered_rel.df %>% 
-    group_by(Sample) %>%
-    filter(Relative_abundance > 0) %>%
-    top_n(n = 10, wt = Relative_abundance) %>% 
-    mutate(Relative_abundance = round(Relative_abundance*100,3)) %>%
-    as.data.frame() 
-  
-  temp <- melt(round(colSums(unassigned_project_otu_table_unfiltered.df[unique(most_abundant_unassigned.df$OTU.ID),sample_ids])/colSums(project_otu_table_unfiltered.df[,sample_ids]) * 100,4), value.name = "Relative_abundance")
-  length(unique(most_abundant_unassigned.df$OTU.ID)) 
-  length(unique(most_abundant_unassigned.df$OTU.ID)) / length(project_otu_table_unfiltered.df$OTU.ID) *100
-  # temp <- melt(round(colSums(unassigned_project_otu_table_unfiltered.df[,sample_ids])/colSums(project_otu_table_unfiltered.df[,sample_ids]) * 100,4), value.name = "Relative_abundance")
-  temp <- m2df(temp,column_name = "Index")
-  temp <- merge(temp,metadata.df,by = "Index") %>% select(Index, Sample_type, Cohort, Relative_abundance)
-  temp <- temp[order(temp$Relative_abundance,decreasing = T),]
-  print(max(temp$Relative_abundance))
-  print(min(temp$Relative_abundance))
-  print(mean(temp$Relative_abundance))
-  print(median(temp$Relative_abundance))
-  
-  
-  # Get corresponding representative sequence
-  most_abundant_unassigned.df$RepSeq <- unlist(lapply(most_abundant_unassigned.df$OTU.ID, 
-                                                      function(x) as.character(unassigned_project_otu_table_unfiltered.df[unassigned_project_otu_table_unfiltered.df$OTU.ID == x,]$RepSeq)))
-  write.csv(x = most_abundant_unassigned.df, file = paste0("Result_tables/other/most_abundant_unassigned.csv"), row.names = F)
-  
-  # Get unique set of features
-  unique_most_abundant_unassigned.df <- unique(most_abundant_unassigned.df[c("OTU.ID", "RepSeq")])
-  
-  # Write fasta file
-  write.fasta(sequences = as.list(unique_most_abundant_unassigned.df$RepSeq),open = "w", 
-              names = as.character(unique_most_abundant_unassigned.df$OTU.ID),
-              file.out = paste0("Result_other/sequences/most_abundant_unassigned_features.fasta"))
-  
-}
+# unassigned_project_otu_table_unfiltered.df <- project_otu_table_unfiltered.df[project_otu_table_unfiltered.df$Domain == "Unassigned",]
+# rownames(unassigned_project_otu_table_unfiltered.df) <- unassigned_project_otu_table_unfiltered.df$OTU.ID
+# 
+# # Convert to dataframe
+# unassigned_otu_unfiltered_rel.df <- m2df(otu_unfiltered_rel.m[as.character(unassigned_project_otu_table_unfiltered.df$OTU.ID),,drop =F],
+#                                          column_name = "OTU.ID")
+# 
+# # Melt
+# unassigned_otu_unfiltered_rel.df <- melt(unassigned_otu_unfiltered_rel.df, variable.name = "Sample", value.name = "Relative_abundance")
+# 
+# if (max(unassigned_otu_unfiltered_rel.df$Relative_abundance) != 0){
+#   
+#   # Get the top most abundant unassigned features per sample
+#   most_abundant_unassigned.df <- unassigned_otu_unfiltered_rel.df %>% 
+#     group_by(Sample) %>%
+#     filter(Relative_abundance > 0) %>%
+#     top_n(n = 10, wt = Relative_abundance) %>% 
+#     mutate(Relative_abundance = round(Relative_abundance*100,3)) %>%
+#     as.data.frame() 
+#   
+#   temp <- melt(round(colSums(unassigned_project_otu_table_unfiltered.df[unique(most_abundant_unassigned.df$OTU.ID),sample_ids])/colSums(project_otu_table_unfiltered.df[,sample_ids]) * 100,4), value.name = "Relative_abundance")
+#   length(unique(most_abundant_unassigned.df$OTU.ID)) 
+#   length(unique(most_abundant_unassigned.df$OTU.ID)) / length(project_otu_table_unfiltered.df$OTU.ID) *100
+#   # temp <- melt(round(colSums(unassigned_project_otu_table_unfiltered.df[,sample_ids])/colSums(project_otu_table_unfiltered.df[,sample_ids]) * 100,4), value.name = "Relative_abundance")
+#   temp <- m2df(temp,column_name = "Index")
+#   temp <- merge(temp,metadata.df,by = "Index") %>% select(Index, Sample_type, Cohort, Relative_abundance)
+#   temp <- temp[order(temp$Relative_abundance,decreasing = T),]
+#   print(max(temp$Relative_abundance))
+#   print(min(temp$Relative_abundance))
+#   print(mean(temp$Relative_abundance))
+#   print(median(temp$Relative_abundance))
+#   
+#   
+#   # Get corresponding representative sequence
+#   most_abundant_unassigned.df$RepSeq <- unlist(lapply(most_abundant_unassigned.df$OTU.ID, 
+#                                                       function(x) as.character(unassigned_project_otu_table_unfiltered.df[unassigned_project_otu_table_unfiltered.df$OTU.ID == x,]$RepSeq)))
+#   write.csv(x = most_abundant_unassigned.df, file = paste0("Result_tables/other/most_abundant_unassigned.csv"), row.names = F)
+#   
+#   # Get unique set of features
+#   unique_most_abundant_unassigned.df <- unique(most_abundant_unassigned.df[c("OTU.ID", "RepSeq")])
+#   
+#   # Write fasta file
+#   write.fasta(sequences = as.list(unique_most_abundant_unassigned.df$RepSeq),open = "w", 
+#               names = as.character(unique_most_abundant_unassigned.df$OTU.ID),
+#               file.out = paste0("Result_other/sequences/most_abundant_unassigned_features.fasta"))
+#   
+# }
 
 # -------------------------------------------------------------------------------------------------------------------------------------
 # -------------------------------------------------------------------------------------------------------------------------------------

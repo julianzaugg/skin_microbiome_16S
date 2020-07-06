@@ -651,15 +651,25 @@ for (cohort in unique(metadata.df$Cohort)){
 # ------------------------------------------------------------------------------------------------
 # ------------------------------------------------------------------------------------------------
 # Publication figures
+source("Code/helper_functions.R")
+# temp <- setNames(as.character(unique(metadata.df$Sample_type_colour)), as.character(unique(metadata.df$Sample_type)))
 
+shapes_for_sampletype <- setNames(c(25,24,23,22,21), as.character(unique(metadata.df$Sample_type)))
+metadata.df$Sample_type_shape <- unlist(lapply(metadata.df$Sample_type, function(x) shapes_for_sampletype[x][[1]]))
+temp <- metadata.df[immunocompetent_samples,]
+temp$Sample_type_shape
 # par(mfrow = c(2,2),
 #     oma = c(2,2,0,0),
 #     mar = c(1,4,0,1))
-make_publication_plot <- function(){
+make_publication_plot <- function(filetype = "pdf"){
   source("Code/helper_functions.R")
   graphics.off()
-  # svg(filename = "Result_figures/ordination_plots/sample_type_patient_genus_PCA_for_publication.svg",width = 8,height = 7)
-  pdf(file = "Result_figures/ordination_plots/sample_type_patient_genus_PCA_for_publication.pdf",width = 8,height = 7)
+  if (filetype == "svg"){
+    svg(filename = "Result_figures/ordination_plots/sample_type_patient_genus_PCA_for_publication.svg",width = 8,height = 7)
+  }
+  else{
+    pdf(file = "Result_figures/ordination_plots/sample_type_patient_genus_PCA_for_publication.pdf",width = 8,height = 7)  
+  }
   # par(mfrow = c(2,2))
   # par(mfrow = c(2,2),
   #     mar = c(1,10,5,1))
@@ -673,13 +683,14 @@ make_publication_plot <- function(){
                legend_x = -5, legend_y = 8,
                point_size = .7, point_line_thickness = 0.3,point_alpha =.9,
                legend_title = "Sample type",
-               legend_cex = .5,
+               legend_cex = .7,
                plot_title = "",
                limits = c(-5,4,-5,8),
                plot_spiders = F,
                plot_ellipses = F,
                plot_hulls = F,
                use_shapes = T,
+               variable_shapes_available = T,
                show_x_label = F,
                show_y_label = T,
                plot_x_ticks = T,
@@ -696,9 +707,12 @@ make_publication_plot <- function(){
                plot_arrows = F,arrow_alpha = .7, arrow_colour = "grey20",arrow_scalar = 2,arrow_thickness = .7,
                label_arrows = T, arrow_label_size = .5, arrow_label_colour = "black", arrow_label_font_type = 1,
                specie_labeller_function = genus_relabeller_function,arrow_label_offset = 0)
-  title(outer=F,adj=.5,main="Immunosuppressed",cex.main=4,col.main="black",font.main=2,line=1, cex.main =1.5, family = "serif")
+  # title(outer=F,adj=.5,main="Immunosuppressed",cex.main=4,col.main="black",font.main=2,line=1, cex.main =1.5, family = "serif")
+  # title(outer=F,adj=.5,main="Immunosuppressed",cex.main=4,col.main="black",font.main=2,line=1, cex.main =1)
+  title(outer=F,adj=.5,main="Organ transplant recipient",cex.main=4,col.main="black",font.main=2,line=1, cex.main =1)
   # title(outer=F,ylab = "By Sample type",font.lab=2, line = 5,cex.lab = 2, family = "serif")
-  title(outer=T,adj=.77,ylab = "By sample type",font.lab=2, line = 2,cex.lab = 1.5, family = "serif")
+  # title(outer=T,adj=.77,ylab = "By sample type",font.lab=2, line = 2,cex.lab = 1.5, family = "serif")
+  title(outer=T,adj=.77,ylab = "By sample type",font.lab=2, line = 2,cex.lab = 1)
 
   par(mar = c(1,4,3,1))
   generate_pca(immunocompetent_genus_pca, mymetadata = subset(metadata.df, Cohort == "immunocompetent"),
@@ -706,13 +720,14 @@ make_publication_plot <- function(){
                legend_x = -4, legend_y = 4,
                point_size = .7, point_line_thickness = 0.3,point_alpha =.9,
                legend_title = "Sample type",
-               legend_cex = .5,
+               legend_cex = .7,
                plot_title = "",
                limits = c(-4,7,-6,4),
                plot_spiders = F,
                plot_ellipses = F,
                plot_hulls = F,
                use_shapes = T,
+               variable_shapes_available = T,
                show_x_label = F,
                show_y_label = T,
                plot_x_ticks = T,
@@ -729,7 +744,8 @@ make_publication_plot <- function(){
                plot_arrows = F,arrow_alpha = .7, arrow_colour = "grey20",arrow_scalar = 2,arrow_thickness = .7,
                label_arrows = T, arrow_label_size = .5, arrow_label_colour = "black", arrow_label_font_type = 1,
                specie_labeller_function = genus_relabeller_function,arrow_label_offset = 0)
-  title(outer=F,adj=.5,main="Immunocompetent",cex.main=4,col.main="black",font.main=2,line=1, cex.main =1.5, family = "serif")
+  # title(outer=F,adj=.5,main="Immunocompetent",cex.main=4,col.main="black",font.main=2,line=1, cex.main =1.5, family = "serif")
+  title(outer=F,adj=.5,main="Immunocompetent",cex.main=4,col.main="black",font.main=2,line=1, cex.main =1)
   
   par(mar = c(4,4,0,1))
   generate_pca(immunosuppressed_genus_pca, mymetadata = metadata.df[immunosuppressed_samples,],
@@ -744,6 +760,7 @@ make_publication_plot <- function(){
                plot_ellipses = T,
                plot_hulls = F,
                use_shapes = T,
+               variable_shapes_available = F,
                show_x_label = T,
                show_y_label = T,
                plot_x_ticks = T,
@@ -762,7 +779,9 @@ make_publication_plot <- function(){
                label_arrows = T, arrow_label_size = .5, arrow_label_colour = "black", arrow_label_font_type = 1,
                specie_labeller_function = genus_relabeller_function,arrow_label_offset = 0)
   # title(outer=F,ylab = "By patient",font.lab=2, line = 5,cex.lab = 2, family = "serif")
-  title(outer=T,adj = 0.26, ylab = "By patient",font.lab=2, line = 2,cex.lab = 1.5, family = "serif")
+  # title(outer=T,adj = 0.26, ylab = "By patient",font.lab=2, line = 2,cex.lab = 1.5, family = "serif")
+  # title(outer=T,adj = 0.26, ylab = "By patient",font.lab=2, line = 2,cex.lab = 1)
+  title(outer=T,adj = 0.26, ylab = "By subject",font.lab=2, line = 2,cex.lab = 1)
   
   par(mar = c(4,4,0,1))
   generate_pca(immunocompetent_genus_pca, mymetadata = subset(metadata.df, Cohort == "immunocompetent"),
@@ -777,6 +796,7 @@ make_publication_plot <- function(){
                plot_ellipses = T,
                plot_hulls = F,
                use_shapes = T,
+               variable_shapes_available = F,
                show_x_label = T,
                show_y_label = T,
                plot_x_ticks = T,
@@ -799,7 +819,7 @@ make_publication_plot <- function(){
   # title(main = "",outer = T,ylab = "Test")
   dev.off()
 }
-make_publication_plot()
+make_publication_plot("svg")
 # 
 # include <- T
 # plot(0,
@@ -842,7 +862,7 @@ genus_interaction_patient_within_cohort_permanova_results <- data.frame()
 # run_permanova_custom(my_metadata = metadata.df,
 #                      my_formula = as.formula(paste0("t(genus_clr_subset.m)~Patient+Cohort+Sample_type+Patient:Sample_type + Cohort:Sample_type")),
 #                      my_method = "euclidean",label = "CLR",permutations = 999)
-
+discrete_variables <- c("Sample_type", "Cohort", "Patient")
 # Compare groups for each variable
 for (myvar in discrete_variables){
   print(myvar)

@@ -1,7 +1,5 @@
 
 library(ggplot2)
-library(plyr)
-library(dplyr)
 library(tidyr)
 library(RColorBrewer)
 # library(vegan)
@@ -9,6 +7,8 @@ library(reshape2)
 # library(gplots)
 # library(pheatmap)
 library(grid)
+library(plyr)
+library(dplyr)
 
 
 library(ComplexHeatmap) # Make Complex Heatmaps
@@ -169,11 +169,11 @@ filter_summary_to_top_n <- function(taxa_summary, grouping_variables, abundance_
 generate_pca <- function(pca_object, mymetadata, variable_to_plot, colour_palette, limits = NULL, filename = NULL, include_legend = T, add_spider = F, add_ellipse = F,
                          point_alpha = 1, plot_width = 10, plot_height=10, point_size = 0.8, point_line_thickness = 1,
                          label_sites = F, label_species = F,
-                         legend_x = NULL, legend_y = NULL, legend_x_offset = 0, legend_y_offset = 0,title_cex = 1,
-                         legend_cex = 0.6,
+                         legend_x = NULL, legend_y = NULL, legend_x_offset = 0, legend_y_offset = 0,legend_cex = 0.6,
+                         title_cex = 1,
                          plot_spiders = NULL, plot_ellipses = NULL,plot_hulls = NULL, legend_cols = 2, legend_title = NULL,
                          label_ellipse = F, ellipse_label_size = 0.5, ellipse_border_width = 1,variable_colours_available = F, 
-                         plot_title = NULL, use_shapes = F, my_levels = NULL,
+                         plot_title = NULL, use_shapes = F, variable_shapes_available = F, my_levels = NULL,
                          plot_arrows = F, arrow_colour = "black", arrow_alpha = 1,
                          label_arrows=T,arrow_label_size = .5, num_top_species = 5, arrow_scalar = 1,
                          arrow_label_colour = "black", arrow_thickness = .2,arrow_label_font_type = 1,
@@ -277,8 +277,16 @@ generate_pca <- function(pca_object, mymetadata, variable_to_plot, colour_palett
     variable_colours <- setNames(colour_palette[1:length(variable_values)], variable_values)  
   }
   if (use_shapes == T){
-    # variable_shapes <- setNames(c(25,24,23,22,21,8,6,5,4,3,2,1)[1:length(variable_values)],variable_values)
-    variable_shapes <- setNames(rep(c(25,24,23,22,21),length(variable_values))[1:length(variable_values)],variable_values)
+    if (variable_shapes_available == T){
+      shape_col_name <- paste0(variable_to_plot, "_shape")
+      variable_shapes <- setNames(unique(metadata_ordered.df[[shape_col_name]]), 
+                                  as.character(unique(metadata_ordered.df[[variable_to_plot]])))
+      
+    }
+    else{
+      # variable_shapes <- setNames(c(25,24,23,22,21,8,6,5,4,3,2,1)[1:length(variable_values)],variable_values)
+      variable_shapes <- setNames(rep(c(25,24,23,22,21),length(variable_values))[1:length(variable_values)],variable_values)      
+    }
   } else{
     variable_shapes <- setNames(rep(c(21),length(variable_values))[1:length(variable_values)],variable_values)  
   }
@@ -1760,8 +1768,9 @@ generate_significance_boxplots <- function(mydata.df, # Main dataframe
                                            sig_tip_length = 0.01, # length of tips on significance lines
                                            sig_linetype = 1, # linetype of significance lines
                                            sig_colour = "grey20", # colour of significance lines
-                                           sig_line_starting_scale = 1.05
-){
+                                           sig_line_starting_scale = 1.05,
+                                           use_mean = F # Base boxplot on mean instead of median
+  ){
   # Requires ggplot and ggsignif packages
   
   # mydata.df must have the following columns: "variable_column" , "value_column" and (optionally) "variable_column_colour"
@@ -1792,8 +1801,31 @@ generate_significance_boxplots <- function(mydata.df, # Main dataframe
   sig_subset.df <- sig_subset.df[which(sig_subset.df[,p_value_column] < sig_threshold),]
   
   # Generate plot
-  myplot <- ggplot(mydata.df, aes(x = get(variable_column), fill = get(variable_column), y = get(value_column))) +
-    geom_boxplot(outlier.shape = NA) +
+  if (use_mean == T){
+    print("using mean")
+    myplot <- ggplot(mydata.df, aes(x = get(variable_column), 
+                                    fill = get(variable_column),
+                                    y = get(value_column))) +
+      geom_boxplot(fatten = NULL,outlier.shape = NA) +
+      stat_summary(fun = mean, geom = "errorbar", aes(ymax = ..y.., ymin = ..y..),
+                   width = 0.75, size = .75, linetype = "solid", colour = "black")
+      # stat_summary(fun.y = median, geom = "errorbar", aes(ymax = ..y.., ymin = ..y..),
+      #              width = 0.75, size = 1, linetype = "solid", colour = "red")
+      # geom_boxplot(outlier.shape = NA, aes(middle = mean(get(value_column)))) +
+      # stat_summary(fun = mean, geom = "errorbar",
+      #              colour ="red",
+      #              linetype ="dotted",
+      #              size = .5,
+      #              width = .5,
+      #              aes(ymax = ..y.., ymin = ..y..))
+  } else {
+    myplot <- ggplot(mydata.df, aes(x = get(variable_column), 
+                                    fill = get(variable_column), 
+                                    y = get(value_column))) +
+      geom_boxplot(outlier.shape = NA)
+  }
+  
+  myplot <- myplot +
     geom_jitter(size=0.5, width = 0.10, height=0) +
     guides(fill=FALSE) +
     # scale_y_continuous(breaks = seq(0, max(sig_subset.df$y_position)+.1, 1)) +

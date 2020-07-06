@@ -76,6 +76,31 @@ otu_taxonomy_map.df <- read.csv("Result_tables/other/otu_taxonomy_map.csv", head
 
 # Load the processed metadata
 metadata.df <- read.csv("Result_tables/other/processed_metadata.csv", sep =",", header = T)
+# temp <- read.table("Result_tables/relative_abundance_tables/Genus_relative_abundances.csv", sep =",", header = T)
+# temp <- melt(temp, variable.name = "Index", value.name = "Relative_abundance")
+# temp <- left_join(temp, metadata.df, by = "Index")
+# temp$Genus <- unlist(lapply(as.character(temp$taxonomy_genus), function(x) unlist(strsplit(x,";"))[6]))
+# temp2 <- subset(temp, Genus %in% c("g__Staphylococcus", "g__Paracoccus", "g__Cutibacterium", "g__Malassezia", "Micrococcus"))
+# length(temp2[temp2$Relative_abundance == 0,]$Index)
+# summary(temp2[temp2$Relative_abundance == 0,]$Sample_type)
+# temp2 <- subset(temp, Genus %in% c("g__Paracoccus"))
+# length(temp2[temp2$Relative_abundance == 0,]$Index)
+# summary(temp2[temp2$Relative_abundance == 0,]$Sample_type)
+# temp2 <- subset(temp, Genus %in% c("g__Cutibacterium"))
+# length(temp2[temp2$Relative_abundance == 0,]$Index)
+# summary(temp2[temp2$Relative_abundance == 0,]$Sample_type)
+# temp2 <- subset(temp, Genus %in% c("g__Malassezia"))
+# length(temp2[temp2$Relative_abundance == 0,]$Index)
+# summary(temp2[temp2$Relative_abundance == 0,]$Sample_type)
+# temp2 <- subset(temp, Genus %in% c("Micrococcus"))
+# length(temp2[temp2$Relative_abundance == 0,]$Index)
+# summary(temp2[temp2$Relative_abundance == 0,]$Sample_type)
+
+
+
+# temp <- read.table(pipe("pbpaste"), sep = "\t", header = T)
+
+
 
 # Set the Index to be the rowname
 rownames(metadata.df) <- metadata.df$Index
@@ -167,6 +192,7 @@ calculate_taxa_significances <- function(mydata, variable_column, value_column, 
 
 # Calculate the significance values for taxa between multiple groups
 calculate_taxa_significances_multiple <- function(mydata, variable_column, value_column, taxonomy_column){
+  # FIXME only using non-zero values!!
   results.df <- data.frame("Taxonomy" = character(),
                            "Variable" = character(),
                            "Group_1" = character(),
@@ -667,6 +693,39 @@ write.csv(cohort_sample_type_genus_summary_top.df[c("Cohort", "Sample_type", "ta
 # ---------------------------------------------------------------------------------------------
 # ---------------------------------------------------------------------------------------------
 # Publication figures
+# significances_IS.df = immunosuppressed_sample_type_genus_summary_top_significances_filtered.df,
+# significances_IC.df = immunocompetent_sample_type_genus_summary_top_significances_filtered.df,
+# taxonomy_level = "taxonomy_genus",
+# sample_data.df = genus_data.df,
+
+# genus_relabeller_function2 <- function(my_labels){
+#   unlist(lapply(my_labels, 
+#                 function(x) {
+#                   phylostring <- unlist(strsplit(x, split = ";"))
+#                   paste(phylostring[6], sep = ";")
+#                 }))
+# }
+# 
+# immunosuppressed_genus_summary.df <- generate_taxa_summary(immunosuppressed_genus_data.df,
+#                                                            taxa_column = "taxonomy_genus", 
+#                                                            group_by_columns = c("Sample_type"))
+# immunosuppressed_top_genus_summary.df <- filter_summary_to_top_n(taxa_summary = immunosuppressed_genus_summary.df, 
+#                                                                  grouping_variables = c("Sample_type"),
+#                                                                  abundance_column = "Mean_relative_abundance",
+#                                                                  my_top_n = 5)
+# 
+# temp <- subset(immunosuppressed_genus_data.df, taxonomy_genus %in% immunosuppressed_top_genus_summary.df$taxonomy_genus)
+# temp$taxa_label <- genus_relabeller_function2(as.character(temp$taxonomy_genus))
+# ggplot(temp, aes(x =taxa_label, y = Relative_abundance,fill = Sample_type)) +
+#   geom_boxplot(outlier.shape = NA) +
+#   geom_jitter(show.legend = F,
+#               size = .4, 
+#               alpha = 1,
+#               position = position_jitterdodge()) +
+#   # scale_fill_manual(values = variable_colours, name = variable_column) +
+#   common_theme +
+#   theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1, size = 6))
+# 
 
 # Based on those taxa that we are interested in, e.g.:
 unique(unique(subset(immunosuppressed_sample_type_genus_summary_top_significances_filtered.df,Dunn_padj <= 0.05 & KrusW_pvalue <= 0.05)$Taxonomy),
@@ -722,7 +781,8 @@ make_publication_plot <- function(taxa,
     scale_y_continuous(breaks = seq(ymin_break,ymax_break,ybreak), limits = c(0,ymax_limit)) +
     theme(plot.title = element_text(size = 8),
           plot.subtitle = element_text(size = 5,hjust = .5),
-          plot.margin = unit(c(0, 0, 0, 0), "cm")) 
+          plot.margin = unit(c(0, 0, 0, 0), "cm"),
+          axis.title = element_text(size = 8))
   
   IC_plot <- generate_significance_boxplots(mydata.df = data_subset_immunocompetent.df,
                                             variable_column = "Sample_type",
@@ -738,8 +798,8 @@ make_publication_plot <- function(taxa,
     scale_y_continuous(breaks = seq(ymin_break,ymax_break,ybreak), limits = c(0,ymax_limit)) +
     theme(plot.title = element_text(size = 8),
           plot.subtitle = element_text(size = 5,hjust = .5),
-          plot.margin = unit(c(0, 0, 0, 0), "cm")) 
-  
+          plot.margin = unit(c(0, 0, 0, 0), "cm"),
+          axis.title = element_text(size = 8))
   
   title <- ggdraw() + 
     draw_label(
@@ -753,7 +813,12 @@ make_publication_plot <- function(taxa,
   plot_grid(title, grid_plot,ncol = 1, rel_heights = c(0.1, 1))
   
 }
-
+# stat_summary(fun = mean, geom = "errorbar",
+#              colour ="black",
+#              linetype ="dotted",
+#              size = .5,
+#              width = .5,
+#              aes(ymax = ..y.., ymin = ..y..))
 
 # ---------------------------------------------
 # ---------- Compare within cohort ------------
@@ -775,7 +840,7 @@ myplot <- make_publication_plot(taxa = "g__Staphylococcus",
                                 taxonomy_level = "taxonomy_genus",
                                 sample_data.df = genus_data.df,
                                 relabeller_function = genus_relabeller_function,
-                                sig_vjust = 0.5)
+                                sig_vjust = 0.5,use_mean = T)
 
 ggsave(plot = myplot, filename = "Result_figures/abundance_analysis_plots/boxplots/g__Staphylococcus.pdf",width = 15,height = 12,units = "cm")
 
@@ -786,7 +851,7 @@ myplot <- make_publication_plot(taxa = "g__Staphylococcus",
                                 sample_data.df = genus_data.df,
                                 value_column = "Read_count_logged",
                                 relabeller_function = genus_relabeller_function,
-                                ymin_break = 0, ymax_break = 20,ybreak = 1,ymax_limit = 10,sig_line_starting_scale = 1.1,sig_tip_length = .0005,sig_vjust = 0.5)
+                                ymin_break = 0, ymax_break = 20,ybreak = 1,ymax_limit = 7,sig_line_starting_scale = 1.1,sig_tip_length = .0005,sig_vjust = 0.5)
 
 myplot
 # ---------------------------------------------
@@ -908,7 +973,8 @@ myplot <- make_publication_plot(taxa = "g__Micrococcus",
                                 taxonomy_level = "taxonomy_genus",
                                 relabeller_function = genus_relabeller_function,
                                 sample_data.df = genus_data.df,
-                                ymin_break = 0, ymax_break = 100,ybreak = 10,ymax_limit = 40, sig_line_starting_scale = 1.05)
+                                ymin_break = 0, ymax_break = 100,ybreak = 10,ymax_limit = 40, sig_line_starting_scale = 1.05,
+                                use_mean = F) 
 ggsave(plot = myplot, filename = "Result_figures/abundance_analysis_plots/boxplots/g__Micrococcus.pdf",width = 15,height = 12,units = "cm")
 
 # ---------------------------------------------

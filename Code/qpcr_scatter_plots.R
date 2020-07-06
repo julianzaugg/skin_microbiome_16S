@@ -54,6 +54,8 @@ source("Code/helper_functions.R")
 # Scatter plots for qPCR values 
 # temp <- genus_data.df %>% select(Sample,Cohort, Sample_type, Sample_type_colour, S_aureus_qPCR, Staph_spp_qPCR, qPCR_16S) %>% unique()
 consolidated_metadata.df <- read.csv("Result_tables/other/metadata_consolidated.csv")
+unique(consolidated_metadata.df[c("Sample_type","Sample_type_colour")])
+
 consolidated_metadata.df <- consolidated_metadata.df[consolidated_metadata.df$Sample_type != "negative",]
 # consolidated_metadata.df <- left_join(consolidated_metadata.df, unique(genus_data.df[,c("Sample_type", "Sample_type_colour")]), by = "Sample_type")
 
@@ -72,7 +74,6 @@ consolidated_metadata.df <- consolidated_metadata.df[consolidated_metadata.df$Sa
 #   theme_light() +
 #   theme(axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1))+
 #   scale_y_continuous(limits = c(0, 1000))
-
 
 temp <- consolidated_metadata.df %>% select(Index,Swab_ID, Cohort, Sample_type, Sample_type_colour, 
                                             S_aureus_qPCR, Staph_spp_qPCR, qPCR_16S,Human_qPCR, Total_DNA) %>% unique()
@@ -96,6 +97,7 @@ temp <- temp %>%
                 Mean_value_x100_log_10 = log(Mean_value *100,10)) %>%
   as.data.frame()
 temp <- temp[!is.na(temp$value),]
+unique(temp[c("Sample_type", "Sample_type_colour")])
 
 # temp[is.na(temp)] <- ""
 write.csv(temp,file = "Result_tables/abundance_analysis_tables/qpcr_plot_table.csv", quote = F, row.names = F)
