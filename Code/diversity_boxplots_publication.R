@@ -197,62 +197,272 @@ immunosuppressed_genus_alpha_dunn_significances.df <- calculate_alpha_diversity_
 immunocompetent_genus_alpha_diversity_summary.df <- summarise_diversities_each_variable(immunocompetent_genus_rare_alpha.df, variables = discrete_variables)
 immunocompetent_genus_alpha_dunn_significances.df <- calculate_alpha_diversity_significance_multiple(immunocompetent_genus_rare_alpha.df,variable = "Sample_type")
 
+# 
+# 
+# sig_threshold = 0.05 # p-values less than this will be displayed
+# sig_line_scaling_percentage = 0.08 # percent of max y value for spacing significance lines
+# sig_vjust = 0.03 # amount to vertically adjust the significance annotations
+# sig_tip_length = 0.01 # length of tips on significance lines
+# sig_linetype = 1 # linetype of significance lines
+# sig_colour = "grey20" # colour of significance lines
+# sig_line_starting_scale = 1.05
+# process_significances <- function(my_sig_data,my_diversity_data,variable_column,value_column,stat_column = "Shannon_Dunn_padj"){
+#   my_sig_data <- my_sig_data[which(my_sig_data[,stat_column] <= sig_threshold),]
+#   
+#   # Determine the maximum diversity value for the pair of groups being compared
+#   for (row in 1:nrow(my_sig_data)){
+#     group_1 <- as.character(my_sig_data[row,"Group_1"])
+#     group_2 <- as.character(my_sig_data[row,"Group_2"])
+#     y_max <- max(my_diversity_data[which(my_diversity_data[,variable_column] == group_1),][,value_column],
+#                  my_diversity_data[which(my_diversity_data[,variable_column] == group_2),][,value_column])
+#     my_sig_data[row,"y_max"] <- y_max
+#     my_sig_data[row,"level_index_group_1"] <- which(levels(my_diversity_data[,variable_column]) == group_1)
+#     my_sig_data[row,"level_index_group_2"] <- which(levels(my_diversity_data[,variable_column]) == group_2)
+#     my_sig_data[row,"level_distance"] <- abs(my_sig_data[row,"level_index_group_2"] - my_sig_data[row,"level_index_group_1"])
+#   }
+#   
+#   my_sig_data <- my_sig_data[order(my_sig_data$level_distance),]
+#   scale <- sig_line_starting_scale # starting scale
+#   for (row in 1:nrow(my_sig_data)){
+#     my_sig_data[row, "y_position"] <- max(my_sig_data[, "y_max"]) * scale
+#     scale <- scale + sig_line_scaling_percentage # increase scale value
+#   }
+#   
+#   my_sig_data$Group_1 <- factor(my_sig_data$Group_1, levels = levels(my_diversity_data[,variable_column]))
+#   my_sig_data$Group_2 <- factor(my_sig_data$Group_2, levels = levels(my_diversity_data[,variable_column]))
+#   
+  # my_sig_data$P_value_label <- as.character(lapply(my_sig_data[,stat_column], function(x) ifelse(x <= 0.001, "***",
+  #                                                                                                ifelse(x <= 0.01, "**",
+  #                                                                                                       ifelse(x <= 0.05, "*", "ns")))))
+#   
+#   my_sig_data
+# }
 
-
-process_significances <- function(my_sig_data,my_abundance_data,variable_column,value_column){
-  my_sig_data <- my_sig_data[which(my_sig_data[,"Dunn_padj"] <= sig_threshold),]
-  
-  # Determine the maximum diversity value for the pair of groups being compared
-  for (row in 1:nrow(my_sig_data)){
-    group_1 <- as.character(my_sig_data[row,"Group_1"])
-    group_2 <- as.character(my_sig_data[row,"Group_2"])
-    y_max <- max(my_abundance_data[which(my_abundance_data[,variable_column] == group_1),][,value_column],
-                 my_abundance_data[which(my_abundance_data[,variable_column] == group_2),][,value_column])
-    my_sig_data[row,"y_max"] <- y_max
-    my_sig_data[row,"level_index_group_1"] <- which(levels(my_abundance_data[,variable_column]) == group_1)
-    my_sig_data[row,"level_index_group_2"] <- which(levels(my_abundance_data[,variable_column]) == group_2)
-    my_sig_data[row,"level_distance"] <- abs(my_sig_data[row,"level_index_group_2"] - my_sig_data[row,"level_index_group_1"])
+generate_p_labels <- function(sig_table){
+  for (sig_column in c("Chao1_Dunn_padj", "Shannon_Dunn_padj", "Simpson_Dunn_padj")){
+    metric = strsplit(sig_column, "_")[[1]][1]
+    sig_table[,paste0(metric, "_p_label")] <-
+      as.character(lapply(sig_table[,sig_column], 
+                          function(x) ifelse(x <= 0.001, "***", 
+                                             ifelse(x <= 0.01, "**",
+                                                    ifelse(x <= 0.05, "*", "ns")))))
   }
-  
-  my_sig_data <- my_sig_data[order(my_sig_data$level_distance),]
-  scale <- sig_line_starting_scale # starting scale
-  for (row in 1:nrow(my_sig_data)){
-    my_sig_data[row, "y_position"] <- max(my_sig_data[, "y_max"]) * scale
-    scale <- scale + sig_line_scaling_percentage # increase scale value
-  }
-  
-  my_sig_data$Group_1 <- factor(my_sig_data$Group_1, levels = levels(my_abundance_data[,variable_column]))
-  my_sig_data$Group_2 <- factor(my_sig_data$Group_2, levels = levels(my_abundance_data[,variable_column]))
-  
-  my_sig_data$P_value_label <- as.character(lapply(my_sig_data[,"Dunn_padj"], function(x) ifelse(x <= 0.001, "***", 
-                                                                                                 ifelse(x <= 0.01, "**", 
-                                                                                                        ifelse(x <= 0.05, "*", "ns")))))
-  
-  my_sig_data
+  sig_table
 }
+immunosuppressed_genus_alpha_dunn_significances.df <- generate_p_labels(immunosuppressed_genus_alpha_dunn_significances.df)
+immunocompetent_genus_alpha_dunn_significances.df <- generate_p_labels(immunocompetent_genus_alpha_dunn_significances.df)
 
+immunosuppressed_genus_alpha_dunn_significances.df$Cohort  <- "organ transplant recipient"
+immunocompetent_genus_alpha_dunn_significances.df$Cohort  <- "immunocompetent"
+write.csv(x = rbind(immunosuppressed_genus_alpha_dunn_significances.df,immunocompetent_genus_alpha_dunn_significances.df),
+          file = "Result_tables/diversity_analysis/IS_IC_diversity_signficances.csv",
+          row.names =F,
+          quote = F)
 
-immunosuppressed_genus_shannon_boxplot <- ggplot(IS_genus_rel_specific.df, aes(x = Genus, 
-                                                      y = Relative_abundance, 
-                                                      fill = Sample_type, 
-                                                      shape = Sample_type)) +
+sample_type_colours <- unique(metadata.df[,c("Sample_type", "Sample_type_colour")])
+sample_type_colours <- setNames(as.character(sample_type_colours[,"Sample_type_colour"]), 
+                                sample_type_colours[,"Sample_type"])
+
+immunosuppressed_genus_shannon_boxplot <- 
+  ggplot(immunosuppressed_genus_rare_alpha.df,aes(x = Sample_type, 
+                                                  y = Shannon, 
+                                                  fill = Sample_type, 
+                                                  shape = Sample_type)) +
   geom_boxplot(position = position_dodge(width =.75), 
                outlier.shape = NA, width=.5,lwd =.3) +
   geom_jitter(size = .6,stroke =.1,
-              position = position_jitterdodge(jitter.width = .2,
-                                              dodge.width = .75)) +
-  scale_shape_manual(values = c(25,24,23,22,21),name = "Sample type") +
-  scale_fill_manual(values = sample_type_colours, name = "Sample type") +
-  # stat_summary(fun = mean, geom = "errorbar", aes(ymax = ..y.., ymin = ..y..),
-  #              width = 0.75, size = .2, linetype = "solid", colour = "red",
-  #              position = "dodge") +
+              position = position_jitterdodge(jitter.width = .75,
+                                              dodge.width = .75))  +
+  scale_shape_manual(values = c(25,24,23,22,21),
+                     name = "Sample type") +
+  scale_fill_manual(values = sample_type_colours, 
+                    name = "Sample type") +
   stat_summary(fun = "mean", colour = "grey2", geom = "point",
-               shape = 16,size = 1,
-               position = position_dodge(width = .75),show.legend = F) +
-  # stat_summary(fun = "mean", colour = "grey20", geom = "point",
-  # shape = 16,lwd = 3,
-  # position = position_dodge(width = 1)) +
-  scale_y_continuous(limits = c(0,100), breaks = seq(0,100, by = 10)) + 
-  ylab("Relative abundance") +
+               shape = 16,size = 1, position = position_dodge(width = .75),show.legend = F) +
+  xlab("Sample type") +
+  ylab("Shannon") +
   common_theme +
-  theme(axis.text.x = element_text(face = "italic"))
+  scale_y_continuous(limits = c(0,5), breaks = seq(0,5, .5))
+
+immunosuppressed_genus_chao1_boxplot <- 
+  ggplot(immunosuppressed_genus_rare_alpha.df,aes(x = Sample_type, 
+                                                  y = Chao1, 
+                                                  fill = Sample_type, 
+                                                  shape = Sample_type)) +
+  geom_boxplot(position = position_dodge(width =.75), 
+               outlier.shape = NA, width=.5,lwd =.3) +
+  geom_jitter(size = .6,stroke =.1,
+              position = position_jitterdodge(jitter.width = .75,
+                                              dodge.width = .75))  +
+  scale_shape_manual(values = c(25,24,23,22,21),
+                     name = "Sample type") +
+  scale_fill_manual(values = sample_type_colours, 
+                    name = "Sample type") +
+  stat_summary(fun = "mean", colour = "grey2", geom = "point",
+               shape = 16,size = 1, position = position_dodge(width = .75),show.legend = F) +
+  xlab("Sample type") +
+  ylab("Chao1") +
+  common_theme +
+  scale_y_continuous(limits = c(0,300), breaks = seq(0,350, 50))
+immunosuppressed_genus_chao1_boxplot
+
+immunosuppressed_genus_simpson_boxplot <- 
+  ggplot(immunosuppressed_genus_rare_alpha.df,aes(x = Sample_type, 
+                                                  y = Simpson, 
+                                                  fill = Sample_type, 
+                                                  shape = Sample_type)) +
+  geom_boxplot(position = position_dodge(width =.75), 
+               outlier.shape = NA, width=.5,lwd =.3) +
+  geom_jitter(size = .6,stroke =.1,
+              position = position_jitterdodge(jitter.width = .75,
+                                              dodge.width = .75))  +
+  scale_shape_manual(values = c(25,24,23,22,21),
+                     name = "Sample type") +
+  scale_fill_manual(values = sample_type_colours, 
+                    name = "Sample type") +
+  stat_summary(fun = "mean", colour = "grey2", geom = "point",
+               shape = 16,size = 1, position = position_dodge(width = .75),show.legend = F) +
+  xlab("Sample type") +
+  ylab("Simpson") +
+  common_theme +
+  scale_y_continuous(limits = c(0,1.0), breaks = seq(0,1, .1))
+immunosuppressed_genus_simpson_boxplot
+
+
+
+
+immunocompetent_genus_shannon_boxplot <- 
+  ggplot(immunocompetent_genus_rare_alpha.df,aes(x = Sample_type, 
+                                                 y = Shannon, 
+                                                 fill = Sample_type, 
+                                                 shape = Sample_type)) +
+  geom_boxplot(position = position_dodge(width =.75), 
+               outlier.shape = NA, width=.5,lwd =.3) +
+  geom_jitter(size = .6,stroke =.1,
+              position = position_jitterdodge(jitter.width = .75,
+                                              dodge.width = .75))  +
+  scale_shape_manual(values = c(25,24,23,22,21),
+                     name = "Sample type") +
+  scale_fill_manual(values = sample_type_colours, 
+                    name = "Sample type") +
+  stat_summary(fun = "mean", colour = "grey2", geom = "point",
+               shape = 16,size = 1, position = position_dodge(width = .75),show.legend = F) +
+  xlab("Sample type") +
+  ylab("Shannon") +
+  common_theme +
+  scale_y_continuous(limits = c(0,5), breaks = seq(0,5, 0.5))
+
+immunocompetent_genus_chao1_boxplot <- 
+  ggplot(immunocompetent_genus_rare_alpha.df,aes(x = Sample_type, 
+                                                 y = Chao1, 
+                                                 fill = Sample_type, 
+                                                 shape = Sample_type)) +
+  geom_boxplot(position = position_dodge(width =.75), 
+               outlier.shape = NA, width=.5,lwd =.3) +
+  geom_jitter(size = .6,stroke =.1,
+              position = position_jitterdodge(jitter.width = .75,
+                                              dodge.width = .75))  +
+  scale_shape_manual(values = c(25,24,23,22,21),
+                     name = "Sample type") +
+  scale_fill_manual(values = sample_type_colours, 
+                    name = "Sample type") +
+  stat_summary(fun = "mean", colour = "grey2", geom = "point",
+               shape = 16,size = 1, position = position_dodge(width = .75),show.legend = F) +
+  xlab("Sample type") +
+  ylab("Chao1") +
+  common_theme +
+  scale_y_continuous(limits = c(0,300), breaks = seq(0,350, 50))
+immunocompetent_genus_chao1_boxplot
+
+immunocompetent_genus_simpson_boxplot <- 
+  ggplot(immunocompetent_genus_rare_alpha.df,aes(x = Sample_type, 
+                                                 y = Simpson, 
+                                                 fill = Sample_type, 
+                                                 shape = Sample_type)) +
+  geom_boxplot(position = position_dodge(width =.75), 
+               outlier.shape = NA, width=.5,lwd =.3) +
+  geom_jitter(size = .6,stroke =.1,
+              position = position_jitterdodge(jitter.width = .75,
+                                              dodge.width = .75))  +
+  scale_shape_manual(values = c(25,24,23,22,21),
+                     name = "Sample type") +
+  scale_fill_manual(values = sample_type_colours, 
+                    name = "Sample type") +
+  stat_summary(fun = "mean", colour = "grey2", geom = "point",
+               shape = 16,size = 1, position = position_dodge(width = .75),show.legend = F) +
+  xlab("Sample type") +
+  ylab("Simpson") +
+  common_theme +
+  scale_y_continuous(limits = c(0,1.0), breaks = seq(0,1, .1))
+immunocompetent_genus_simpson_boxplot
+
+# Extract the legend
+my_legend <- cowplot::get_legend(immunosuppressed_genus_chao1_boxplot + 
+                                   theme(
+                                     legend.position = "right",
+                                     legend.text = element_text(size = 7),
+                                     legend.title = element_text(size =8, face="bold"),
+                                     legend.justification = "center",
+                                     legend.direction = "horizontal",
+                                     legend.box.just = "bottom",
+                                     plot.margin = unit(c(0, 0, 0, 0), "cm")
+                                   )
+)
+
+
+library(cowplot)
+chao1 <- plot_grid(plotlist = list(immunosuppressed_genus_chao1_boxplot + 
+                                     labs(title = "Organ transplant recipient") + 
+                                     theme(axis.title.x = element_blank(),
+                                           axis.text.x = element_blank(),
+                                           legend.position = "none",
+                                           plot.title = element_text(face = "bold", hjust = 0.5,size = 10))
+                                     , 
+                                   immunocompetent_genus_chao1_boxplot + 
+                                     labs(title = "Immunocompetent") + 
+                                     theme(axis.title.x = element_blank(),
+                                           axis.title.y = element_blank(),
+                                           axis.text.x = element_blank(),
+                                           axis.text.y = element_blank(),
+                                           legend.position = "none",
+                                           plot.title = element_text(face = "bold", hjust = 0.5,size = 10))
+                                   ),
+                   rel_widths = c(1,.7))
+
+shannon <- plot_grid(plotlist = list(immunosuppressed_genus_shannon_boxplot + theme(axis.title.x = element_blank(),
+                                                                                    axis.text.x = element_blank(),
+                                                                                    legend.position = "none",
+                                                                                    plot.margin = unit(c(5.5,5.5,5.5,6),"pt")), 
+                                     immunocompetent_genus_shannon_boxplot + theme(axis.title.x = element_blank(),
+                                                                                   axis.title.y = element_blank(),
+                                                                                   axis.text.x = element_blank(),
+                                                                                   axis.text.y = element_blank(),
+                                                                                   legend.position = "none")
+                                     ),
+                     rel_widths = c(1,.7))
+simpson <- plot_grid(plotlist = list(immunosuppressed_genus_simpson_boxplot + theme(legend.position = "none"),
+                                     immunocompetent_genus_simpson_boxplot + theme(axis.title.y = element_blank(),
+                                                                                   axis.text.y = element_blank(),
+                                                                                   legend.position = "none") 
+
+                                     
+                                     ),
+                     rel_widths = c(1,.7))
+
+grid_plot <- plot_grid(plotlist = list(chao1,shannon,simpson),
+                       ncol = 1,nrow = 3,
+                       rel_heights = c(1,1,1), align = "hv")
+
+# grid_plot <- plot_grid(plotlist = list(grid_plot, my_legend), 
+                       # nrow = 2, rel_heights = c(1,.1))
+
+
+# grid_plot
+ggsave(filename = "Result_figures/diversity_analysis/IS_IC_diversity_boxplots.pdf", 
+       plot = grid_plot, width = 13, 
+       height = 20, units = "cm", device = "pdf")
+
+ggsave(filename = "Result_figures/diversity_analysis/IS_IC_diversity_boxplots.svg", 
+       plot = grid_plot, width = 13, 
+       height = 20, units = "cm", device = "svg")
+

@@ -190,6 +190,11 @@ write.csv(x = rbind(IS_genus_significances,IC_genus_significances),
           file = "Result_tables/abundance_analysis_tables/temp.csv")
 
 
+sample_type_colours <- unique(IS_genus_rel_specific.df[,c("Sample_type", "Sample_type_colour")])
+sample_type_colours <- setNames(as.character(sample_type_colours[,"Sample_type_colour"]), 
+                                sample_type_colours[,"Sample_type"])
+
+
 IS_genus_plot <- ggplot(IS_genus_rel_specific.df, aes(x = Genus, 
                                      y = Relative_abundance, 
                                      fill = Sample_type, 
