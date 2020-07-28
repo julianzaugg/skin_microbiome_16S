@@ -71,7 +71,7 @@ genus_rel_specific.df$Genus <- factor(genus_rel_specific.df$Genus, levels = c("S
 IS_genus_rel_specific.df <- subset(genus_rel_specific.df, Cohort == "immunosuppressed")
 IC_genus_rel_specific.df <- subset(genus_rel_specific.df, Cohort == "immunocompetent")
 
-IS_genus_rel_specific.df$Sample_type <- factor(IS_genus_rel_specific.df$Sample_type, levels = c("HS", "PDS", "AK", "SCC_PL", "SCC"))
+IS_genus_rel_specific.df$Sample_type <- factor(IS_genus_rel_specific.df$Sample_type, levels = c("NS", "PDS", "AK", "SCC_PL", "SCC"))
 IC_genus_rel_specific.df$Sample_type <- factor(IC_genus_rel_specific.df$Sample_type, levels = c("PDS", "AK", "SCC_PL", "SCC"))
 
 # IS_genus_rel_specific.df %>% group_by(Sample_type) %>% tally(n_distinct(Index))
@@ -187,7 +187,7 @@ IC_genus_significances <- process_significances(my_sig_data = IC_genus_significa
                                              variable_column = "Sample_type",
                                              value_column = "Relative_abundance")
 write.csv(x = rbind(IS_genus_significances,IC_genus_significances),
-          file = "Result_tables/abundance_analysis_tables/temp.csv")
+          file = "Result_tables/abundance_analysis_tables/temp.csv", row.names = F,quote = F)
 
 
 sample_type_colours <- unique(IS_genus_rel_specific.df[,c("Sample_type", "Sample_type_colour")])

@@ -163,7 +163,7 @@ metadata.df[metadata.df$Cohort == "immunosuppressed", ]$Cohort <- "organ transpl
 # Define the discrete variables
 discrete_variables <- c("Sample_type", "Cohort", "Subject")
 
-metadata.df$Sample_type <- factor(metadata.df$Sample_type, levels = c("HS", "PDS", "AK", "SCC_PL","SCC"))
+metadata.df$Sample_type <- factor(metadata.df$Sample_type, levels = c("NS", "PDS", "AK", "SCC_PL","SCC"))
 
 
 # Load the counts

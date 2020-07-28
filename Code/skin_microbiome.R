@@ -84,7 +84,7 @@ sampletype_ak_col <- rgb(red=255,green=196,blue=0,maxColorValue = 255)
 sampletype_sccpl_col <- rgb(red=240,green=110,blue=123,maxColorValue = 255)
 sampletype_scc_col <- rgb(red=179,green=19,blue=19,maxColorValue = 255)
 sample_type_palette_final <- setNames(c(sampletype_negative_col, sampletype_hs_col, sampletype_pds_col, sampletype_ak_col, sampletype_sccpl_col,sampletype_scc_col),
-                                      c("negative", "HS", "PDS", "AK", "SCC_PL", "SCC"))
+                                      c("negative", "NS", "PDS", "AK", "SCC_PL", "SCC"))
 
 
 # Length of suppression pallete
@@ -357,6 +357,7 @@ metadata.df <- subset(metadata.df, !is.na(Cohort))
 # Filter samples to those that are immunosuppressed, immunocompetent snapshot 5 samples or negative
 # this saves processing time later
 metadata.df <- metadata.df[which(metadata.df$Cohort == "immunosuppressed" | metadata.df$Snapshot_sample_5 == "yes" | metadata.df$Sample_type_original == "negative"),]
+# metadata.df <- metadata.df[which(metadata.df$Cohort %in% c("immunosuppressed","immunocompetent") | metadata.df$Sample_type_original == "negative"),]
 
 # ------------------------------------------------------------------------------------------
 # Create Lesion_final_refined variable. This will be used for publication.
@@ -384,7 +385,7 @@ metadata.df[metadata.df$Cohort == "immunocompetent" & metadata.df$Sample_type_or
 # metadata.df[metadata.df$Cohort == "immunosuppressed" & metadata.df$Lesion_type %in% c("C", "AK_PL"),]$Sample_type <- "C_P"
 metadata.df[metadata.df$Cohort == "immunosuppressed" & metadata.df$Sample_type_original %in% c("C", "AK_PL"),]$Sample_type <- "PDS"
 # metadata.df[metadata.df$Cohort == "immunosuppressed" & metadata.df$Lesion_type_suppressed_refined %in% c("C"),]$Sample_type <- "C"
-metadata.df[metadata.df$Cohort == "immunosuppressed" & metadata.df$Sample_type_suppressed_refined %in% c("C"),]$Sample_type <- "HS"
+metadata.df[metadata.df$Cohort == "immunosuppressed" & metadata.df$Sample_type_suppressed_refined %in% c("C"),]$Sample_type <- "NS"
 metadata.df[metadata.df$Cohort == "immunosuppressed" & metadata.df$Sample_type_original %in% c("AK"),]$Sample_type <- "AK"
 metadata.df[metadata.df$Cohort == "immunosuppressed" & metadata.df$Sample_type_original %in% c("SCC_PL", "IEC_PL"),]$Sample_type <- "SCC_PL"
 metadata.df[metadata.df$Cohort == "immunosuppressed" & metadata.df$Sample_type_original %in% c("SCC", "IEC"),]$Sample_type <- "SCC"
@@ -417,6 +418,18 @@ metadata_unfiltered.df <- metadata.df
 
 # Filter to samples those that are the following lesion types.
 metadata.df <- metadata.df[metadata.df$Sample_type_original %in% c("C","AK_PL","IEC_PL","SCC_PL","AK","IEC","SCC", "negative", "NLC"),]
+metadata.df
+# summary(metadata.df$Cohort)
+# summary(subset(metadata.df, Sample_type_original != "negative")$Cohort)
+# metadata.df %>% group_by(Cohort, Sample_type_original) %>% tally()
+# metadata.df %>% group_by(Cohort, Sample_type) %>% tally()
+# metadata.df %>% group_by(Cohort) %>% tally()
+# metadata_unfiltered.df %>% group_by(Cohort, Sample_type_original) %>% tally()
+# metadata_unfiltered.df %>% group_by(Cohort, Sample_type) %>% tally()
+# metadata_unfiltered.df %>% group_by(Cohort) %>% tally()
+# subset(metadata_unfiltered.df, !is.na(Sample_type)) %>% group_by(Cohort) %>% tally()
+
+
 
 # Remove unnessary columns / variables from metadata
 metadata.df <- metadata.df %>% select( 
@@ -544,6 +557,7 @@ bases_original_samples.v <- gsub("_.*","",original_samples.v)
 # Add the counts for 'b' samples to their 'original' counterpart
 temp.df <- project_otu_table.df # use separate temporary dataframe to save time when editing code
 temp_meta.df <- metadata.df
+repeat_mapping.df <- data.frame()
 for (sample in original_samples.v){
   sample_base <- gsub("_.*","",sample)
   if  (paste0(sample_base, 'b') %in% bases_repeat_samples.v){
@@ -555,9 +569,25 @@ for (sample in original_samples.v){
     if (sample %in% rownames(temp_meta.df)){
       temp_meta.df[sample,]$R1_read_count_raw <- temp_meta.df[sample,]$R1_read_count_raw + temp_meta.df[matching_repeat_sample,]$R1_read_count_raw
     }
+    metadata_unfiltered.df[sample,]$R1_location_renamed
     # print(paste(sample_base, sample, matching_repeat_sample, sum_base_prior, sum_repeat, sum_base_post))
+    if (sample %in% metadata_unfiltered.df$Index){
+      
+      # print(paste(sample_base, sample, matching_repeat_sample, 
+                  # metadata_unfiltered.df[sample,]$R1_location_renamed,
+                  # metadata_unfiltered.df[matching_repeat_sample,]$R1_location_renamed))
+      repeat_mapping.df <- rbind(repeat_mapping.df, data.frame("Sample_base" = sample_base, 
+                                                         "Sample" = sample, 
+                                                         "Repeat_sample" = matching_repeat_sample, 
+                                                         "Sample_R1_location" = metadata_unfiltered.df[sample,]$R1_location_renamed,
+                                                         "Sample_R2_location" = metadata_unfiltered.df[sample,]$R2_location_renamed,
+                                                         "Repeat_sample_R1_location" = metadata_unfiltered.df[matching_repeat_sample,]$R1_location_renamed,
+                                                         "Repeat_sample_R2_location" = metadata_unfiltered.df[matching_repeat_sample,]$R2_location_renamed
+                                                         ))
+    }
   }
 }
+
 
 # And now remove all the repeat 'b' samples from the project table and metadata
 temp.df <- temp.df[,!colnames(temp.df) %in% repeat_samples.v]
@@ -734,9 +764,21 @@ metadata.df$Gender_colour <- all_gender_colours
 
 # ------------------------------------------------
 # Metadata and feature data after consolidating samples. This should be everything needed from this point on!
+metadata.df$Repeat_sample <- "No"
+metadata.df[metadata.df$Index %in% repeat_mapping.df$Sample,]$Repeat_sample <- "Yes"
 write.csv(metadata.df,file = "Result_tables/other/metadata_consolidated.csv", row.names = F, quote = F)
 write.csv(project_otu_table.df,file = "Result_tables/other/feature_data_consolidated.csv", row.names = F, quote = F)
 
+# For submission to SRA, collect the location of read files and note samples that need to be combined
+# summary(metadata.df$Index %in% repeat_mapping.df$Sample)
+# dim(repeat_mapping.df)
+temp <- metadata.df
+temp <- left_join(temp, repeat_mapping.df, by = c("Index" = "Sample"))
+temp <- temp[,c("Index", "Swab_ID", "Sample_type","Patient", "Cohort", "Sample_R1_location", "Sample_R2_location", "Repeat_sample_R1_location", "Repeat_sample_R2_location")]
+temp[is.na(temp$Sample_R1_location),]$Sample_R1_location <- as.character(metadata_unfiltered.df[temp[is.na(temp$Sample_R1_location),]$Index,]$R1_location_renamed)
+temp[is.na(temp$Sample_R2_location),]$Sample_R2_location <- as.character(metadata_unfiltered.df[temp[is.na(temp$Sample_R2_location),]$Index,]$R2_location_renamed)
+write.table(temp,file = "Result_tables/other/sample_16S_data_for_SRA_submission.tsv", row.names = F, quote = F, sep = "\t")
+# metadata_unfiltered.df["S8882_J318",]
 # ------------------------------------------------
 # ------------------------------------------------
 # Reassign the sample ids 

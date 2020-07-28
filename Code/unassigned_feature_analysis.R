@@ -51,7 +51,7 @@ generate_taxa_summary_unassigned <- function(mydata, taxa_column, group_by_colum
                      Median_relative_abundance = round(median(Relative_abundance), 5),
                      Min_relative_abundance = round(min(Relative_abundance),5),
                      Max_relative_abundance = round(max(Relative_abundance),5),
-                     Summed_relative_abundance = round(sum(Relative_abundance),5),
+                     Summed_relative_abundance = round(sum(Relative_abundance),5)
     ) %>%
     as.data.frame()
   return(taxa_group_summary)
@@ -75,7 +75,7 @@ metadata.df <- rbind(metadata.df, metadata_negative_samples.df)
 rownames(metadata.df) <- metadata.df$Index
 
 
-discrete_variables <- c("Lesion_type_refined","Gender","Patient", "Cohort", "Length_of_immunosuppression_group_1", "Length_of_immunosuppression_group_2")
+discrete_variables <- c("Sample_type","Patient", "Cohort")
 
 # Load abundance data for unassigned features. These abundances are calculated prior to filtering taxa or features.
 # temp <- read.csv("Result_tables/combined_counts_abundances_and_metadata_tables/OTU_counts_abundances_and_metadata.csv", header = T)
@@ -139,11 +139,17 @@ n_features_with_hit <- length(top_blast_hits.df[top_blast_hits.df$Genus != "Unas
 n_features_with_hit
 
 # Number of features with an assignment at the Genus level
-sort(summary(factor(top_blast_hits.df[top_blast_hits.df$Genus != "Unassigned",]$Genus)))
-sort(summary(factor(top_blast_hits.df[top_blast_hits.df$Genus != "Unassigned",]$Genus)) /n_features_with_hit * 100)
+a <- melt(sort(summary(factor(top_blast_hits.df[top_blast_hits.df$Genus != "Unassigned",]$Genus)),decreasing = T))
+b <- melt(sort(summary(factor(top_blast_hits.df[top_blast_hits.df$Genus != "Unassigned",]$Genus)) /n_features_with_hit * 100,decreasing = T))
 
-sort(summary(factor(top_blast_hits.df[top_blast_hits.df$Genus != "Unassigned",]$Strain)))
-sort(summary(factor(top_blast_hits.df[top_blast_hits.df$Genus != "Unassigned",]$Strain)) /n_features_with_hit * 100)
+c <- melt(sort(summary(factor(top_blast_hits.df[top_blast_hits.df$Genus != "Unassigned",]$Strain)),decreasing = T))
+d <- melt(sort(summary(factor(top_blast_hits.df[top_blast_hits.df$Genus != "Unassigned",]$Strain)) /n_features_with_hit * 100,decreasing = T))
+
+temp <- cbind(c,d)
+names(temp) <- c("Frequency", "Percent_of_ASVs_assigned_at_genus_level")
+unassigned_features_genus.df <- m2df(temp,column_name = "Strain")
+unassigned_features_genus.df$Percent_of_ASVs_assigned_at_genus_level <- round(unassigned_features_genus.df$Percent_of_ASVs_assigned_at_genus_level, 2)
+write.csv(unassigned_features_genus.df, file = "Result_tables/other/unassigned_feature_summary.csv", quote=F, row.names = F)
 
 full_table.df <- left_join(feature_abundances.df, metadata.df,by = c("Sample" = "Index"))
 # top_blast_hits.df$query_id %in% feature_abundances.df$OTU.ID
@@ -162,7 +168,7 @@ file = "Result_tables/other/unassigned_blast_results_processed.csv", quote = F, 
 length(unique(full_table.df$OTU.ID))
 length(unique(full_table.df$Sample))
 
-# FIXME > mean_relative_abundance values very different from non-zero
+
 # Generate taxa summaries
 strain_taxa_summary_sample.df <- generate_taxa_summary_unassigned(mydata = full_table.df,taxa_column = "taxonomy_strain",group_by_columns = c("Sample"))
 species_taxa_summary_sample.df <- generate_taxa_summary_unassigned(mydata = full_table.df,taxa_column = "taxonomy_species",group_by_columns = c("Sample"))
