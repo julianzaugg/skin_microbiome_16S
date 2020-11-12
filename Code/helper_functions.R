@@ -35,6 +35,186 @@ my_colour_palette_10_soft <- c("#9E788F","#4C5B61","#678D58","#AD5233","#A0A083"
 ####################################
 
 
+create_combined_dataframe <- function(counts.df, counts_rare.df, abundances.df, abundances_rare.df, mymetadata, mylevel = "OTU", otu_map.df = NULL){
+  counts <- clean_dataframe(counts.df)
+  rel_abundances <- clean_dataframe(abundances.df)
+  counts_rare <- clean_dataframe(counts_rare.df)
+  rel_abundances_rare <- clean_dataframe(abundances_rare.df)
+  
+  # Ensure ordering is the same
+  rel_abundances <- rel_abundances[rownames(counts),]
+  counts_rare <- counts_rare[rownames(counts),]
+  rel_abundances_rare <- rel_abundances_rare[rownames(counts),]
+  
+  # Combine the datasets. Passing as.matrix(counts) captures the rownames as a column. This can be renamed after
+  combined_data <- cbind(melt(as.matrix(counts), variable.name = "sample", value.name = "Read_count"),
+                         melt(rel_abundances, value.name = "Relative_abundance")[,2, drop = F],
+                         melt(counts_rare, value.name = "Read_count_rarefied")[,2, drop = F],
+                         melt(rel_abundances_rare, value.name = "Relative_abundance_rarefied")[,2, drop = F])
+  
+  # Remove samples with a read count of zero
+  combined_data <- combined_data[combined_data$Read_count > 0,]
+  
+  # Calculate logged read counts
+  combined_data$Read_count_logged <- log(combined_data$Read_count, 10)
+  combined_data$Read_count_rarefied_logged <- log(combined_data$Read_count_rarefied, 10)
+  
+  # Fix the Var2 column
+  names(combined_data)[2] <- "Sample"
+  
+  # Merge with metadata. Assumes an Index column matching Sample
+  combined_data <- merge(combined_data, mymetadata, by.x = "Sample", by.y = "Index")
+  
+  if (mylevel == "OTU.ID"){
+    names(combined_data)[names(combined_data) == "Var1"] <- "OTU.ID"
+    combined_data <- merge(combined_data, otu_map.df, by.x = "OTU.ID", by.y = "OTU.ID")
+  }
+  else if (mylevel == "Species"){
+    names(combined_data)[names(combined_data) == "Var1"] <- "taxonomy_species"
+    otu_map_reduced.df <- unique(otu_map.df[,c("Domain","Phylum", "Class", "Order", "Family", "Genus", "Species", "taxonomy_species")])
+    combined_data <- merge(combined_data, otu_map_reduced.df, by.x = "taxonomy_species", by.y = "taxonomy_species")
+  }
+  else if (mylevel == "Genus"){
+    names(combined_data)[names(combined_data) == "Var1"] <- "taxonomy_genus"
+    otu_map_reduced.df <- unique(otu_map.df[,c("Domain","Phylum", "Class", "Order", "Family", "Genus", "taxonomy_genus")])
+    combined_data <- merge(combined_data, otu_map_reduced.df, by.x = "taxonomy_genus", by.y = "taxonomy_genus")
+  }
+  else if (mylevel == "Family"){
+    names(combined_data)[names(combined_data) == "Var1"] <- "taxonomy_family"
+    otu_map_reduced.df <- unique(otu_map.df[,c("Domain","Phylum", "Class", "Order", "Family", "taxonomy_family")])
+    combined_data <- merge(combined_data, otu_map_reduced.df, by.x = "taxonomy_family", by.y = "taxonomy_family")
+  }
+  else if (mylevel == "Order"){
+    names(combined_data)[names(combined_data) == "Var1"] <- "taxonomy_order"
+    otu_map_reduced.df <- unique(otu_map.df[,c("Domain","Phylum", "Class", "Order", "taxonomy_order")])
+    combined_data <- merge(combined_data, otu_map_reduced.df, by.x = "taxonomy_order", by.y = "taxonomy_order")
+  }
+  else if (mylevel == "Class"){
+    names(combined_data)[names(combined_data) == "Var1"] <- "taxonomy_class"
+    otu_map_reduced.df <- unique(otu_map.df[,c("Domain","Phylum", "Class", "taxonomy_class")])
+    combined_data <- merge(combined_data, otu_map_reduced.df, by.x = "taxonomy_class", by.y = "taxonomy_class")
+  }
+  else if (mylevel == "Phylum"){
+    names(combined_data)[names(combined_data) == "Var1"] <- "taxonomy_phylum"
+    otu_map_reduced.df <- unique(otu_map.df[,c("Domain","Phylum", "taxonomy_phylum")])
+    combined_data <- merge(combined_data, otu_map_reduced.df, by.x = "taxonomy_phylum", by.y = "taxonomy_phylum")
+  }
+  return(combined_data)
+}
+
+create_combined_dataframe_no_rare <- function(counts.df, abundances.df, mymetadata, mylevel = "OTU", otu_map.df = NULL){
+  counts <- clean_dataframe(counts.df)
+  rel_abundances <- clean_dataframe(abundances.df)
+  # Ensure ordering is the same
+  rel_abundances <- rel_abundances[rownames(counts),,drop = F]
+  # Combine the datasets. Passing as.matrix(counts) captures the rownames as a column. This can be renamed after
+  combined_data <- cbind(melt(as.matrix(counts), variable.name = "sample", value.name = "Read_count"),
+                         melt(rel_abundances, value.name = "Relative_abundance")[,2, drop = F])
+  # Remove samples with a read count of zero
+  combined_data <- combined_data[combined_data$Read_count > 0,]
+  # Calculate logged read counts
+  combined_data$Read_count_logged <- log(combined_data$Read_count, 10)
+  # Fix the Var2 column
+  names(combined_data)[2] <- "Sample"
+  # Merge with metadata. Assumes an Index column matching Sample
+  combined_data <- merge(combined_data, mymetadata, by.x = "Sample", by.y = "Index")
+  if (mylevel == "OTU.ID"){
+    names(combined_data)[names(combined_data) == "Var1"] <- "OTU.ID"
+    combined_data <- merge(combined_data, otu_map.df, by.x = "OTU.ID", by.y = "OTU.ID")
+  }
+  else if (mylevel == "Species"){
+    names(combined_data)[names(combined_data) == "Var1"] <- "taxonomy_species"
+    otu_map_reduced.df <- unique(otu_map.df[,c("Domain","Phylum", "Class", "Order", "Family", "Genus", "Species", "taxonomy_species")])
+    combined_data <- merge(combined_data, otu_map_reduced.df, by.x = "taxonomy_species", by.y = "taxonomy_species")
+  }
+  else if (mylevel == "Genus"){
+    names(combined_data)[names(combined_data) == "Var1"] <- "taxonomy_genus"
+    otu_map_reduced.df <- unique(otu_map.df[,c("Domain","Phylum", "Class", "Order", "Family", "Genus", "taxonomy_genus")])
+    combined_data <- merge(combined_data, otu_map_reduced.df, by.x = "taxonomy_genus", by.y = "taxonomy_genus")
+  }
+  else if (mylevel == "Family"){
+    names(combined_data)[names(combined_data) == "Var1"] <- "taxonomy_family"
+    otu_map_reduced.df <- unique(otu_map.df[,c("Domain","Phylum", "Class", "Order", "Family", "taxonomy_family")])
+    combined_data <- merge(combined_data, otu_map_reduced.df, by.x = "taxonomy_family", by.y = "taxonomy_family")
+  }
+  else if (mylevel == "Order"){
+    names(combined_data)[names(combined_data) == "Var1"] <- "taxonomy_order"
+    otu_map_reduced.df <- unique(otu_map.df[,c("Domain","Phylum", "Class", "Order", "taxonomy_order")])
+    combined_data <- merge(combined_data, otu_map_reduced.df, by.x = "taxonomy_order", by.y = "taxonomy_order")
+  }
+  else if (mylevel == "Class"){
+    names(combined_data)[names(combined_data) == "Var1"] <- "taxonomy_class"
+    otu_map_reduced.df <- unique(otu_map.df[,c("Domain","Phylum", "Class", "taxonomy_class")])
+    combined_data <- merge(combined_data, otu_map_reduced.df, by.x = "taxonomy_class", by.y = "taxonomy_class")
+  }
+  else if (mylevel == "Phylum"){
+    names(combined_data)[names(combined_data) == "Var1"] <- "taxonomy_phylum"
+    otu_map_reduced.df <- unique(otu_map.df[,c("Domain","Phylum", "taxonomy_phylum")])
+    combined_data <- merge(combined_data, otu_map_reduced.df, by.x = "taxonomy_phylum", by.y = "taxonomy_phylum")
+  }
+  return(combined_data)
+}
+
+
+read_counts_and_unique_features <- function(count_matrix, sample_list){
+  # Number of features and read counts
+  temp <- count_matrix
+  temp[temp > 0] <- 1
+  read_sums <- colSums(count_matrix)
+  feature_sums <- colSums(temp)
+  sample_read_counts <- data.frame(sample_list, unlist(lapply(sample_list, 
+                                                              function(x) ifelse(x %in% names(read_sums), read_sums[x],0))))
+  sample_feature_counts <- data.frame(sample_list, unlist(lapply(sample_list, 
+                                                                 function(x) ifelse(x %in% names(feature_sums), feature_sums[x],0))))
+  out <- list("sample_read_counts" = sample_read_counts,
+              "sample_feature_counts" = sample_feature_counts)
+  out
+}
+
+generate_tax_level_data <- function(feature_count_taxonomy_data.df, sample_ids, tax_string_levels){
+  
+  df2matrix <- function(mydataframe){
+    mymatrix <- mydataframe
+    rownames(mymatrix) <- mydataframe[,1]
+    mymatrix[,1] <- NULL
+    mymatrix <- as.matrix(mymatrix)
+    mymatrix
+  }
+  
+  m2df <- function(mymatrix, column_name = "Row_variable"){
+    mydf <- as.data.frame(mymatrix)
+    cur_names <- names(mydf)
+    mydf[, column_name] <- rownames(mydf)
+    rownames(mydf) <- NULL
+    mydf <- mydf[,c(column_name,cur_names)]
+    return(mydf)
+  }
+  
+  output <- list()
+  for (tax_string_level in tax_string_levels){
+    counts.df <- 
+      feature_count_taxonomy_data.df[c(tax_string_level, sample_ids)] %>% 
+      group_by_(tax_string_level) %>% # Group the dataframe by the taxonomy string 
+      # Summarise each group by applying the the 'sum' function to the counts of each member of the group, 
+      # i.e. duplicate entries for each taxa level are collapsed into a single entry and their counts summed together
+      dplyr::summarise_all(funs(sum)) %>%  
+      as.data.frame() # convert back to dataframe
+    
+    # Now create the relative abundance matrix at the current taxa level
+    abundances.m <- counts.df
+    
+    rownames(abundances.m) <- abundances.m[[tax_string_level]]
+    abundances.m[tax_string_level] <- NULL
+    abundances.m <- as.matrix(abundances.m)
+    abundances.m <- t(t(abundances.m) / colSums(abundances.m))
+    abundances.m[is.nan(abundances.m)] <- 0
+    
+    output[[tax_string_level]] <- list("counts" = df2matrix(counts.df), "abundances" = abundances.m)
+  }
+  output
+}
+
+
 # Function
 log_matrix <- function(mymat){
   out <- log(mymat, 10)
@@ -63,6 +243,25 @@ clr = function(x, base=2){
 is.nan.data.frame <- function(x){
   do.call(cbind, lapply(x, is.nan))
 }
+
+
+first_resolved_taxonomy <- function(x) {
+  # Get the lowest taxonomy level (or 'first') that has been resolved from a taxonomy string
+  ranks.v <- unlist(strsplit(x, split = ';'))
+  # print(x)
+  # print(ranks.v)
+  for (i in length(ranks.v):1) {
+    split.v <- unlist(strsplit(ranks.v[i], split = '__'))
+    if (!is.na(split.v[2]) & split.v[2] != "") {
+      if (!grepl(split.v[2], pattern = "Unassigned|uncultured")) {
+        return(ranks.v[i])
+      }
+    }
+  }
+  return(ranks.v[1])
+}
+
+
 
 filter_heatmap_matrix <- function(myheatmap, row_max = 0, prevalence = 0){
   internal_heatmap <- myheatmap
@@ -166,7 +365,497 @@ filter_summary_to_top_n <- function(taxa_summary, grouping_variables, abundance_
 }
 
 # ---------------------------------------------------------------------------------------------------------
-generate_pca <- function(pca_object, mymetadata, variable_to_plot, colour_palette, limits = NULL, filename = NULL, include_legend = T, add_spider = F, add_ellipse = F,
+generate_pca_plot <- function(pca_object, # PCA object generated by the rda() function from vegan package
+                              my_metadata.df, # Dataframe containing metadata
+                              variable_to_plot, # Variable (column) that we are plotting
+                              variable_colours_available = F, 
+                              my_colour_palette = NULL,
+                              my_levels = NULL,
+                              
+                              axis_limits = NULL, # list of axes limits c(xmin, xmax,ymin,ymax)
+                              hide_grid = F,
+                              show_x_label = T, # Show x-axis label
+                              show_y_label = T, # Show y-axis label
+                              plot_x_ticks = T, # Show x-axis tick marks
+                              plot_y_ticks = T, # Show y-axis tick marks
+                              plot_x_tick_labels = T, # Show x-axis tick labels
+                              plot_y_tick_labels = T, # Show x-axis tick labels
+                              plot_title = NULL, # Show plot title
+                              title_cex = 1, # Size of title
+                              
+                              component_choices = c(1,2),
+                              
+                              plot_arrows = F, # Show contributing species/OTUs vectors
+                              num_top_species = 5, # How many species/OTUs to show with the largest contributions to the variance
+                              arrow_colour = "black", # Color of arrows
+                              arrow_alpha = 1, # Transparency of arrows, 0 = invisible, 1= fully, visible, 0.5 = 50% transparent
+                              arrow_thickness = .2, # Thickness of arrow
+                              label_arrows=T, # Label the arrows
+                              arrow_label_size = .5, # Size of arrow label
+                              arrow_scalar = 1, # Scale of the arrows
+                              arrow_label_colour = "black", # Colour of arrow label
+                              arrow_label_font_type = 1, # Font type of arrow label : 1 Normal, 2 bold, 3 italic, 4 bold italic
+                              arrow_label_offset = 0, # How much to offset the arrow label
+                              arrow_label_alpha = 1, # The transparency of the arrow labels
+                              
+                              plot_hulls = F, # Plot hulls
+                              hull_alpha = 1, # The transparency of the hulls
+                              
+                              plot_spiders = F, # Plot spiders
+                              label_spider = F, # Label the spider centroid
+                              spider_label_size = 0.5, # Size of spider label
+                              spider_alpha = 1, # The transparency of the spiders
+                              
+                              plot_ellipses = F, # Plot ellipse
+                              label_ellipse = F, # Label ellipse
+                              ellipse_label_size = 0.5, # Size of ellipse label
+                              ellipse_border_width = 1, # Width of ellipse border
+                              ellipse_alpha = 1, # The transparency of the ellipses
+                              
+                              
+                              label_sites = F, # Label the individual sites/samples
+                              label_species = F, # Label the individual species/OTUs
+                              
+                              point_alpha = 1, # Transparency of points, 0 = invisible, 1= fully, visible, 0.5 = 50% transparent
+                              point_size = 0.8, # Size of points
+                              point_line_thickness = 1, # Thickness of point outline
+                              use_shapes = T,
+                              variable_shapes_available = F,
+                              
+                              include_legend = T, # Show the legend
+                              legend_x = NULL, # x axis position of legend
+                              legend_y = NULL, # y axis position of legend
+                              legend_x_offset = 0, # How much to offset the legend on the x axis (assumes legend_x = NULL)
+                              legend_y_offset = 0, # How much to offset the legend on the y axis (assumes legend_y = NULL)
+                              legend_cex = 0.6, # Size of text in legend
+                              legend_columns = 2, # Number of columns used for legend key
+                              legend_key_text_distance = 0.5, # Distance between legend keys and text
+                              legend_column_spacing = 0.5, # Distance between legend columns
+                              legend_title = NULL, # Title of the legend. If NULL, just uses the variable
+                              legend_fill_colour = NULL,
+                              specie_labeller_function = NULL, # Function to re-label the species/OTUs,
+                              
+                              is_constrained = F, # This is a constrained ordination object
+                              
+                              file_type = "pdf",
+                              filename = NULL,
+                              plot_width = 10,
+                              plot_height=10
+){
+  # Function to generate a PCA plot
+  
+  pca.scores <- try(scores(pca_object, choices=c(1,2,3)))
+  if(inherits(pca.scores, "try-error")) {
+    return()
+  }
+  # Get component x,y coordinates
+  pca_site_scores <- scores(pca_object, display = "sites", choices = component_choices)
+  pca_specie_scores <- scores(pca_object, display = "species", choices = component_choices)
+  
+  # Check all entries in the PCA object are also in the metadata
+  if (!all(rownames(pca_site_scores) %in% rownames(my_metadata.df))){
+    error_message <- paste0("There are rows in the PCA object that are not defined in the metadata.
+                             Rownames in the metadata need to match those used in the PCA object")
+    stop(error_message)
+  }
+  # Remove NA entries from the metadata and from the PCA
+  my_metadata.df <- my_metadata.df[!is.na(my_metadata.df[[variable_to_plot]]),]
+  pca_site_scores <- pca_site_scores[rownames(pca_site_scores) %in% rownames(my_metadata.df),]
+  
+  if (is_constrained){
+    pca_percentages <- (pca_object$CCA$eig/sum(pca_object$CCA$eig)) * 100  
+  } else{
+    pca_percentages <- (pca_object$CA$eig/sum(pca_object$CA$eig)) * 100  
+  }
+  
+  # Assign a percentage of zero to NA values
+  pca_percentages[is.na(pca_percentages)] <- 0
+  if (length(pca_percentages) == 1){
+    pca_percentages[2] <- 0
+  }
+  
+  if (!is.null(axis_limits)){
+    x_min <- axis_limits[1]
+    x_max <- axis_limits[2]
+    y_min <- axis_limits[3]
+    y_max <- axis_limits[4]
+  }else {
+    x_min <- round(lapply(min(pca_site_scores[,1]), function(x) ifelse(x > 0, x + 1, x - 1))[[1]])
+    x_max <- round(lapply(max(pca_site_scores[,1]), function(x) ifelse(x > 0, x + 1, x - 1))[[1]])
+    y_min <- round(lapply(min(pca_site_scores[,2]), function(x) ifelse(x > 0, x + 1, x - 1))[[1]])
+    y_max <- round(lapply(max(pca_site_scores[,2]), function(x) ifelse(x > 0, x + 1, x - 1))[[1]])
+    
+  }
+  my_xlab <- ""
+  my_ylab <- ""
+  if (show_x_label){
+    my_xlab = paste("PC",component_choices[1],"(", round(pca_percentages[component_choices[1]],1), "%)", sep = "")  
+  }
+  if (show_y_label){
+    my_ylab = paste("PC", component_choices[2],"(", round(pca_percentages[component_choices[2]],1), "%)", sep = "")
+  }
+  
+  my_metadata.df <- my_metadata.df[order(rownames(my_metadata.df)),]
+  my_metadata.df <- my_metadata.df[order(my_metadata.df[[variable_to_plot]]),]
+  
+  # ------------------------------------------------------------------------------------
+  # Ensure outcome variable is factored
+  # Refactor the variable column so that the levels are consistent
+  if (!is.null(my_levels)){
+    my_metadata.df[,variable_to_plot] <- factor(my_metadata.df[,variable_to_plot], levels = my_levels)
+  } else{
+    # Uncomment to factorise and order levels alphabetically
+    my_metadata.df[,variable_to_plot] <- factor(my_metadata.df[,variable_to_plot], 
+                                                levels = sort(unique(as.character(my_metadata.df[,variable_to_plot]))))
+    # Uncomment to factorise and inherit the current ordering
+    # my_metadata.df[,variable_to_plot] <- factor(my_metadata.df[,variable_to_plot])
+  }
+  # ------------------------------------------------------------------------------------
+  
+  
+  if (!is.null(filename)){
+    if (file_type == "pdf"){
+      pdf(file = filename,height = plot_height, width = plot_width)
+    } else if (file_type == "svg"){
+      # Cairo::CairoSVG(file = filename,width = plot_width,height = plot_height)
+      svg(filename = filename,height = plot_height, width = plot_width)
+      # svglite(file = filename,height = plot_height, width = plot_width)
+    }
+  }
+  
+  
+  # dataframe.df <- dataframe.df[order(rownames(dataframe.df)),,drop = F]
+  # dataframe.df <- dataframe.df[order(dataframe.df[[variable_to_plot]]),,drop = F]
+  # dataframe.df[,variable_to_plot] <- factor(dataframe.df[,variable_to_plot], 
+  #                                           levels = sort(unique(as.character(dataframe.df[,variable_to_plot]))))
+  plot(0,
+       type='n',
+       # x = 0, y=0,
+       xlim = c(x_min,x_max),
+       ylim = c(y_min,y_max),
+       xlab = my_xlab,
+       ylab = my_ylab,
+       xaxt = "n",
+       yaxt = "n",
+       # frame.plot = F,
+       frame.plot = T
+  )
+  # Make grid
+  if (hide_grid == F){
+    grid(NULL,NULL, lty = 2, lwd = 1, col = "grey80")
+  }
+  
+  # Add axes 
+  axis(side = 1, labels = ifelse(plot_x_tick_labels, T, F), tck = -0.01,tick = ifelse(plot_x_ticks,T,F))
+  axis(side = 2, labels = ifelse(plot_y_tick_labels, T, F), tck = -0.01, tick = ifelse(plot_x_ticks,T,F))
+  
+  # Assign (unique) colours and shapes for each grouping variable
+  variable_values <- levels(my_metadata.df[[variable_to_plot]])
+  
+  # If variable colour column "variable_colour" in metadata, use colours from there
+  if (variable_colours_available == T){
+    colour_col_name <- paste0(variable_to_plot, "_colour")
+    variable_colours <- setNames(as.character(unique(my_metadata.df[[colour_col_name]])), 
+                                 as.character(unique(my_metadata.df[[variable_to_plot]])))
+  } else{ # Otherwise use default palette
+    colour_palette_distinct <- c("#8eec45","#0265e8","#f6a800","#bf6549","#486900","#c655a0","#00d1b6","#ff4431","#aeb85c","#7e7fc8")
+    variable_colours <- setNames(rep(colour_palette_distinct,length(variable_values))[1:length(variable_values)], variable_values)
+  }
+  
+  # Whether to use shapes
+  if (use_shapes == T){
+    # If variable shape column "variable_shape" in metadata, use shapes from there
+    if (variable_shapes_available == T){
+      shape_col_name <- paste0(variable_to_plot, "_shape")
+      variable_shapes <- setNames(unique(my_metadata.df[[shape_col_name]]), 
+                                  as.character(unique(my_metadata.df[[variable_to_plot]])))
+      
+    } else{ # Use default pre-defined shapes
+      # variable_shapes <- setNames(c(25,24,23,22,21,8,6,5,4,3,2,1)[1:length(variable_values)],variable_values)
+      variable_shapes <- setNames(rep(c(25,24,23,22,21),
+                                      length(variable_values))[1:length(variable_values)],variable_values)      
+    }
+  } else{
+    variable_shapes <- setNames(rep(c(21),length(variable_values))[1:length(variable_values)],variable_values)  
+  }
+  
+  # variable_colours <- colours.l[[variable_to_plot]] # Assumes colours.l a global variable
+  # variable_shapes <- pchs.l[[variable_to_plot]]  # Assumes pchs.l a global variable, also assumes shapes are only 25,24,23,22,21 (I think)
+  # variable_shapes <- setNames(rep(c(25,24,23,22,21),length(variable_values))[1:length(variable_values)],variable_values)      
+  
+  # print(variable_values)
+  # print(variable_colours)
+  # print(variable_shapes)
+  annotation_dataframe <- data.frame(variable_colours, variable_shapes, stringsAsFactors = F)
+  annotation_dataframe$variable_outline_colours <- as.character(annotation_dataframe$variable_colours)
+  if (point_line_thickness != 0){
+    annotation_dataframe[annotation_dataframe$variable_shapes > 15,"variable_outline_colours"] <- "black"  
+  }
+  
+  # Filter annotation dataframe to levels of interest
+  if (!is.null(my_levels)){
+    annotation_dataframe <- annotation_dataframe[my_levels,]
+  }
+  
+  pca_site_scores <- pca_site_scores[rownames(my_metadata.df),]
+  
+  # Get the colours for all samples
+  all_sample_colours <- as.character(
+    lapply(
+      as.character(my_metadata.df[rownames(pca_site_scores),variable_to_plot]), 
+      function(x) as.character(annotation_dataframe[x,"variable_colours"])
+    )
+  )
+  
+  # Get the shapes for all samples
+  all_sample_shapes <- as.numeric(
+    lapply(
+      as.character(my_metadata.df[rownames(pca_site_scores),variable_to_plot]), 
+      function(x) annotation_dataframe[x,"variable_shapes"][[1]]
+    )
+  )
+  
+  # Set the outline colours for all samples based on the sample colours and refering to the annotation dataframe created above
+  all_sample_outline_colours <- as.character(unlist(lapply(all_sample_colours, 
+                                                           function(x) annotation_dataframe[annotation_dataframe$variable_colours == x, "variable_outline_colours"])))
+  
+  points(pca_site_scores, 
+         cex = point_size,
+         lwd = point_line_thickness,
+         pch = all_sample_shapes,
+         col = alpha(all_sample_outline_colours,point_alpha),
+         # col = alpha("black",point_alpha),
+         bg = alpha(all_sample_colours, point_alpha)
+  )
+  
+  # Plot arrows for species / variables
+  plot_arrows_func <- function(){
+    
+    left_pc1.v <- rownames(pca_specie_scores[order(pca_specie_scores[,1]),][1:num_top_species,])
+    right_pc1.v <- rownames(pca_specie_scores[order(pca_specie_scores[,1]),][(length(pca_specie_scores[,1]) - num_top_species):length(pca_specie_scores[,1]),])
+    
+    left_pc2.v <- rownames(pca_specie_scores[order(pca_specie_scores[,2]),][1:num_top_species,])
+    right_pc2.v <- rownames(pca_specie_scores[order(pca_specie_scores[,2]),][(length(pca_specie_scores[,2]) - num_top_species):length(pca_specie_scores[,2]),])
+    
+    top_vars.v <- unique(c(left_pc1.v, right_pc1.v, left_pc2.v, right_pc2.v))
+    arrows(0,0, 
+           arrow_scalar * pca_specie_scores[top_vars.v,1], 
+           arrow_scalar * pca_specie_scores[top_vars.v,2], 
+           length =0.05, 
+           col = alpha(arrow_colour, arrow_alpha),
+           lwd = arrow_thickness,
+           lty = 1)
+    
+    if (label_arrows){
+      if (!is.null(specie_labeller_function)){
+        for (tv in top_vars.v){
+          text(x = pca_specie_scores[tv,1]* arrow_scalar,
+               y = pca_specie_scores[tv,2]* arrow_scalar,
+               labels = specie_labeller_function(tv),
+               cex = arrow_label_size,
+               # Values of 1, 2, 3 and 4, respectively indicate positions below, 
+               # to the left of, above and to the right of the specified (x,y) coordinates.
+               pos = sample(c(1,2,3,4),1),
+               # pos = 2,
+               offset = arrow_label_offset,
+               col = alpha(arrow_label_colour,alpha = arrow_label_alpha),
+               font = arrow_label_font_type)
+        }
+      } else{
+        for (tv in top_vars.v){
+          text(x = pca_specie_scores[tv,1] * arrow_scalar,
+               y = pca_specie_scores[tv,2] * arrow_scalar,
+               labels = tv,
+               cex = arrow_label_size,
+               # Values of 1, 2, 3 and 4, respectively indicate positions below, 
+               # to the left of, above and to the right of the specified (x,y) coordinates.
+               pos = sample(c(1,2,3,4),1),
+               # pos = 2,
+               offset = arrow_label_offset,
+               col = alpha(arrow_label_colour,alpha = arrow_label_alpha),
+               font = arrow_label_font_type)
+        }
+      }
+    }
+  }
+  
+  if (plot_arrows == T){
+    plot_arrows_func()
+  }
+  
+  # Plot ellipses that are filled
+  plot_ellipses_func <- function () {
+    for (member in variable_values) {
+      if (nrow(my_metadata.df[my_metadata.df[[variable_to_plot]] == member,,drop = F]) > 2){ # if too few samples, skip plotting ellipse
+        ordiellipse(pca_site_scores,
+                    groups = my_metadata.df[[variable_to_plot]],
+                    kind = "ehull",
+                    lwd = ellipse_border_width,
+                    # border = variable_colours[member][[1]],
+                    border = alpha(variable_colours[member][[1]],ellipse_alpha),
+                    # col = variable_colours[member][[1]],
+                    col = alpha(variable_colours[member][[1]],ellipse_alpha),
+                    show.groups = member,
+                    alpha = .05,
+                    # alpha = ellipse_alpha,
+                    draw = "polygon",
+                    label = F,
+                    cex = .5)
+      }
+    }
+  }
+  
+  # Plot hulls that are filled
+  plot_hulls_func <- function () {
+    for (member in variable_values){
+      if (nrow(my_metadata.df[my_metadata.df[[variable_to_plot]] == member,,drop = F]) > 2){ # if too few samples, skip plotting ellipse}
+        ordihull(pca_site_scores,
+                 groups = my_metadata.df[[variable_to_plot]],
+                 lwd = ellipse_border_width,
+                 # border = variable_colours[member][[1]],
+                 border = alpha(variable_colours[member][[1]],hull_alpha),
+                 # col = variable_colours[member][[1]],
+                 col = alpha(variable_colours[member][[1]],hull_alpha),
+                 show.groups = member,
+                 alpha = .05,
+                 draw = "polygon",
+                 label = F,
+                 cex = .5)
+      }
+    }
+  }
+  if (hasArg(plot_hulls)){
+    if (plot_hulls == T){
+      plot_hulls_func()    
+    }
+  }
+  
+  #Plot spiders
+  plot_spiders_func <- function (label_spider = F) {
+    for (member in variable_values){
+      if (nrow(my_metadata.df[my_metadata.df[[variable_to_plot]] == member,,drop = F]) > 2){ # if too few samples, skip plotting ellipse
+        ordispider(pca_site_scores,
+                   groups = my_metadata.df[[variable_to_plot]],
+                   # col = variable_colours[member][[1]],
+                   col = alpha(variable_colours[member][[1]],spider_alpha),
+                   show.groups = member,
+                   #alpha = .05,
+                   label = label_spider,
+                   cex = spider_label_size)
+      }
+    }
+  }
+  if (hasArg(plot_spiders)){
+    if (plot_spiders == T){
+      plot_spiders_func(label_spider = label_spider)    
+    }
+  }
+  
+  plot_ellipses_labels_func <- function(label_ellipse = F){
+    # Repeat to have labels clearly on top of all ellipses
+    for (member in variable_values){
+      if (nrow(my_metadata.df[my_metadata.df[[variable_to_plot]] == member,,drop = F]) > 2){ # if too few samples, skip plotting ellipse
+        ordiellipse(pca_site_scores,
+                    groups = my_metadata.df[[variable_to_plot]],
+                    kind = "ehull",
+                    # border = variable_colours[member][[1]],
+                    border = NA,
+                    # col = variable_colours[member][[1]],
+                    col = NA,
+                    show.groups = member,
+                    alpha = 0,
+                    draw = "polygon",
+                    label = label_ellipse,
+                    cex = ellipse_label_size)
+      }
+    }
+  }
+  
+  if (hasArg(plot_ellipses) | hasArg(label_ellipse)){
+    if (plot_ellipses == T){
+      plot_ellipses_func()    
+      plot_ellipses_labels_func(label_ellipse = label_ellipse)
+    } else if (label_ellipse == T){
+      plot_ellipses_labels_func(label_ellipse = label_ellipse)
+    }
+  } 
+  
+  if (label_sites == T){
+    text(x = pca_site_scores[,1],
+         y = pca_site_scores[,2],
+         labels = rownames(pca_site_scores),
+         cex = .5,
+         pos = 2)
+  }
+  if (label_species == T){
+    text(x = pca_specie_scores[,1],
+         y = pca_specie_scores[,2],
+         labels = rownames(pca_specie_scores),
+         cex = .5,
+         pos = 2)
+  }
+  if (is.null(legend_x)){
+    legend_x <- x_min + legend_x_offset
+  }
+  if (is.null(legend_y)){
+    legend_y <- y_max + legend_y_offset
+  }
+  if (is.null(legend_title)){
+    legend_title <- variable_to_plot
+  }
+  
+  if (!is.null(plot_title)){
+    title(main = plot_title, cex.main = title_cex)
+  } 
+  
+  legend_bty = "n"
+  if (!is.null(legend_fill_colour)){
+    legend_bty <- "o"
+    legend_fill <- legend_fill_colour
+    legend_colour <- legend_fill_colour
+  }
+  
+  if (include_legend){
+    legend(
+      # title = bold(variable_to_plot),
+      title = as.expression(bquote(bold(.(legend_title)))),
+      # title.adj = 0.5,
+      title.col="black",
+      # x = x_min-4,
+      # y = y_max-6,
+      x = legend_x,
+      y = legend_y,
+      # legend= variable_values,
+      # pch= unique(all_sample_shapes),
+      # col= legend_point_outline_colours,
+      # pt.bg = unique(all_sample_colours),
+      legend= rownames(annotation_dataframe),
+      pch= annotation_dataframe$variable_shapes,
+      col= as.character(annotation_dataframe$variable_outline_colours),
+      pt.bg = as.character(annotation_dataframe$variable_colours),
+      #bg = "white",
+      bty = legend_bty,
+      bg = legend_fill,
+      box.col = legend_colour,
+      ncol = legend_columns,
+      cex = legend_cex,
+      # pt.cex = 0.6,
+      pt.lwd = point_line_thickness,
+      y.intersp =1,
+      x.intersp = legend_key_text_distance, # Distance between legend keys and text
+      xjust = 0,
+      # yjust = 1,
+      title.adj = 0.5,
+      text.width = legend_column_spacing # Distance between legend columns
+    )
+  }
+  if (!is.null(filename)){
+    dev.off()
+  }
+}
+
+
+old_generate_pca <- function(pca_object, mymetadata, variable_to_plot, colour_palette, limits = NULL, filename = NULL, include_legend = T, add_spider = F, add_ellipse = F,
                          point_alpha = 1, plot_width = 10, plot_height=10, point_size = 0.8, point_line_thickness = 1,
                          label_sites = F, label_species = F,
                          legend_x = NULL, legend_y = NULL, legend_x_offset = 0, legend_y_offset = 0,legend_cex = 0.6,
@@ -631,8 +1320,6 @@ calculate_PC_abundance_correlations <- function(pca_object, mydata.df, taxa_colu
   abundance_pc_correlations.df
 }
 # ---------------------------------------------------------------------------------------------------------
-
-
 
 # Function to create heatmap
 make_heatmap <- function(myheatmap_matrix,
@@ -1165,6 +1852,7 @@ run_permdisp_custom <- function(my_metadata, my_data, my_group, my_method = "euc
   dist_matrix <- vegdist(t(my_data), method = my_method)
   betadisper_object <- with(my_metadata, betadisper(dist_matrix, group = get(my_group)))
   permutest_results <- permutest(betadisper_object, permutations = permutations, parallel = 2)
+  #permutest.betadisper
   
   for (r in rownames(permutest_results$tab)){
     variable <- r

@@ -250,7 +250,7 @@ IS_genus_plot <- ggplot(IS_genus_rel_specific.df, aes(x = Genus,
 
 
 ggsave(plot = IS_genus_plot, 
-       filename = "Result_figures/abundance_analysis_plots/IS_abundace_boxplot_publication.pdf",
+       filename = "Result_figures/abundance_analysis_plots/IS_abundance_boxplot_publication.pdf",
        width = 15, height = 12, units = "cm"
        )
 
@@ -283,7 +283,7 @@ IC_genus_plot <- ggplot(IC_genus_rel_specific.df, aes(x = Genus,
 IC_genus_plot
 
 ggsave(plot = IC_genus_plot, 
-       filename = "Result_figures/abundance_analysis_plots/IC_abundace_boxplot_publication.pdf",
+       filename = "Result_figures/abundance_analysis_plots/IC_abundance_boxplot_publication.pdf",
        width = 15, height = 12, units = "cm"
 )
 
@@ -320,12 +320,12 @@ grid_plot <- plot_grid(plotlist = list(grid_plot, my_legend),
                        nrow = 2, rel_heights = c(1,.1))
 
 ggsave(plot = grid_plot, 
-       filename = "Result_figures/abundance_analysis_plots/IS_IC_abundace_boxplot_publication.pdf",
+       filename = "Result_figures/abundance_analysis_plots/IS_IC_abundance_boxplot_publication.pdf",
        width = 25, height = 12, units = "cm"
 )
 
 ggsave(plot = grid_plot, 
-       filename = "Result_figures/abundance_analysis_plots/IS_IC_abundace_boxplot_publication.svg",
+       filename = "Result_figures/abundance_analysis_plots/IS_IC_abundance_boxplot_publication.svg",
        width = 25, height = 12, units = "cm",device = "svg"
 )
 

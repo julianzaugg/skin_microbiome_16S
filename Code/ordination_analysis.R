@@ -78,6 +78,9 @@ dim(otu.m)
 dim(subset(metadata.df, Cohort == "immunocompetent"))
 dim(subset(metadata.df, Cohort == "immunosuppressed"))
 
+colnames(otu.m)[!colnames(otu.m) %in% metadata.df$Index]
+
+
 genus_data.df <- read.csv("Result_tables/combined_counts_abundances_and_metadata_tables/Genus_counts_abundances_and_metadata.csv",header = T)
 length(unique(genus_data.df$Sample))
 
@@ -312,6 +315,33 @@ generate_pca(genus_pca, mymetadata = metadata.df,
 # All samples, immunocompetent
 
 # Sample_type
+source("Code/helper_functions.R")
+
+# metadata.df$Sample_type__Patient <- with(metadata.df, paste0(Sample_type, "__", Patient))
+# 
+# generate_pca_plot(pca_object = immunocompetent_genus_pca,
+#                   my_metadata.df = subset(metadata.df, Cohort == "immunocompetent"),
+#                   variable_to_plot = "Sample_type",
+#                   variable_colours_available = T,
+#                   plot_ellipses = F,
+#                   label_ellipse = F,
+#                   ellipse_label_size = .3,
+#                   # ellipse_border_width = 1,
+#                   # ellipse_alpha = 1,
+#                   
+#                   point_size = .8, point_line_thickness = 0.8,point_alpha =.9,
+#                   use_shapes = T,
+#                   component_choices = c(1,2),
+#                   plot_height = 5, plot_width = 5,
+#                   
+#                   legend_title = "Sample type",
+#                   legend_cex = .5,
+#                   legend_columns = 1,
+#                   legend_x = -4, legend_y = 5,
+#                   plot_arrows = F,
+#                   filename = paste0("Result_figures/ordination_plots/genus/immunocompetent_sample_type.pdf")
+#                   )
+
 generate_pca(immunocompetent_genus_pca, mymetadata = subset(metadata.df, Cohort == "immunocompetent"),
              plot_height = 5, plot_width = 5,
              legend_x = -6, legend_y = 5,
@@ -523,128 +553,128 @@ generate_pca(immunosuppressed_otu_pca, mymetadata = metadata.df[immunosuppressed
 
 
 # Gender
-source("Code/helper_functions.R")
-generate_pca(immunosuppressed_genus_pca, mymetadata = metadata.df[immunosuppressed_samples,],
-             plot_height = 5, plot_width = 5,
-             legend_x = -5, legend_y = 8,
-             point_size = .7, point_line_thickness = 0.3,point_alpha =.9,
-             legend_title = "Gender",
-             legend_cex = .5,
-             plot_title = "immunosuppressed cohort, all Sample types",
-             limits = c(-5,5,-5,8),
-             plot_spiders = F,
-             plot_ellipses = F,
-             plot_hulls = F,
-             use_shapes = T,
-             ellipse_border_width = .5,
-             include_legend = T,
-             label_ellipse = F, ellipse_label_size = .3,
-             colour_palette = patient_colour_palette_45,
-             variable_to_plot = "Gender",
-             legend_cols = 2,
-             variable_colours_available = F,
-             num_top_species = 3,
-             plot_arrows = F,arrow_alpha = .7, arrow_colour = "grey20",arrow_scalar = 2,arrow_thickness = .7,
-             label_arrows = T, arrow_label_size = .5, arrow_label_colour = "black", arrow_label_font_type = 1,
-             specie_labeller_function = genus_relabeller_function,arrow_label_offset = 0,
-             filename = paste0("Result_figures/ordination_plots/genus/immunosuppressed_gender.pdf"))
+# source("Code/helper_functions.R")
+# generate_pca(immunosuppressed_genus_pca, mymetadata = metadata.df[immunosuppressed_samples,],
+#              plot_height = 5, plot_width = 5,
+#              legend_x = -5, legend_y = 8,
+#              point_size = .7, point_line_thickness = 0.3,point_alpha =.9,
+#              legend_title = "Gender",
+#              legend_cex = .5,
+#              plot_title = "immunosuppressed cohort, all Sample types",
+#              limits = c(-5,5,-5,8),
+#              plot_spiders = F,
+#              plot_ellipses = F,
+#              plot_hulls = F,
+#              use_shapes = T,
+#              ellipse_border_width = .5,
+#              include_legend = T,
+#              label_ellipse = F, ellipse_label_size = .3,
+#              colour_palette = patient_colour_palette_45,
+#              variable_to_plot = "Gender",
+#              legend_cols = 2,
+#              variable_colours_available = F,
+#              num_top_species = 3,
+#              plot_arrows = F,arrow_alpha = .7, arrow_colour = "grey20",arrow_scalar = 2,arrow_thickness = .7,
+#              label_arrows = T, arrow_label_size = .5, arrow_label_colour = "black", arrow_label_font_type = 1,
+#              specie_labeller_function = genus_relabeller_function,arrow_label_offset = 0,
+#              filename = paste0("Result_figures/ordination_plots/genus/immunosuppressed_gender.pdf"))
 
 # ---------------------------------------------------------------------------------------------------------
 
 # Each Sample type, color by cohort and patient
-for (sample_type in unique(metadata.df$Sample_type)){
-  metadata_sample_type.df <- subset(metadata.df, Sample_type == sample_type)
-  metadata_sample_type.df <- metadata_sample_type.df[order(rownames(metadata_sample_type.df)),]
-  genus_clr_sample_type.m <- genus_clr.m[,colnames(genus_clr.m) %in% rownames(metadata_sample_type.df)]
-  genus_pca_sample_type <- rda(t(genus_clr_sample_type.m), data = metadata_sample_type.df)
-  generate_pca(genus_pca_sample_type, mymetadata = metadata_sample_type.df,
-               plot_height = 5, plot_width = 5,
-               legend_x = -5, legend_y = 8,
-               point_size = .7, point_line_thickness = 0.3,point_alpha =.9,
-               legend_title = "Cohort",
-               legend_cex = .5,
-               plot_title = paste0("Sample type : ", sample_type),
-               limits = c(-10,10,-10,10),
-               plot_spiders = F,
-               plot_ellipses = F,
-               plot_hulls = F,
-               use_shapes = T,
-               ellipse_border_width = .5,
-               include_legend = T,
-               label_ellipse = F, ellipse_label_size = .3,
-               colour_palette = patient_colour_palette_45,
-               variable_to_plot = "Cohort",
-               legend_cols = 2,
-               variable_colours_available = T,
-               num_top_species = 3,
-               plot_arrows = F,arrow_alpha = .7, arrow_colour = "grey20",arrow_scalar = 2,arrow_thickness = .7,
-               label_arrows = T, arrow_label_size = .5, arrow_label_colour = "black", arrow_label_font_type = 1,
-               specie_labeller_function = genus_relabeller_function,arrow_label_offset = 0,
-               filename = paste0("Result_figures/ordination_plots/genus/",sample_type,"_cohort.pdf"))
-  
-  
-  generate_pca(genus_pca_sample_type, mymetadata = metadata_sample_type.df,
-               plot_height = 5, plot_width = 5,
-               legend_x = -5, legend_y = 8,
-               point_size = .7, point_line_thickness = 0.3,point_alpha =.9,
-               legend_title = "Patient",
-               legend_cex = .5,
-               plot_title = paste0("Sample type : ", sample_type),
-               limits = c(-10,10,-10,10),
-               plot_spiders = F,
-               plot_ellipses = F,
-               plot_hulls = F,
-               use_shapes = T,
-               ellipse_border_width = .5,
-               include_legend = T,
-               label_ellipse = F, ellipse_label_size = .3,
-               colour_palette = patient_colour_palette_45,
-               variable_to_plot = "Patient",
-               legend_cols = 2,
-               variable_colours_available = T,
-               num_top_species = 3,
-               plot_arrows = F,arrow_alpha = .7, arrow_colour = "grey20",arrow_scalar = 2,arrow_thickness = .7,
-               label_arrows = T, arrow_label_size = .5, arrow_label_colour = "black", arrow_label_font_type = 1,
-               specie_labeller_function = genus_relabeller_function,arrow_label_offset = 0,
-               filename = paste0("Result_figures/ordination_plots/genus/", sample_type, "_patient.pdf"))
-}
-
-# Each Sample type within cohort, color by patient
-for (cohort in unique(metadata.df$Cohort)){
-  for (sample_type in unique(metadata.df$Sample_type)){
-    metadata_sample_type.df <- subset(metadata.df, Cohort == cohort & Sample_type == sample_type)
-    metadata_sample_type.df <- metadata_sample_type.df[order(rownames(metadata_sample_type.df)),]
-    genus_clr_sample_type.m <- genus_clr.m[,colnames(genus_clr.m) %in% rownames(metadata_sample_type.df)]
-    if (dim(genus_clr_sample_type.m)[2] == 0){
-      next
-    }
-    genus_pca_sample_type <- rda(t(genus_clr_sample_type.m), data = metadata_sample_type.df)
-    generate_pca(genus_pca_sample_type, mymetadata = metadata_sample_type.df,
-                 plot_height = 5, plot_width = 5,
-                 legend_x = -5, legend_y = 8,
-                 point_size = .7, point_line_thickness = 0.3,point_alpha =.9,
-                 legend_title = "Patient",
-                 legend_cex = .5,
-                 plot_title = paste0("Sample type : ", sample_type),
-                 limits = c(-10,10,-10,10),
-                 plot_spiders = F,
-                 plot_ellipses = F,
-                 plot_hulls = F,
-                 use_shapes = T,
-                 ellipse_border_width = .5,
-                 include_legend = T,
-                 label_ellipse = F, ellipse_label_size = .3,
-                 colour_palette = patient_colour_palette_45,
-                 variable_to_plot = "Patient",
-                 legend_cols = 2,
-                 variable_colours_available = T,
-                 num_top_species = 3,
-                 plot_arrows = F,arrow_alpha = .7, arrow_colour = "grey20",arrow_scalar = 2,arrow_thickness = .7,
-                 label_arrows = T, arrow_label_size = .5, arrow_label_colour = "black", arrow_label_font_type = 1,
-                 specie_labeller_function = genus_relabeller_function,arrow_label_offset = 0,
-                 filename = paste0("Result_figures/ordination_plots/genus/",cohort, "_",sample_type,"_patient.pdf"))
-  }
-}
+# for (sample_type in unique(metadata.df$Sample_type)){
+#   metadata_sample_type.df <- subset(metadata.df, Sample_type == sample_type)
+#   metadata_sample_type.df <- metadata_sample_type.df[order(rownames(metadata_sample_type.df)),]
+#   genus_clr_sample_type.m <- genus_clr.m[,colnames(genus_clr.m) %in% rownames(metadata_sample_type.df)]
+#   genus_pca_sample_type <- rda(t(genus_clr_sample_type.m), data = metadata_sample_type.df)
+#   generate_pca(genus_pca_sample_type, mymetadata = metadata_sample_type.df,
+#                plot_height = 5, plot_width = 5,
+#                legend_x = -5, legend_y = 8,
+#                point_size = .7, point_line_thickness = 0.3,point_alpha =.9,
+#                legend_title = "Cohort",
+#                legend_cex = .5,
+#                plot_title = paste0("Sample type : ", sample_type),
+#                limits = c(-10,10,-10,10),
+#                plot_spiders = F,
+#                plot_ellipses = F,
+#                plot_hulls = F,
+#                use_shapes = T,
+#                ellipse_border_width = .5,
+#                include_legend = T,
+#                label_ellipse = F, ellipse_label_size = .3,
+#                colour_palette = patient_colour_palette_45,
+#                variable_to_plot = "Cohort",
+#                legend_cols = 2,
+#                variable_colours_available = T,
+#                num_top_species = 3,
+#                plot_arrows = F,arrow_alpha = .7, arrow_colour = "grey20",arrow_scalar = 2,arrow_thickness = .7,
+#                label_arrows = T, arrow_label_size = .5, arrow_label_colour = "black", arrow_label_font_type = 1,
+#                specie_labeller_function = genus_relabeller_function,arrow_label_offset = 0,
+#                filename = paste0("Result_figures/ordination_plots/genus/",sample_type,"_cohort.pdf"))
+#   
+#   
+#   generate_pca(genus_pca_sample_type, mymetadata = metadata_sample_type.df,
+#                plot_height = 5, plot_width = 5,
+#                legend_x = -5, legend_y = 8,
+#                point_size = .7, point_line_thickness = 0.3,point_alpha =.9,
+#                legend_title = "Patient",
+#                legend_cex = .5,
+#                plot_title = paste0("Sample type : ", sample_type),
+#                limits = c(-10,10,-10,10),
+#                plot_spiders = F,
+#                plot_ellipses = F,
+#                plot_hulls = F,
+#                use_shapes = T,
+#                ellipse_border_width = .5,
+#                include_legend = T,
+#                label_ellipse = F, ellipse_label_size = .3,
+#                colour_palette = patient_colour_palette_45,
+#                variable_to_plot = "Patient",
+#                legend_cols = 2,
+#                variable_colours_available = T,
+#                num_top_species = 3,
+#                plot_arrows = F,arrow_alpha = .7, arrow_colour = "grey20",arrow_scalar = 2,arrow_thickness = .7,
+#                label_arrows = T, arrow_label_size = .5, arrow_label_colour = "black", arrow_label_font_type = 1,
+#                specie_labeller_function = genus_relabeller_function,arrow_label_offset = 0,
+#                filename = paste0("Result_figures/ordination_plots/genus/", sample_type, "_patient.pdf"))
+# }
+# 
+# # Each Sample type within cohort, color by patient
+# for (cohort in unique(metadata.df$Cohort)){
+#   for (sample_type in unique(metadata.df$Sample_type)){
+#     metadata_sample_type.df <- subset(metadata.df, Cohort == cohort & Sample_type == sample_type)
+#     metadata_sample_type.df <- metadata_sample_type.df[order(rownames(metadata_sample_type.df)),]
+#     genus_clr_sample_type.m <- genus_clr.m[,colnames(genus_clr.m) %in% rownames(metadata_sample_type.df)]
+#     if (dim(genus_clr_sample_type.m)[2] == 0){
+#       next
+#     }
+#     genus_pca_sample_type <- rda(t(genus_clr_sample_type.m), data = metadata_sample_type.df)
+#     generate_pca(genus_pca_sample_type, mymetadata = metadata_sample_type.df,
+#                  plot_height = 5, plot_width = 5,
+#                  legend_x = -5, legend_y = 8,
+#                  point_size = .7, point_line_thickness = 0.3,point_alpha =.9,
+#                  legend_title = "Patient",
+#                  legend_cex = .5,
+#                  plot_title = paste0("Sample type : ", sample_type),
+#                  limits = c(-10,10,-10,10),
+#                  plot_spiders = F,
+#                  plot_ellipses = F,
+#                  plot_hulls = F,
+#                  use_shapes = T,
+#                  ellipse_border_width = .5,
+#                  include_legend = T,
+#                  label_ellipse = F, ellipse_label_size = .3,
+#                  colour_palette = patient_colour_palette_45,
+#                  variable_to_plot = "Patient",
+#                  legend_cols = 2,
+#                  variable_colours_available = T,
+#                  num_top_species = 3,
+#                  plot_arrows = F,arrow_alpha = .7, arrow_colour = "grey20",arrow_scalar = 2,arrow_thickness = .7,
+#                  label_arrows = T, arrow_label_size = .5, arrow_label_colour = "black", arrow_label_font_type = 1,
+#                  specie_labeller_function = genus_relabeller_function,arrow_label_offset = 0,
+#                  filename = paste0("Result_figures/ordination_plots/genus/",cohort, "_",sample_type,"_patient.pdf"))
+#   }
+# }
 
 
 # ------------------------------------------------------------------------------------------------
@@ -819,7 +849,7 @@ make_publication_plot <- function(filetype = "pdf"){
   # title(main = "",outer = T,ylab = "Test")
   dev.off()
 }
-make_publication_plot("svg")
+make_publication_plot("pdf")
 # 
 # include <- T
 # plot(0,

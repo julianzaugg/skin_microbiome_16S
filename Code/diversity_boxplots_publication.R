@@ -174,6 +174,7 @@ genus.m <- genus.m[,rownames(metadata.df)]
 
 # Create the rarefied matrices
 genus_rare.m <- t(rrarefy(t(genus.m[,colSums(genus.m) >= 2000]), 2000))
+# genus_rare.m <- t(rrarefy(t(genus.m[,colSums(genus.m) >= 10000]), 10000))
 
 # Create phyloseq object
 genus_rare_phyloseq <- otu_table(genus_rare.m, taxa_are_rows=TRUE)
