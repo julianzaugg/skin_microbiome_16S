@@ -66,7 +66,9 @@ metadata.df <- read.csv("Result_tables/other/processed_metadata.csv", sep =",", 
 metadata.df <- subset(metadata.df, Cohort == "immunosuppressed" | Snapshot_sample_5 == "yes")
 
 # Define the variables of interest
-discrete_variables <- c("Lesion_type_refined","Gender","Patient", "Cohort", "Length_of_immunosuppression_group_1", "Length_of_immunosuppression_group_2")
+# discrete_variables <- c("Sample_type","Gender","Patient", "Cohort", "Length_of_immunosuppression_group_1", "Length_of_immunosuppression_group_2")
+discrete_variables <- c("Sample_type","Patient", "Cohort")
+
 
 # Load count table at the OTU level. These are the counts for OTUs that were above our abundance thresholds
 otu.m <- as.matrix(read.table("Result_tables/count_tables/OTU_counts.csv", sep =",", header =T, row.names = 1))
@@ -116,9 +118,7 @@ metadata.df[discrete_variables] <- lapply(metadata.df[discrete_variables], facto
 # how the counts for each OTU/genus depend on the variables defined in the 'colData'. See help(DESeqDataSetFromMatrix) for more information.
 # The first column of the metadata.df ('colData') must match the ordering of the columns of the countData
 
-
-
-patient_lesion_counts <- metadata.df %>% group_by(Patient, Lesion_type_refined) %>% dplyr::summarise(Count = n()) %>% as.data.frame()
+patient_lesion_counts <- metadata.df %>% group_by(Patient, Sample_type) %>% dplyr::summarise(Count = n()) %>% as.data.frame()
 
 compare_groups_deseq <- function(mydata.m, mymetadata.df, myvariables, assign_taxonomy = T){
   # Compare groups for all variables
@@ -223,57 +223,57 @@ compare_groups_deseq_within_group <- function(mydata.m, mymetadata.df, myvariabl
 # May be commented out to avoid re-running (very slow)
 
 # Compare groups
-# otu_group_comparison.df <- compare_groups_deseq(mydata.m = otu.m, mymetadata.df = metadata.df, myvariables = c("Lesion_type_refined"), assign_taxonomy = T)
+# otu_group_comparison.df <- compare_groups_deseq(mydata.m = otu.m, mymetadata.df = metadata.df, myvariables = c("Sample_type"), assign_taxonomy = T)
 # write.csv(x =otu_group_comparison.df,file ="Result_tables/DESeq_results/OTU_deseq.csv",quote = F, row.names =F)
 
-# genus_group_comparison.df <- compare_groups_deseq(mydata.m = genus.m, mymetadata.df = metadata.df, myvariables = c("Lesion_type_refined"), assign_taxonomy = F)
-# write.csv(x =genus_group_comparison.df,file ="Result_tables/DESeq_results/Genus_deseq.csv",quote = F, row.names =F)
+genus_group_comparison.df <- compare_groups_deseq(mydata.m = genus.m, mymetadata.df = metadata.df, myvariables = c("Sample_type"), assign_taxonomy = F)
+write.csv(x =genus_group_comparison.df,file ="Result_tables/DESeq_results/Genus_deseq.csv",quote = F, row.names =F)
 
 # Compare all lesion types within each patient
 # otu_group_comparison_within_patient.df <- compare_groups_deseq_within_group(mydata.m = otu.m,
 #                                                                             mymetadata.df = metadata.df,
-#                                                                             myvariables = c("Lesion_type_refined"),
+#                                                                             myvariables = c("Sample_type"),
 #                                                                             within_group_variable = "Patient",
 #                                                                             assign_taxonomy = T)
 # write.csv(x =otu_group_comparison_within_patient.df,file ="Result_tables/DESeq_results/OTU_within_patient_deseq.csv",quote = F, row.names =F)
-# 
-# genus_group_comparison_within_patient.df <- compare_groups_deseq_within_group(mydata.m = genus.m,
-                                                                              # mymetadata.df = metadata.df,
-                                                                              # myvariables = c("Lesion_type_refined"),
-                                                                              # within_group_variable = "Patient",
-                                                                              # assign_taxonomy = F)
-# write.csv(x =genus_group_comparison_within_patient.df,file ="Result_tables/DESeq_results/Genus_within_patient_deseq.csv",quote = F, row.names =F)
+
+genus_group_comparison_within_patient.df <- compare_groups_deseq_within_group(mydata.m = genus.m,
+                                                                              mymetadata.df = metadata.df,
+                                                                              myvariables = c("Sample_type"),
+                                                                              within_group_variable = "Patient",
+                                                                              assign_taxonomy = F)
+write.csv(x =genus_group_comparison_within_patient.df,file ="Result_tables/DESeq_results/Genus_within_patient_deseq.csv",quote = F, row.names =F)
 
 # Compare all lesion types within each cohort
 # otu_group_comparison_within_cohort.df <- compare_groups_deseq_within_group(mydata.m = otu.m,
 #                                                                            mymetadata.df = metadata.df,
-#                                                                            myvariables = c("Lesion_type_refined"),
+#                                                                            myvariables = c("Sample_type"),
 #                                                                            within_group_variable = "Cohort",
 #                                                                            assign_taxonomy = T)
 # write.csv(x =otu_group_comparison_within_cohort.df,file ="Result_tables/DESeq_results/OTU_within_cohort_deseq.csv",quote = F, row.names =F)
 
-# genus_group_comparison_within_cohort.df <- compare_groups_deseq_within_group(mydata.m = genus.m,
-#                                                                              mymetadata.df = metadata.df,
-#                                                                              myvariables = c("Lesion_type_refined"),
-#                                                                              within_group_variable = "Cohort",
-#                                                                              assign_taxonomy = F)
-# write.csv(x =genus_group_comparison_within_cohort.df,file ="Result_tables/DESeq_results/Genus_within_cohort_deseq.csv",quote = F, row.names =F)
+genus_group_comparison_within_cohort.df <- compare_groups_deseq_within_group(mydata.m = genus.m,
+                                                                             mymetadata.df = metadata.df,
+                                                                             myvariables = c("Sample_type"),
+                                                                             within_group_variable = "Cohort",
+                                                                             assign_taxonomy = F)
+write.csv(x =genus_group_comparison_within_cohort.df,file ="Result_tables/DESeq_results/Genus_within_cohort_deseq.csv",quote = F, row.names =F)
 
 # Comparing the same lesion types between cohorts. Always compare suppressed vs competent, e.g. suppressed AK vs competent AK
 # The trick is to group by the lesion type and then only compare groups within the Cohort variable
-# otu_cohort_comparison_within_lesion.df <- compare_groups_deseq_within_group(mydata.m = otu.m,
+# otu_cohort_comparison_within_sample_type.df <- compare_groups_deseq_within_group(mydata.m = otu.m,
 #                                                                             mymetadata.df = metadata.df,
 #                                                                             myvariables = c("Cohort"),
-#                                                                             within_group_variable = "Lesion_type_refined",
+#                                                                             within_group_variable = "Sample_type",
 #                                                                             assign_taxonomy = T)
-# write.csv(x =otu_cohort_comparison_within_lesion.df,file ="Result_tables/DESeq_results/OTU_cohort_within_lesion_deseq.csv",quote = F, row.names =F)
+# write.csv(x =otu_cohort_comparison_within_sample_type.df,file ="Result_tables/DESeq_results/OTU_cohort_within_sample_type_deseq.csv",quote = F, row.names =F)
 
-# genus_cohort_comparison_within_lesion.df <- compare_groups_deseq_within_group(mydata.m = genus.m,
-#                                                                               mymetadata.df = metadata.df,
-#                                                                               myvariables = c("Cohort"),
-#                                                                               within_group_variable = "Lesion_type_refined",
-#                                                                               assign_taxonomy = F)
-# write.csv(x =genus_cohort_comparison_within_lesion.df,file ="Result_tables/DESeq_results/Genus_cohort_within_lesion_deseq.csv",quote = F, row.names =F)
+genus_cohort_comparison_within_sample_type.df <- compare_groups_deseq_within_group(mydata.m = genus.m,
+                                                                              mymetadata.df = metadata.df,
+                                                                              myvariables = c("Cohort"),
+                                                                              within_group_variable = "Sample_type",
+                                                                              assign_taxonomy = F)
+write.csv(x =genus_cohort_comparison_within_sample_type.df,file ="Result_tables/DESeq_results/Genus_cohort_within_sample_type_deseq.csv",quote = F, row.names =F)
 
 
 # ------------------------------------------------------------------------------------------------
@@ -298,7 +298,8 @@ species_relabeller_function <- function(my_labels){
                 }))
 }
 
-metadata.df$Lesion_type_refined <- factor(metadata.df$Lesion_type_refined, levels = c("C", "C_P", "AK", "SCC_PL", "SCC"))
+# metadata.df$Sample_type <- factor(metadata.df$Sample_type, levels = c("C", "C_P", "AK", "SCC_PL", "SCC"))
+metadata.df$Sample_type <- factor(metadata.df$Sample_type, levels = c("NS","PDS", "AK", "SCC_PL", "SCC"))
 
 # Create cohort specific data sets
 immunosuppressed_metadata.df <- metadata.df[metadata.df$Cohort == "immunosuppressed",]
@@ -314,8 +315,8 @@ genus_data.df <- read.csv("Result_tables/combined_counts_abundances_and_metadata
 otu_data.df <- subset(otu_data.df, Cohort == "immunosuppressed" | Snapshot_sample_5 == "yes")
 genus_data.df <- subset(genus_data.df, Cohort == "immunosuppressed" | Snapshot_sample_5 == "yes")
 
-otu_data.df$Lesion_type_refined <- factor(otu_data.df$Lesion_type_refined, levels = c("C", "C_P", "AK", "SCC_PL", "SCC"))
-genus_data.df$Lesion_type_refined <- factor(genus_data.df$Lesion_type_refined, levels = c("C", "C_P", "AK", "SCC_PL", "SCC"))
+otu_data.df$Sample_type <- factor(otu_data.df$Sample_type, levels = c("C", "C_P", "AK", "SCC_PL", "SCC"))
+genus_data.df$Sample_type <- factor(genus_data.df$Sample_type, levels = c("C", "C_P", "AK", "SCC_PL", "SCC"))
 
 genus_data.df$Cohort <- factor(genus_data.df$Cohort, levels = c("immunosuppressed", "immunocompetent"))
 
@@ -326,8 +327,8 @@ genus_within_cohort_deseq_results <- read.csv("Result_tables/DESeq_results/Genus
 otu_within_patient_deseq_results <- read.csv("Result_tables/DESeq_results/OTU_within_patient_deseq.csv", header =T)
 genus_within_patient_deseq_results <- read.csv("Result_tables/DESeq_results/Genus_within_patient_deseq.csv", header =T)
 
-otu_cohort_within_lesion_deseq_results <- read.csv("Result_tables/DESeq_results/OTU_cohort_within_lesion_deseq.csv", header =T)
-genus_cohort_within_lesion_deseq_results <- read.csv("Result_tables/DESeq_results/Genus_cohort_within_lesion_deseq.csv", header =T)
+otu_cohort_within_sample_type_deseq_results <- read.csv("Result_tables/DESeq_results/OTU_cohort_within_sample_type_deseq.csv", header =T)
+genus_cohort_within_sample_type_deseq_results <- read.csv("Result_tables/DESeq_results/Genus_cohort_within_sample_type_deseq.csv", header =T)
 
 # ------------------------------------------------------------------------------------------------
 # ------------------------------------------------------------------------------------------------
@@ -363,7 +364,7 @@ make_publication_plot <- function(taxa,
   }
   
   IS_plot <-  generate_significance_boxplots(mydata.df = data_subset_immunosuppressed.df,
-                                             variable_column = "Lesion_type_refined",
+                                             variable_column = "Sample_type",
                                              value_column = value_column,
                                              variable_colours_available = T,
                                              significances.df = significances_subset_immunosuppressed.df,
@@ -382,7 +383,7 @@ make_publication_plot <- function(taxa,
     # theme(axis.title.y = element_text(hjust = 0.3)) # Added to adjust when trimming y axis 
   
   IC_plot <- generate_significance_boxplots(mydata.df = data_subset_immunocompetent.df,
-                                            variable_column = "Lesion_type_refined",
+                                            variable_column = "Sample_type",
                                             value_column = value_column,
                                             variable_colours_available = T,
                                             significances.df = significances_subset_immunocompetent.df,
@@ -618,14 +619,14 @@ myplot
 # ------------------------------------------------------------------------------------------------
 # ------ Within Lesion
 
-deseq_subset_CP.df <- genus_cohort_within_lesion_deseq_results[genus_cohort_within_lesion_deseq_results$Lesion_type_refined == "C_P",]
-deseq_subset_AK.df <- genus_cohort_within_lesion_deseq_results[genus_cohort_within_lesion_deseq_results$Lesion_type_refined == "AK",]
-deseq_subset_SCCPL.df <- genus_cohort_within_lesion_deseq_results[genus_cohort_within_lesion_deseq_results$Lesion_type_refined == "SCC_PL",]
-deseq_subset_SCC.df <- genus_cohort_within_lesion_deseq_results[genus_cohort_within_lesion_deseq_results$Lesion_type_refined == "SCC",]
+deseq_subset_CP.df <- genus_cohort_within_sample_type_deseq_results[genus_cohort_within_sample_type_deseq_results$Sample_type == "C_P",]
+deseq_subset_AK.df <- genus_cohort_within_sample_type_deseq_results[genus_cohort_within_sample_type_deseq_results$Sample_type == "AK",]
+deseq_subset_SCCPL.df <- genus_cohort_within_sample_type_deseq_results[genus_cohort_within_sample_type_deseq_results$Sample_type == "SCC_PL",]
+deseq_subset_SCC.df <- genus_cohort_within_sample_type_deseq_results[genus_cohort_within_sample_type_deseq_results$Sample_type == "SCC",]
 
 # ---------------------------------------------
 # g__Staphylococcus
-temp <- subset(genus_data.df, Lesion_type_refined == "C_P")
+temp <- subset(genus_data.df, Sample_type == "C_P")
 temp <- temp[grepl("g__Staphylococcus", temp$taxonomy_genus),]
 temp$Relative_abundance <- temp$Relative_abundance *100
 temp_sig <- deseq_subset_CP.df[grepl("g__Staph", deseq_subset_CP.df$Taxonomy),]
@@ -642,11 +643,11 @@ myplot <- generate_significance_boxplots(mydata.df = temp,
         axis.text.x = element_text(size = 7)) + 
   scale_y_continuous(breaks = seq(0,100,10), limits = c(0,100))
 
-ggsave(plot = myplot, filename = "Result_figures/DESeq_plots/g__Staphylococcus_within_lesion_CP_boxplot.pdf",width = 7,height = 10,units = "cm")
+ggsave(plot = myplot, filename = "Result_figures/DESeq_plots/g__Staphylococcus_within_sample_type_CP_boxplot.pdf",width = 7,height = 10,units = "cm")
 # ---------------------------------------------
 
 # g__Corynebacterium 
-temp <- subset(genus_data.df, Lesion_type_refined == "C_P")
+temp <- subset(genus_data.df, Sample_type == "C_P")
 temp <- temp[grepl("g__Corynebacterium", temp$taxonomy_genus),]
 temp$Relative_abundance <- temp$Relative_abundance *100
 temp_sig <- deseq_subset_CP.df[grepl("g__Corynebacterium", deseq_subset_CP.df$Taxonomy),]
@@ -663,10 +664,10 @@ myplot <- generate_significance_boxplots(mydata.df = temp,
         axis.text.x = element_text(size = 7)) + 
   scale_y_continuous(breaks = seq(0,100,10), limits = c(0,100))
 
-ggsave(plot = myplot, filename = "Result_figures/DESeq_plots/g__Corynebacterium_within_lesion_CP_boxplot.pdf",width = 7,height = 10,units = "cm")
+ggsave(plot = myplot, filename = "Result_figures/DESeq_plots/g__Corynebacterium_within_sample_type_CP_boxplot.pdf",width = 7,height = 10,units = "cm")
 
 
-temp <- subset(genus_data.df, Lesion_type_refined == "AK")
+temp <- subset(genus_data.df, Sample_type == "AK")
 temp <- temp[grepl("g__Corynebacterium", temp$taxonomy_genus),]
 temp$Relative_abundance <- temp$Relative_abundance *100
 temp_sig <- deseq_subset_AK.df[grepl("g__Corynebacterium", deseq_subset_AK.df$Taxonomy),]
@@ -683,12 +684,12 @@ myplot <- generate_significance_boxplots(mydata.df = temp,
         axis.text.x = element_text(size = 7)) + 
   scale_y_continuous(breaks = seq(0,100,10), limits = c(0,100))
 
-ggsave(plot = myplot, filename = "Result_figures/DESeq_plots/g__Corynebacterium_within_lesion_AK_boxplot.pdf",width = 7,height = 10,units = "cm")
+ggsave(plot = myplot, filename = "Result_figures/DESeq_plots/g__Corynebacterium_within_sample_type_AK_boxplot.pdf",width = 7,height = 10,units = "cm")
 
 
 # ---------------------------------------------
 # g__Streptococcus
-temp <- subset(genus_data.df, Lesion_type_refined == "C_P")
+temp <- subset(genus_data.df, Sample_type == "C_P")
 temp <- temp[grepl("g__Streptococcus", temp$taxonomy_genus),]
 temp$Relative_abundance <- temp$Relative_abundance *100
 temp_sig <- deseq_subset_CP.df[grepl("g__Streptococcus", deseq_subset_CP.df$Taxonomy),]
@@ -705,11 +706,11 @@ myplot <- generate_significance_boxplots(mydata.df = temp,
         axis.text.x = element_text(size = 7)) + 
   scale_y_continuous(breaks = seq(0,100,5), limits = c(0,25))
 myplot
-ggsave(plot = myplot, filename = "Result_figures/DESeq_plots/g__Streptococcus_within_lesion_CP_boxplot.pdf",width = 7,height = 10,units = "cm")
+ggsave(plot = myplot, filename = "Result_figures/DESeq_plots/g__Streptococcus_within_sample_type_CP_boxplot.pdf",width = 7,height = 10,units = "cm")
 
 # ---------------------------------------------
 # g__Psychromonas
-# temp <- subset(genus_data.df, Lesion_type_refined == "SCC_PL")
+# temp <- subset(genus_data.df, Sample_type == "SCC_PL")
 # temp <- temp[grepl("g__Psychromonas", temp$taxonomy_genus),]
 # temp$Relative_abundance <- temp$Relative_abundance *100
 # temp_sig <- deseq_subset_SCCPL.df[grepl("g__Psychromonas", deseq_subset_SCCPL.df$Taxonomy),]
@@ -726,7 +727,7 @@ ggsave(plot = myplot, filename = "Result_figures/DESeq_plots/g__Streptococcus_wi
 #         axis.text.x = element_text(size = 7)) +
 #   scale_y_continuous(breaks = seq(0,100,5), limits = c(0,100))
 # myplot
-# ggsave(plot = myplot, filename = "Result_figures/DESeq_plots/g__Psychromonas_within_lesion_SCC_boxplot.pdf",width = 7,height = 10,units = "cm")
+# ggsave(plot = myplot, filename = "Result_figures/DESeq_plots/g__Psychromonas_within_sample_type_SCC_boxplot.pdf",width = 7,height = 10,units = "cm")
 
 
 
@@ -744,7 +745,7 @@ heatmap.m <- heatmap.m[,colnames(heatmap.m) %in% immunosuppressed_metadata.df$In
 source("Code/helper_functions.R")
 myhm <- make_heatmap(heatmap.m*100, 
                      mymetadata = immunosuppressed_metadata.df, 
-                     variables = c("Lesion_type_refined"),
+                     variables = c("Sample_type"),
                      column_title = "Sample",
                      row_title = "Genus",
                      plot_height = 2.5,
@@ -783,7 +784,7 @@ my_row_names.df$taxonomy_species <- species_relabeller_function(my_row_names.df$
 
 myhm <- make_heatmap(heatmap.m*100, 
                      mymetadata = immunosuppressed_metadata.df, 
-                     variables = c("Lesion_type_refined"),
+                     variables = c("Sample_type"),
                      column_title = "Sample",
                      row_title = "Feature",
                      my_row_labels = my_row_names.df,
@@ -823,7 +824,7 @@ heatmap.m <- heatmap.m[,colnames(heatmap.m) %in% immunocompetent_metadata.df$Ind
 source("Code/helper_functions.R")
 myhm <- make_heatmap(heatmap.m*100, 
                      mymetadata = immunocompetent_metadata.df, 
-                     variables = c("Lesion_type_refined"),
+                     variables = c("Sample_type"),
                      column_title = "Sample",
                      row_title = "Genus",
                      plot_height = 3,
@@ -860,7 +861,7 @@ my_row_names.df$taxonomy_species <- species_relabeller_function(my_row_names.df$
 source("Code/helper_functions.R")
 myhm <- make_heatmap(heatmap.m*100, 
                      mymetadata = immunocompetent_metadata.df, 
-                     variables = c("Lesion_type_refined"),
+                     variables = c("Sample_type"),
                      column_title = "Sample",
                      row_title = "Feature",
                      my_row_labels = my_row_names.df,
@@ -895,14 +896,14 @@ myhm <- make_heatmap(heatmap.m*100,
 # ---------------------------------------------
 # ------ Cohort within Lesion type
 
-# C_meta.df <- subset(metadata.df, Lesion_type_refined == "C")
-CP_meta.df <- subset(metadata.df, Lesion_type_refined == "C_P")
-AK_meta.df <- subset(metadata.df, Lesion_type_refined == "AK")
-SCC_PL_meta.df <- subset(metadata.df, Lesion_type_refined == "SCC_PL")
-SCC_meta.df <- subset(metadata.df, Lesion_type_refined == "SCC")
+# C_meta.df <- subset(metadata.df, Sample_type == "C")
+CP_meta.df <- subset(metadata.df, Sample_type == "C_P")
+AK_meta.df <- subset(metadata.df, Sample_type == "AK")
+SCC_PL_meta.df <- subset(metadata.df, Sample_type == "SCC_PL")
+SCC_meta.df <- subset(metadata.df, Sample_type == "SCC")
 
 # ---- C_P
-heatmap.m <- genus_rel.m[as.character(unique(genus_cohort_within_lesion_deseq_results$Taxonomy)),]
+heatmap.m <- genus_rel.m[as.character(unique(genus_cohort_within_sample_type_deseq_results$Taxonomy)),]
 heatmap.m <- heatmap.m[,colnames(heatmap.m) %in% rownames(CP_meta.df)]
 # metadata.df[metadata.df$Index %in% colnames(heatmap.m),]
 source("Code/helper_functions.R")
@@ -931,9 +932,9 @@ myhm <- make_heatmap(heatmap.m*100,
                      row_dend_width = unit(3, "cm"),
                      simple_anno_size = unit(.25, "cm"),
                      show_top_annotation = T,
-                     filename = paste0("Result_figures/DESeq_plots/Cohort_within_Lesion_type_refined_CP_genus.pdf"))
+                     filename = paste0("Result_figures/DESeq_plots/Cohort_within_Sample_type_CP_genus.pdf"))
 # -- OTU
-heatmap.m <- otu_rel.m[as.character(unique(otu_cohort_within_lesion_deseq_results$OTU)),]
+heatmap.m <- otu_rel.m[as.character(unique(otu_cohort_within_sample_type_deseq_results$OTU)),]
 heatmap.m <- heatmap.m[,colnames(heatmap.m) %in% rownames(CP_meta.df)]
 my_row_names.df <- data.frame(OTU.ID = rownames(heatmap.m), 
                               taxonomy_species=as.character(otu_taxonomy_map.df[otu_taxonomy_map.df$OTU.ID %in% rownames(heatmap.m),]$taxonomy_species),stringsAsFactors = F)
@@ -971,10 +972,10 @@ myhm <- make_heatmap(heatmap.m*100,
                      col_annotation_label_size = 6,
                      col_annotation_legend_grid_height = .2,
                      col_annotation_legend_grid_width = .2,
-                     filename = paste0("Result_figures/DESeq_plots/Cohort_within_Lesion_type_refined_CP_otu.pdf"))
+                     filename = paste0("Result_figures/DESeq_plots/Cohort_within_Sample_type_CP_otu.pdf"))
 
 # ---- AK
-heatmap.m <- genus_rel.m[as.character(unique(genus_cohort_within_lesion_deseq_results$Taxonomy)),]
+heatmap.m <- genus_rel.m[as.character(unique(genus_cohort_within_sample_type_deseq_results$Taxonomy)),]
 heatmap.m <- heatmap.m[,colnames(heatmap.m) %in% rownames(AK_meta.df)]
 # metadata.df[metadata.df$Index %in% colnames(heatmap.m),]
 source("Code/helper_functions.R")
@@ -1003,9 +1004,9 @@ myhm <- make_heatmap(heatmap.m*100,
                      row_dend_width = unit(3, "cm"),
                      simple_anno_size = unit(.25, "cm"),
                      show_top_annotation = T,
-                     filename = paste0("Result_figures/DESeq_plots/Cohort_within_Lesion_type_refined_AK_genus.pdf"))
+                     filename = paste0("Result_figures/DESeq_plots/Cohort_within_Sample_type_AK_genus.pdf"))
 # -- OTU
-heatmap.m <- otu_rel.m[as.character(unique(otu_cohort_within_lesion_deseq_results$OTU)),]
+heatmap.m <- otu_rel.m[as.character(unique(otu_cohort_within_sample_type_deseq_results$OTU)),]
 heatmap.m <- heatmap.m[,colnames(heatmap.m) %in% rownames(AK_meta.df)]
 my_row_names.df <- data.frame(OTU.ID = rownames(heatmap.m), 
                               taxonomy_species=as.character(otu_taxonomy_map.df[otu_taxonomy_map.df$OTU.ID %in% rownames(heatmap.m),]$taxonomy_species),stringsAsFactors = F)
@@ -1043,10 +1044,10 @@ myhm <- make_heatmap(heatmap.m*100,
                      col_annotation_label_size = 6,
                      col_annotation_legend_grid_height = .2,
                      col_annotation_legend_grid_width = .2,
-                     filename = paste0("Result_figures/DESeq_plots/Cohort_within_Lesion_type_refined_AK_otu.pdf"))
+                     filename = paste0("Result_figures/DESeq_plots/Cohort_within_Sample_type_AK_otu.pdf"))
 
 # ---- SCC_PL
-heatmap.m <- genus_rel.m[as.character(unique(genus_cohort_within_lesion_deseq_results$Taxonomy)),]
+heatmap.m <- genus_rel.m[as.character(unique(genus_cohort_within_sample_type_deseq_results$Taxonomy)),]
 heatmap.m <- heatmap.m[,colnames(heatmap.m) %in% rownames(SCC_PL_meta.df)]
 # metadata.df[metadata.df$Index %in% colnames(heatmap.m),]
 source("Code/helper_functions.R")
@@ -1075,9 +1076,9 @@ myhm <- make_heatmap(heatmap.m*100,
                      row_dend_width = unit(3, "cm"),
                      simple_anno_size = unit(.25, "cm"),
                      show_top_annotation = T,
-                     filename = paste0("Result_figures/DESeq_plots/Cohort_within_Lesion_type_refined_SCC_PL_genus.pdf"))
+                     filename = paste0("Result_figures/DESeq_plots/Cohort_within_Sample_type_SCC_PL_genus.pdf"))
 # -- OTU
-heatmap.m <- otu_rel.m[as.character(unique(otu_cohort_within_lesion_deseq_results$OTU)),]
+heatmap.m <- otu_rel.m[as.character(unique(otu_cohort_within_sample_type_deseq_results$OTU)),]
 heatmap.m <- heatmap.m[,colnames(heatmap.m) %in% rownames(SCC_PL_meta.df)]
 my_row_names.df <- data.frame(OTU.ID = rownames(heatmap.m), 
                               taxonomy_species=as.character(otu_taxonomy_map.df[otu_taxonomy_map.df$OTU.ID %in% rownames(heatmap.m),]$taxonomy_species),stringsAsFactors = F)
@@ -1115,12 +1116,12 @@ myhm <- make_heatmap(heatmap.m*100,
                      col_annotation_label_size = 6,
                      col_annotation_legend_grid_height = .2,
                      col_annotation_legend_grid_width = .2,
-                     filename = paste0("Result_figures/DESeq_plots/Cohort_within_Lesion_type_refined_SCC_PL_otu.pdf"))
+                     filename = paste0("Result_figures/DESeq_plots/Cohort_within_Sample_type_SCC_PL_otu.pdf"))
 
 
 # ---- SCC
 # -- Genus
-heatmap.m <- genus_rel.m[as.character(unique(genus_cohort_within_lesion_deseq_results$Taxonomy)),]
+heatmap.m <- genus_rel.m[as.character(unique(genus_cohort_within_sample_type_deseq_results$Taxonomy)),]
 heatmap.m <- heatmap.m[,colnames(heatmap.m) %in% rownames(SCC_meta.df)]
 # metadata.df[metadata.df$Index %in% colnames(heatmap.m),]
 source("Code/helper_functions.R")
@@ -1149,9 +1150,9 @@ myhm <- make_heatmap(heatmap.m*100,
                      row_dend_width = unit(3, "cm"),
                      simple_anno_size = unit(.25, "cm"),
                      show_top_annotation = T,
-                     filename = paste0("Result_figures/DESeq_plots/Cohort_within_Lesion_type_refined_SCC_genus.pdf"))
+                     filename = paste0("Result_figures/DESeq_plots/Cohort_within_Sample_type_SCC_genus.pdf"))
 # -- OTU
-heatmap.m <- otu_rel.m[as.character(unique(otu_cohort_within_lesion_deseq_results$OTU)),]
+heatmap.m <- otu_rel.m[as.character(unique(otu_cohort_within_sample_type_deseq_results$OTU)),]
 heatmap.m <- heatmap.m[,colnames(heatmap.m) %in% rownames(SCC_meta.df)]
 my_row_names.df <- data.frame(OTU.ID = rownames(heatmap.m), 
                               taxonomy_species=as.character(otu_taxonomy_map.df[otu_taxonomy_map.df$OTU.ID %in% rownames(heatmap.m),]$taxonomy_species),stringsAsFactors = F)
@@ -1189,7 +1190,7 @@ myhm <- make_heatmap(heatmap.m*100,
                      col_annotation_label_size = 6,
                      col_annotation_legend_grid_height = .2,
                      col_annotation_legend_grid_width = .2,
-                     filename = paste0("Result_figures/DESeq_plots/Cohort_within_Lesion_type_refined_SCC_otu.pdf"))
+                     filename = paste0("Result_figures/DESeq_plots/Cohort_within_Sample_type_SCC_otu.pdf"))
 
 # ------------------------------------------------------------------------------------
 # ------ Within patient
@@ -1207,7 +1208,7 @@ dim(heatmap.m)
 
 myhm <- make_heatmap(heatmap.m*100, 
                      mymetadata = immunosuppressed_metadata.df, 
-                     variables = c("Patient", "Lesion_type_refined"),
+                     variables = c("Patient", "Sample_type"),
                      column_title = "Sample",
                      row_title = "Genus",
                      plot_height = 10,

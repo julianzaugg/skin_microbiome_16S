@@ -506,6 +506,7 @@ project_otu_table.df$taxonomy_phylum <- with(project_otu_table.df, paste(Domain,
 # Store a version of the unfiltered* project table
 # *Samples specified to be discarded have been removed and repeat samples consolidated
 project_otu_table_unfiltered.df <- project_otu_table.df
+# colSums(project_otu_table_unfiltered.df[,sample_ids])
 
 # ------------------------------------------------------------------------------------------
 ## Now ensure the metadata and the OTU table matches
@@ -675,7 +676,7 @@ zero_count_samples <- sample_ids[colSums(project_otu_table.df[,sample_ids]) == 0
 # sample_ids <- grep("R[0-9].*|S[AB][0-9].*|S[0-9].*", names(project_otu_table.df), value = T)
 
 #  ---------------------------------------------------------------------------------------------------------------- 
-#  ---------------------------------------------------------------------------------------------------------------- 
+#  ----------------------------------------------------------------------------------------------------------------
 #  ------------------------------------------- Remove unwanted lineages ------------------------------------------- 
 
 fungal_phyla <- c("Basidiomycota","Ascomycota","Mucoromycota","Cryptomycota","Peronosporomycetes","Blastocladiomycota","Chytridiomycota","Zoopagomycota","Neocallimastigomycota")
@@ -692,28 +693,43 @@ project_otu_table_discarded.df <- project_otu_table.df[!grepl(paste0("d__Bacteri
                                                          grepl("f__Mitochondria", project_otu_table.df$Taxon),]
 
 # Abundance of discarded features in each sample based on unfiltered data
-temp <- melt(round(colSums(project_otu_table_discarded.df[sample_ids]) / colSums(project_otu_table_unfiltered.df[sample_ids]) * 100,4), value.name = "Relative_abundance")
+negative_sample_ids <- metadata_unfiltered.df[metadata_unfiltered.df$Sample_type == "negative",]$Index
+not_negative_sample_ids <- sample_ids[!sample_ids %in% negative_sample_ids]
+
+temp <- melt(round(colSums(project_otu_table_discarded.df[,sample_ids]) / colSums(project_otu_table_unfiltered.df[sample_ids]) * 100,2), value.name = "Relative_abundance")
 temp[is.nan(temp$Relative_abundance),"Relative_abundance"] <- 0
 temp <- m2df(temp,column_name = "Index")
 temp <- merge(temp,metadata.df,by = "Index") %>% select(Index, Sample_type, Cohort, Relative_abundance)
 temp <- temp[order(temp$Relative_abundance,decreasing = T),]
-max(temp$Relative_abundance)
-min(temp$Relative_abundance)
-mean(temp$Relative_abundance)
-median(temp$Relative_abundance)
+min(temp[temp$Sample_type != "negative",]$Relative_abundance)
+max(temp[temp$Sample_type != "negative",]$Relative_abundance)
+mean(temp[temp$Sample_type != "negative",]$Relative_abundance)
+median(temp[temp$Sample_type != "negative",]$Relative_abundance)
+
+# min(temp$Relative_abundance)
+# max(temp$Relative_abundance)
+# mean(temp$Relative_abundance)
+# median(temp$Relative_abundance)
 
 # Read counts of discarded features in each sample based on unfiltered data
 temp <- melt(colSums(project_otu_table_discarded.df[sample_ids]), value.name = "Read_count")
 temp <- m2df(temp,column_name = "Index")
 temp <- merge(temp,metadata.df,by = "Index") %>% select(Index, Sample_type, Cohort, Read_count)
 temp <- temp[order(temp$Read_count,decreasing = T),]
-max(temp$Read_count)
-min(temp$Read_count)
-mean(temp$Read_count)
-median(temp$Read_count)
+min(temp[temp$Sample_type != "negative",]$Read_count)
+max(temp[temp$Sample_type != "negative",]$Read_count)
+mean(temp[temp$Sample_type != "negative",]$Read_count)
+median(temp[temp$Sample_type != "negative",]$Read_count)
+# max(temp$Read_count)
+# min(temp$Read_count)
+# mean(temp$Read_count)
+# median(temp$Read_count)
 
 # Number of features discarded
-length(project_otu_table_discarded.df$OTU.ID) / length(project_otu_table_unfiltered.df$OTU.ID) *100
+# length(project_otu_table_discarded.df$OTU.ID) / length(project_otu_table_unfiltered.df$OTU.ID) *100
+dim(project_otu_table_discarded.df[apply(project_otu_table_discarded.df[,not_negative_sample_ids],1,max) > 0,not_negative_sample_ids])[1] /
+dim(project_otu_table_unfiltered.df[,not_negative_sample_ids])[1] *100
+# length(project_otu_table_discarded.df[,not_negative_sample_ids]$OTU.ID) / length(project_otu_table_unfiltered.df$OTU.ID) *100
 
 # Abundance of Unassigned features in each sample based on unfiltered data
 dim(project_otu_table_discarded.df[project_otu_table_discarded.df$Taxon == "Unassigned",])
@@ -722,10 +738,14 @@ temp[is.nan(temp$Relative_abundance),"Relative_abundance"] <- 0
 temp <- m2df(temp,column_name = "Index")
 temp <- merge(temp,metadata.df,by = "Index") %>% select(Index, Sample_type_original, Cohort, Relative_abundance)
 temp <- temp[order(temp$Relative_abundance,decreasing = T),]
-max(temp$Relative_abundance)
-min(temp$Relative_abundance)
-mean(temp$Relative_abundance)
-median(temp$Relative_abundance)
+min(temp[temp$Sample_type != "negative",]$Relative_abundance)
+max(temp[temp$Sample_type != "negative",]$Relative_abundance)
+mean(temp[temp$Sample_type != "negative",]$Relative_abundance)
+median(temp[temp$Sample_type != "negative",]$Relative_abundance)
+# max(temp$Relative_abundance)
+# min(temp$Relative_abundance)
+# mean(temp$Relative_abundance)
+# median(temp$Relative_abundance)
 #  ----------------------
 
 # Remove OTUs that are Unassigned
@@ -797,6 +817,7 @@ otu.m$OTU.ID <- NULL
 otu.m <- as.matrix(otu.m)
 
 temp <- read_counts_and_unique_features(otu.m, sample_ids_original)
+# temp <- read_counts_and_unique_features(otu.m, not_negative_sample_ids)
 df2matrix(temp$sample_read_counts)
 df2matrix(temp$sample_feature_counts)
 
@@ -1792,11 +1813,16 @@ rare_stats.df$Swab_ID <- metadata.df[rare_stats.df$Sample,]$Swab_ID
 min(rare_stats.df[which(rare_stats.df$Filtered_data_reads > rare_stats.df$Rarefied_data_reads),]$Features_removed_from_filtered_data_after_rarefaction)
 max(rare_stats.df[which(rare_stats.df$Filtered_data_reads > rare_stats.df$Rarefied_data_reads),]$Features_removed_from_filtered_data_after_rarefaction)
 median(rare_stats.df[which(rare_stats.df$Filtered_data_reads > rare_stats.df$Rarefied_data_reads),]$Features_removed_from_filtered_data_after_rarefaction)
-
+min(rare_stats.df[rare_stats.df$Sample_type != "negative",][which(rare_stats.df[rare_stats.df$Sample_type != "negative",]$Filtered_data_reads > rare_stats.df[rare_stats.df$Sample_type != "negative",]$Rarefied_data_reads),]$Features_removed_from_filtered_data_after_rarefaction)
+max(rare_stats.df[rare_stats.df$Sample_type != "negative",][which(rare_stats.df[rare_stats.df$Sample_type != "negative",]$Filtered_data_reads > rare_stats.df[rare_stats.df$Sample_type != "negative",]$Rarefied_data_reads),]$Features_removed_from_filtered_data_after_rarefaction)
+median(rare_stats.df[rare_stats.df$Sample_type != "negative",][which(rare_stats.df[rare_stats.df$Sample_type != "negative",]$Filtered_data_reads > rare_stats.df[rare_stats.df$Sample_type != "negative",]$Rarefied_data_reads),]$Features_removed_from_filtered_data_after_rarefaction)
 # Proportion of reads removed from the samples that lost reads
 min(rare_stats.df[which(rare_stats.df$Filtered_data_reads > rare_stats.df$Rarefied_data_reads),]$Proportion_reads_removed_from_filtered_data_after_rarefaction)
 max(rare_stats.df[which(rare_stats.df$Filtered_data_reads > rare_stats.df$Rarefied_data_reads),]$Proportion_reads_removed_from_filtered_data_after_rarefaction)
 median(rare_stats.df[which(rare_stats.df$Filtered_data_reads > rare_stats.df$Rarefied_data_reads),]$Proportion_reads_removed_from_filtered_data_after_rarefaction)
+min(rare_stats.df[rare_stats.df$Sample_type != "negative",][which(rare_stats.df[rare_stats.df$Sample_type != "negative",]$Filtered_data_reads > rare_stats.df[rare_stats.df$Sample_type != "negative",]$Rarefied_data_reads),]$Proportion_reads_removed_from_filtered_data_after_rarefaction)
+max(rare_stats.df[rare_stats.df$Sample_type != "negative",][which(rare_stats.df[rare_stats.df$Sample_type != "negative",]$Filtered_data_reads > rare_stats.df[rare_stats.df$Sample_type != "negative",]$Rarefied_data_reads),]$Proportion_reads_removed_from_filtered_data_after_rarefaction)
+median(rare_stats.df[rare_stats.df$Sample_type != "negative",][which(rare_stats.df[rare_stats.df$Sample_type != "negative",]$Filtered_data_reads > rare_stats.df[rare_stats.df$Sample_type != "negative",]$Rarefied_data_reads),]$Proportion_reads_removed_from_filtered_data_after_rarefaction)
 
 write.csv(rare_stats.df,"Result_tables/other/rarefaction_stats.csv",quote = F, row.names = F)
 
