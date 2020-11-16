@@ -226,8 +226,8 @@ compare_groups_deseq_within_group <- function(mydata.m, mymetadata.df, myvariabl
 # otu_group_comparison.df <- compare_groups_deseq(mydata.m = otu.m, mymetadata.df = metadata.df, myvariables = c("Sample_type"), assign_taxonomy = T)
 # write.csv(x =otu_group_comparison.df,file ="Result_tables/DESeq_results/OTU_deseq.csv",quote = F, row.names =F)
 
-genus_group_comparison.df <- compare_groups_deseq(mydata.m = genus.m, mymetadata.df = metadata.df, myvariables = c("Sample_type"), assign_taxonomy = F)
-write.csv(x =genus_group_comparison.df,file ="Result_tables/DESeq_results/Genus_deseq.csv",quote = F, row.names =F)
+# genus_group_comparison.df <- compare_groups_deseq(mydata.m = genus.m, mymetadata.df = metadata.df, myvariables = c("Sample_type"), assign_taxonomy = F)
+# write.csv(x =genus_group_comparison.df,file ="Result_tables/DESeq_results/Genus_deseq.csv",quote = F, row.names =F)
 
 # Compare all lesion types within each patient
 # otu_group_comparison_within_patient.df <- compare_groups_deseq_within_group(mydata.m = otu.m,
@@ -237,12 +237,12 @@ write.csv(x =genus_group_comparison.df,file ="Result_tables/DESeq_results/Genus_
 #                                                                             assign_taxonomy = T)
 # write.csv(x =otu_group_comparison_within_patient.df,file ="Result_tables/DESeq_results/OTU_within_patient_deseq.csv",quote = F, row.names =F)
 
-genus_group_comparison_within_patient.df <- compare_groups_deseq_within_group(mydata.m = genus.m,
-                                                                              mymetadata.df = metadata.df,
-                                                                              myvariables = c("Sample_type"),
-                                                                              within_group_variable = "Patient",
-                                                                              assign_taxonomy = F)
-write.csv(x =genus_group_comparison_within_patient.df,file ="Result_tables/DESeq_results/Genus_within_patient_deseq.csv",quote = F, row.names =F)
+# genus_group_comparison_within_patient.df <- compare_groups_deseq_within_group(mydata.m = genus.m,
+#                                                                               mymetadata.df = metadata.df,
+#                                                                               myvariables = c("Sample_type"),
+#                                                                               within_group_variable = "Patient",
+#                                                                               assign_taxonomy = F)
+# write.csv(x =genus_group_comparison_within_patient.df,file ="Result_tables/DESeq_results/Genus_within_patient_deseq.csv",quote = F, row.names =F)
 
 # Compare all lesion types within each cohort
 # otu_group_comparison_within_cohort.df <- compare_groups_deseq_within_group(mydata.m = otu.m,
@@ -252,12 +252,12 @@ write.csv(x =genus_group_comparison_within_patient.df,file ="Result_tables/DESeq
 #                                                                            assign_taxonomy = T)
 # write.csv(x =otu_group_comparison_within_cohort.df,file ="Result_tables/DESeq_results/OTU_within_cohort_deseq.csv",quote = F, row.names =F)
 
-genus_group_comparison_within_cohort.df <- compare_groups_deseq_within_group(mydata.m = genus.m,
-                                                                             mymetadata.df = metadata.df,
-                                                                             myvariables = c("Sample_type"),
-                                                                             within_group_variable = "Cohort",
-                                                                             assign_taxonomy = F)
-write.csv(x =genus_group_comparison_within_cohort.df,file ="Result_tables/DESeq_results/Genus_within_cohort_deseq.csv",quote = F, row.names =F)
+# genus_group_comparison_within_cohort.df <- compare_groups_deseq_within_group(mydata.m = genus.m,
+#                                                                              mymetadata.df = metadata.df,
+#                                                                              myvariables = c("Sample_type"),
+#                                                                              within_group_variable = "Cohort",
+#                                                                              assign_taxonomy = F)
+# write.csv(x =genus_group_comparison_within_cohort.df,file ="Result_tables/DESeq_results/Genus_within_cohort_deseq.csv",quote = F, row.names =F)
 
 # Comparing the same lesion types between cohorts. Always compare suppressed vs competent, e.g. suppressed AK vs competent AK
 # The trick is to group by the lesion type and then only compare groups within the Cohort variable
@@ -268,12 +268,12 @@ write.csv(x =genus_group_comparison_within_cohort.df,file ="Result_tables/DESeq_
 #                                                                             assign_taxonomy = T)
 # write.csv(x =otu_cohort_comparison_within_sample_type.df,file ="Result_tables/DESeq_results/OTU_cohort_within_sample_type_deseq.csv",quote = F, row.names =F)
 
-genus_cohort_comparison_within_sample_type.df <- compare_groups_deseq_within_group(mydata.m = genus.m,
-                                                                              mymetadata.df = metadata.df,
-                                                                              myvariables = c("Cohort"),
-                                                                              within_group_variable = "Sample_type",
-                                                                              assign_taxonomy = F)
-write.csv(x =genus_cohort_comparison_within_sample_type.df,file ="Result_tables/DESeq_results/Genus_cohort_within_sample_type_deseq.csv",quote = F, row.names =F)
+# genus_cohort_comparison_within_sample_type.df <- compare_groups_deseq_within_group(mydata.m = genus.m,
+#                                                                               mymetadata.df = metadata.df,
+#                                                                               myvariables = c("Cohort"),
+#                                                                               within_group_variable = "Sample_type",
+#                                                                               assign_taxonomy = F)
+# write.csv(x =genus_cohort_comparison_within_sample_type.df,file ="Result_tables/DESeq_results/Genus_cohort_within_sample_type_deseq.csv",quote = F, row.names =F)
 
 
 # ------------------------------------------------------------------------------------------------
@@ -324,8 +324,22 @@ genus_data.df$Cohort <- factor(genus_data.df$Cohort, levels = c("immunosuppresse
 otu_within_cohort_deseq_results <- read.csv("Result_tables/DESeq_results/OTU_within_cohort_deseq.csv", header =T)
 genus_within_cohort_deseq_results <- read.csv("Result_tables/DESeq_results/Genus_within_cohort_deseq.csv", header =T)
 
-otu_within_patient_deseq_results <- read.csv("Result_tables/DESeq_results/OTU_within_patient_deseq.csv", header =T)
-genus_within_patient_deseq_results <- read.csv("Result_tables/DESeq_results/Genus_within_patient_deseq.csv", header =T)
+temp <- otu_rel.m[unique(otu_within_cohort_deseq_results$OTU),]
+otu_within_cohort_deseq_results
+temp <- melt(temp)
+names(temp) <- c("OTU.ID", "Sample", "Abundance")
+temp <- left_join(temp, otu_taxonomy_map.df, by = "OTU.ID")
+temp <- left_join(temp, metadata.df, by = c("Sample" = "Index"))
+temp$Label <- with(temp, paste0(OTU.ID, "\n", Species))
+temp <- temp[grepl("Malassezia",temp$taxonomy_species),]
+temp$Sample_type <- factor(temp$Sample_type, levels = c("NS", "PDS", "AK", "SCC_PL", "SCC"))
+ggplot(temp, aes(x = Sample_type, y = Abundance, fill = Sample_type)) +
+  geom_boxplot(outlier.shape =NA) +
+  geom_jitter(size= 1, shape = 21,aes(fill = Patient)) +
+  facet_wrap(Cohort~Label)
+
+# otu_within_patient_deseq_results <- read.csv("Result_tables/DESeq_results/OTU_within_patient_deseq.csv", header =T)
+# genus_within_patient_deseq_results <- read.csv("Result_tables/DESeq_results/Genus_within_patient_deseq.csv", header =T)
 
 otu_cohort_within_sample_type_deseq_results <- read.csv("Result_tables/DESeq_results/OTU_cohort_within_sample_type_deseq.csv", header =T)
 genus_cohort_within_sample_type_deseq_results <- read.csv("Result_tables/DESeq_results/Genus_cohort_within_sample_type_deseq.csv", header =T)

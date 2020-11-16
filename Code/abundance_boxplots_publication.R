@@ -57,7 +57,10 @@ immunocompetent_metadata.df <- metadata.df[metadata.df$Cohort == "immunocompeten
 immunosuppressed_genus_data.df <- subset(genus_data.df, Cohort == "immunosuppressed")
 immunocompetent_genus_data.df <- subset(genus_data.df, Cohort == "immunocompetent")
 
-genus_rel_specific.df <- genus_rel.df[grepl("g__Staphylococcus|g__Paracoccus|g__Cutibacterium|g__Malassezia|g__Micrococcus", genus_rel.df$taxonomy_genus),]
+# genus_rel_specific.df <- genus_rel.df[grepl("g__Staphylococcus|g__Paracoccus|g__Cutibacterium|g__Malassezia|g__Micrococcus", genus_rel.df$taxonomy_genus),]
+genus_rel_specific.df <- genus_rel.df[grepl("g__Staphylococcus|g__Paracoccus|g__Cutibacterium|g__Malassezia|g__Micrococcus|g__Pseudomonas|g__Streptococcus|g__Corynebacterium", genus_rel.df$taxonomy_genus),]
+# g__Pseudomonas|g__Streptococcus|g__Corynebacterium
+# genus_rel_specific.df <- genus_rel.df
 
 genus_rel_specific.df <- melt(genus_rel_specific.df, variable.name = "Index", value.name = "Relative_abundance")
 genus_rel_specific.df <- left_join(genus_rel_specific.df, metadata.df, by = "Index")
@@ -186,6 +189,8 @@ IC_genus_significances <- process_significances(my_sig_data = IC_genus_significa
                                              my_abundance_data = IC_genus_rel_specific.df,
                                              variable_column = "Sample_type",
                                              value_column = "Relative_abundance")
+temp <- rbind(IS_genus_significances,IC_genus_significances)
+temp <- temp[temp$Dunn_padj <= 0.05,]
 write.csv(x = rbind(IS_genus_significances,IC_genus_significances),
           file = "Result_tables/abundance_analysis_tables/temp.csv", row.names = F,quote = F)
 
@@ -193,7 +198,8 @@ write.csv(x = rbind(IS_genus_significances,IC_genus_significances),
 sample_type_colours <- unique(IS_genus_rel_specific.df[,c("Sample_type", "Sample_type_colour")])
 sample_type_colours <- setNames(as.character(sample_type_colours[,"Sample_type_colour"]), 
                                 sample_type_colours[,"Sample_type"])
-
+IS_genus_rel_specific.df <- subset(IS_genus_rel_specific.df, Genus %in% temp$Taxonomy)
+IC_genus_rel_specific.df <- subset(IC_genus_rel_specific.df, Genus %in% temp$Taxonomy)
 
 IS_genus_plot <- ggplot(IS_genus_rel_specific.df, aes(x = Genus, 
                                      y = Relative_abundance, 

@@ -107,8 +107,7 @@ rownames(metadata.df) <- metadata.df$Index
 
 # Factorise discrete columns
 metadata.df$Patient <- factor(metadata.df$Patient)
-# metadata.df$Sample_type <- factor(metadata.df$Sample_type, levels = c("C", "C_P", "AK", "SCC_PL", "SCC"))
-metadata.df$Sample_type <- factor(metadata.df$Sample_type, levels = c("HS", "PDS", "AK", "SCC_PL", "SCC"))
+metadata.df$Sample_type <- factor(metadata.df$Sample_type, levels = c("NS", "PDS", "AK", "SCC_PL", "SCC"))
 metadata.df$Cohort <- factor(metadata.df$Cohort)
 metadata.df$Length_of_immunosuppression_group_1 <- factor(metadata.df$Length_of_immunosuppression_group_1)
 metadata.df$Length_of_immunosuppression_group_2 <- factor(metadata.df$Length_of_immunosuppression_group_2)
@@ -135,9 +134,9 @@ family_data.df <- subset(family_data.df, Cohort == "immunosuppressed" | Snapshot
 # genus_data.df$Sample_type <- factor(genus_data.df$Sample_type, levels = c("C", "C_P", "AK","SCC_PL","SCC"))
 # family_data.df$Sample_type <- factor(family_data.df$Sample_type, levels = c("C", "C_P", "AK","SCC_PL","SCC"))
 
-species_data.df$Sample_type <- factor(species_data.df$Sample_type, levels = c("HS", "PDS", "AK", "SCC_PL", "SCC"))
-genus_data.df$Sample_type <- factor(genus_data.df$Sample_type, levels = c("HS", "PDS", "AK", "SCC_PL", "SCC"))
-family_data.df$Sample_type <- factor(family_data.df$Sample_type, levels = c("HS", "PDS", "AK", "SCC_PL", "SCC"))
+species_data.df$Sample_type <- factor(species_data.df$Sample_type, levels = c("NS", "PDS", "AK", "SCC_PL", "SCC"))
+genus_data.df$Sample_type <- factor(genus_data.df$Sample_type, levels = c("NS", "PDS", "AK", "SCC_PL", "SCC"))
+family_data.df$Sample_type <- factor(family_data.df$Sample_type, levels = c("NS", "PDS", "AK", "SCC_PL", "SCC"))
 
 # Create cohort specific data sets
 immunosuppressed_metadata.df <- metadata.df[metadata.df$Cohort == "immunosuppressed",]

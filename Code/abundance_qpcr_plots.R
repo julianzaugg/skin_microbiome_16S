@@ -20,28 +20,6 @@ library(cowplot)
 library(dplyr)
 library(scales)
 
-
-# common_theme <- theme(
-#   panel.border = element_blank(), 
-#   panel.grid.major = element_blank(),
-#   panel.grid.minor = element_blank(),
-#   strip.background = element_rect(fill = "white", colour = "white", size = 1),
-#   strip.text = element_text(size = 6),
-#   legend.key=element_blank(),
-#   legend.direction="vertical",
-#   legend.background = element_rect(colour ="white", size = .3),
-#   legend.text.align = 0,
-#   legend.title = element_text(size=10, face="bold"),
-#   legend.title.align = 0.5,
-#   legend.margin = margin(c(2,2,2,2)),
-#   legend.key.height= unit(.3,"cm"),
-#   legend.key.width = unit(.3,"cm"),
-#   legend.text = element_text(size = 8),
-#   axis.line = element_line(colour = "black", size = 0.5),
-#   axis.text = element_text(size = 6, colour = "black"),
-#   axis.title = element_text(size = 7,face = "bold"),
-#   complete = F,
-#   plot.title = element_text(size = 8))
 common_theme <- theme(
   panel.border = element_blank(), 
   panel.grid.major = element_blank(),
@@ -105,6 +83,7 @@ metadata_consolidated.df <- metadata_consolidated.df[! metadata_consolidated.df$
 # 1492 1493 are MS0010 are not present
 forearm_swab_ids_IC = c("522","523","564","565","678","679","740","741", "1172", "1200","1201","1322","1323",
 "1358","1359","1492","1493")
+
 # "678","679" are 'odd'/outliers exclude 
 # forearm_swab_ids_IC = c("522","523","564","565","740","741", "1172", "1200","1201","1322","1323",
 #                         "1358","1359","1492","1493")
@@ -117,13 +96,12 @@ forearm_swab_ids_IS <- c("1382","1383","1384", "1385","1470","1471","1561","1562
 
 # Load filtered/processed abundance data with metadata
 genus_data.df <- read.csv("Result_tables/combined_counts_abundances_and_metadata_tables/genus_counts_abundances_and_metadata.csv")
-# unique(metadata.df$Swab_ID)
-# genus_data.df[1492 %in%  genus_data.df$Swab_ID,]
+
 genus_data.df <- genus_data.df[genus_data.df$Sample %in% rownames(metadata.df),]
 
 temp <- genus_data.df[genus_data.df$Swab_ID %in% forearm_swab_ids_IS,]
-# forearm_swab_ids_IS %in% genus_data.df$Swab_ID
-# forearm_swab_ids_IC %in% genus_data.df$Swab_ID
+# forearm_swab_ids_IS[!forearm_swab_ids_IS %in% genus_data.df$Swab_ID]
+# forearm_swab_ids_IC[!forearm_swab_ids_IC %in% genus_data.df$Swab_ID]
 
 # ------------------------------
 # Set levels
@@ -131,15 +109,19 @@ genus_data.df$Sample_type <- factor(genus_data.df$Sample_type, levels = c("NS", 
 
 # Create taxonomy label
 genus_data.df$taxonomy_label <- with(genus_data.df, paste0(Domain,";", Class,";", Genus))
+genus_data.df$taxonomy_label <- gsub("[a-z]__", "", genus_data.df$taxonomy_label)
 
+# Create cohort specific datasets
 immunosuppressed_genus_data.df <- subset(genus_data.df, Cohort == "immunosuppressed")
 immunocompetent_genus_data.df <- subset(genus_data.df, Cohort == "immunocompetent")
 immunosuppressed_forearm_genus_data.df <- subset(genus_data.df, Cohort == "immunosuppressed" & Swab_ID %in% forearm_swab_ids_IS)
 immunocompetent_forearm_genus_data.df <- subset(genus_data.df, Cohort == "immunocompetent" & Swab_ID %in% forearm_swab_ids_IC)
+
 # Exclude swabs "678","679" from abundance calculations as they are weird samples
 # immunocompetent_genus_data.df <- subset(immunocompetent_genus_data.df,  !Swab_ID %in% c("678","679"))
 # immunocompetent_forearm_genus_data.df <- subset(immunocompetent_forearm_genus_data.df, ! Swab_ID %in% c("678","679"))
 
+# Set factor levels for sample type
 immunosuppressed_genus_data.df$Sample_type <- factor(immunosuppressed_genus_data.df$Sample_type, levels = rev(c("NS","PDS", "AK", "SCC_PL", "SCC")))
 immunocompetent_genus_data.df$Sample_type <- factor(immunocompetent_genus_data.df$Sample_type, levels = rev(c("PDS", "AK", "SCC_PL", "SCC")))
 immunosuppressed_forearm_genus_data.df$Sample_type <- factor(immunosuppressed_forearm_genus_data.df$Sample_type, levels = rev(c("SCC_PL", "SCC")))
@@ -149,13 +131,6 @@ immunocompetent_forearm_genus_data.df$Sample_type <- factor(immunocompetent_fore
 immunosuppressed_genus_summary.df <- generate_taxa_summary(immunosuppressed_genus_data.df,
                                                            taxa_column = "taxonomy_label", 
                                                            group_by_columns = c("Sample_type"))
-
-# immunosuppressed_genus_data.df %>%
-#   dplyr::group_by(Sample_type) %>%
-#   dplyr::mutate(N_total_samples_in_group = n_distinct(Sample)) %>%
-#   dplyr::group_by(Sample_type, taxonomy_genus) %>%
-#   dplyr::summarise(Mean_relative_abundance = round(sum(Relative_abundance)/max(N_total_samples_in_group), 5),) %>%
-#   dplyr::top_n(5)
 
 immunocompetent_genus_summary.df <- generate_taxa_summary(immunocompetent_genus_data.df,
                                                           taxa_column = "taxonomy_label", 
@@ -168,8 +143,6 @@ immunosuppressed_forearm_genus_summary.df <- generate_taxa_summary(immunosuppres
 immunocompetent_forearm_genus_summary.df <- generate_taxa_summary(immunocompetent_forearm_genus_data.df,
                                                                    taxa_column = "taxonomy_label", 
                                                                    group_by_columns = c("Sample_type"))
-# unique(immunosuppressed_forearm_genus_summary.df$Sample_type)
-# unique(immunocompetent_forearm_genus_summary.df$Sample_type)
 
 # Identify the top genus for each lesion type
 immunosuppressed_top_genus_summary.df <- filter_summary_to_top_n(taxa_summary = immunosuppressed_genus_summary.df, 
@@ -197,18 +170,14 @@ both_cohorts_lesions_top_genus <- unique(c(immunosuppressed_top_genus_summary.df
                                            immunosuppressed_top_forearm_genus_summary.df$taxonomy_label,
                                            immunocompetent_top_forearm_genus_summary.df$taxonomy_label))
 
-# both_cohorts_lesions_top_genus <- unique(c(immunosuppressed_top_genus_summary.df$taxonomy_label, 
-                                           # immunocompetent_top_genus_summary.df$taxonomy_label))
-# union(union(union(immunosuppressed_top_genus_summary.df$taxonomy_label,
-#             immunocompetent_top_genus_summary.df$taxonomy_label),
-#       immunosuppressed_top_forearm_genus_summary.df$taxonomy_label),
-#     immunocompetent_top_forearm_genus_summary.df$taxonomy_label)
-
 # Create palette based on unique set
 publication_palette_10 <- c("#d35238","#6ab74d","#8562cc","#c3ab41","#688bcd","#c07b44","#4bb193","#c361aa","#6d8038","#c9566e")
+# publication_palette_23 <- c("#7860cd","#458532","#d6434d","#398762","#dd8066","#ce93dd","#cf5628","#a4ba68","#bf4bb3","#6281c6","#e285a5","#61c897","#d33f7c","#6a6f2d","#975d2a","#afbb30","#a24753","#d8aa6c","#62c151","#9a8c2e","#904e86","#dd9c32","#51bcd6")
 # both_cohorts_genus_palette <- setNames(my_colour_palette_35_distinct[1:length(both_cohorts_lesions_top_genus)], both_cohorts_lesions_top_genus)
 both_cohorts_genus_palette <- setNames(publication_palette_10[1:length(both_cohorts_lesions_top_genus)], both_cohorts_lesions_top_genus)
+# both_cohorts_genus_palette <- setNames(publication_palette_23[1:length(both_cohorts_lesions_top_genus)], both_cohorts_lesions_top_genus)
 
+# Set other colour to grey
 both_cohorts_genus_palette["Other"] <- "grey"
 
 # 
@@ -222,11 +191,12 @@ both_cohorts_genus_palette["Other"] <- "grey"
 #                                                                 abundance_column = "Mean_relative_abundance",
 #                                                                 my_top_n = 5)
 
-# Take the full table and re-label any taxa not in the top to "Other"
+# Re-label any taxa not in the top taxa (for the SAME cohort/groups) to "Other" for each summary table
 # immunosuppressed_genus_summary.df[!immunosuppressed_genus_summary.df$taxonomy_label %in% immunosuppressed_top_genus_summary.df$taxonomy_label,]$taxonomy_label <- "Other"
 # immunocompetent_genus_summary.df[!immunocompetent_genus_summary.df$taxonomy_label %in% immunocompetent_top_genus_summary.df$taxonomy_label,]$taxonomy_label <- "Other"
 # immunosuppressed_forearm_genus_summary.df[!immunosuppressed_forearm_genus_summary.df$taxonomy_label %in% immunosuppressed_top_forearm_genus_summary.df$taxonomy_label,]$taxonomy_label <- "Other"
 
+# Re-label any taxa not in the top taxa (across ALL cohorts/groups) to "Other" for each summary table
 immunosuppressed_genus_summary.df[!immunosuppressed_genus_summary.df$taxonomy_label %in% both_cohorts_lesions_top_genus,]$taxonomy_label <- "Other"
 immunocompetent_genus_summary.df[!immunocompetent_genus_summary.df$taxonomy_label %in% both_cohorts_lesions_top_genus,]$taxonomy_label <- "Other"
 immunosuppressed_forearm_genus_summary.df[!immunosuppressed_forearm_genus_summary.df$taxonomy_label %in% both_cohorts_lesions_top_genus,]$taxonomy_label <- "Other"
@@ -261,7 +231,6 @@ immunocompetent_forearm_genus_summary.df <-
   as.data.frame()
 sum(immunosuppressed_genus_summary.df$Mean_relative_abundance)
 sum(immunosuppressed_genus_summary.df$Normalised_mean_relative_abundance)
-
 
 immunosuppressed_genus_summary.df[immunosuppressed_genus_summary.df$taxonomy_label == "Other","Mean_relative_abundance"] <- NA
 immunocompetent_genus_summary.df[immunocompetent_genus_summary.df$taxonomy_label == "Other","Mean_relative_abundance"] <- NA
@@ -491,6 +460,10 @@ dunn$P_value_label <- as.character(lapply(dunn[,"P.adj"], function(x) ifelse(x <
 dunn <- dunn[dunn$P_value_label != "ns",]
 write.csv(x = dunn, file = "Result_tables/stats_various/qPCR_sampletype_dunn.csv", quote = F, row.names = F)
 
+metadata_consolidated_combined.df %>% 
+  dplyr::group_by(Cohort, Sample_type,Sample_type_label) %>%
+  tally()
+
 mean_qpcr_values.df <- metadata_consolidated_combined.df %>%
   dplyr::group_by(Cohort, Sample_type,Sample_type_label) %>%
   dplyr::summarise(Mean_qPCR_16S = mean(qPCR_16S,na.rm = T)) %>%
@@ -502,7 +475,6 @@ mean_qpcr_values.df <- metadata_consolidated_combined.df %>%
 # ------------------------------------------------------------------------------------------
 # Now plot
 
-# ------ Version using scaled abundances
 all_combined <- rbind(immunosuppressed_genus_summary_combined_forearm.df, immunocompetent_genus_summary_combined_forearm.df)
 dim(all_combined)
 all_combined <- unique(left_join(all_combined, metadata.df[,c("Sample_type","Sample_type_colour")], by = "Sample_type"))
@@ -513,6 +485,20 @@ write.csv(x = temp %>% select(-Sample_type_colour) %>% as.data.frame(),
           file = "Result_tables/abundance_analysis_tables/genus_abundances_combined_publication.csv", 
           quote = F,
           row.names = F)
+
+all_combined %>% 
+  dplyr::group_by(Cohort, Sample_type,Sample_type_label) %>%
+  tally()
+
+# Compare SCC and SCC_PL from all body sites to forearm, to determine change in abundance
+temp <- subset(temp, Sample_type %in% c("SCC", "SCC_PL") & taxonomy_label != "Other")
+temp$Cohort_sampletype_taxonomy_label <- with(temp, paste0(Cohort, "__", Sample_type, "__", taxonomy_label))
+for (tax in unique(temp$Cohort_sampletype_taxonomy_label)){
+  f_abundance <- round(subset(temp, Cohort_sampletype_taxonomy_label == tax & Location == "Forearm")$Mean_relative_abundance*100,3)
+  abs_abundance <- round(subset(temp, Cohort_sampletype_taxonomy_label == tax & Location == "All body sites")$Mean_relative_abundance*100,3)
+  print(paste(tax, f_abundance, abs_abundance, f_abundance - abs_abundance))
+}
+# ------ Version using scaled abundances
 
 # undo order-by-abundance and just use all_combined order
 immunosuppressed_genus_summary_combined_forearm.df$taxonomy_label <- 
@@ -556,6 +542,7 @@ immunosuppressed_abundance_plot <-
       axis.text.x = element_blank(),
       # axis.title.y = element_text(lineheight = 2),
       axis.title.x = element_blank())
+immunosuppressed_abundance_plot
 
 immunocompetent_abundance_plot <- 
   ggplot(immunocompetent_genus_summary_combined_forearm.df,
@@ -720,10 +707,10 @@ grid_plot <- grid_plot +
   
   # annotation_custom(rect_grob, xmin = 0.09, xmax = 0.14, ymin = .11, ymax=.144)
   
-ggsave(filename = "Result_figures/abundance_analysis_plots/IS_IC_sample_type_relative_abundance_and_16S_qPCR.pdf", 
+ggsave(filename = "Result_figures/abundance_analysis_plots/IS_IC_sample_type_relative_abundance_and_rRNA_qPCR.pdf", 
        plot = grid_plot, width = 26, 
        height = 25, units = "cm")
-ggsave(filename = "Result_figures/abundance_analysis_plots/IS_IC_sample_type_relative_abundance_and_16S_qPCR.svg", 
+ggsave(filename = "Result_figures/abundance_analysis_plots/IS_IC_sample_type_relative_abundance_and_rRNA_qPCR.svg", 
        plot = grid_plot, width = 26, height = 25, units = "cm",device = "svg")
 ggsave(plot =my_legend_taxa,"Result_figures/abundance_analysis_plots/taxa.svg", 
        width = 27, units = "cm", device = "svg")
@@ -833,10 +820,10 @@ grid_plot <- grid_plot +
 
 # annotation_custom(rect_grob, xmin = 0.09, xmax = 0.14, ymin = .11, ymax=.144)
 
-ggsave(filename = "Result_figures/abundance_analysis_plots/IS_IC_sample_type_relative_abundance_and_16S_qPCR_scatter.pdf", 
+ggsave(filename = "Result_figures/abundance_analysis_plots/IS_IC_sample_type_relative_abundance_and_rRNA_qPCR_scatter.pdf", 
        plot = grid_plot, width = 26, 
        height = 25, units = "cm")
-ggsave(filename = "Result_figures/abundance_analysis_plots/IS_IC_sample_type_relative_abundance_and_16S_qPCR_scatter.svg", 
+ggsave(filename = "Result_figures/abundance_analysis_plots/IS_IC_sample_type_relative_abundance_and_rRNA_qPCR_scatter.svg", 
        plot = grid_plot, width = 26, height = 25, units = "cm",device = "svg")
 ggsave(plot =my_legend_taxa,"Result_figures/abundance_analysis_plots/taxa.svg", 
        width = 27, units = "cm", device = "svg")
