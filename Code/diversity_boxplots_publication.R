@@ -147,9 +147,6 @@ calculate_alpha_diversity_significance_multiple <- function(mydata, variable){
 }
 
 
-
-
-
 # Load the processed metadata
 metadata.df <- read.csv("Result_tables/other/processed_metadata.csv", sep =",", header = T)
 
@@ -173,8 +170,8 @@ genus.m <-  as.matrix(read.csv("Result_tables/count_tables/Genus_counts.csv", he
 genus.m <- genus.m[,rownames(metadata.df)]
 
 # Create the rarefied matrices
-genus_rare.m <- t(rrarefy(t(genus.m[,colSums(genus.m) >= 2000]), 2000))
-# genus_rare.m <- t(rrarefy(t(genus.m[,colSums(genus.m) >= 10000]), 10000))
+rarefy_threshold <- 2000
+genus_rare.m <- t(rrarefy(t(genus.m[,colSums(genus.m) >= rarefy_threshold]), rarefy_threshold))
 
 # Create phyloseq object
 genus_rare_phyloseq <- otu_table(genus_rare.m, taxa_are_rows=TRUE)
@@ -197,6 +194,34 @@ immunosuppressed_genus_alpha_diversity_summary.df <- summarise_diversities_each_
 immunosuppressed_genus_alpha_dunn_significances.df <- calculate_alpha_diversity_significance_multiple(immunosuppressed_genus_rare_alpha.df,variable = "Sample_type")
 immunocompetent_genus_alpha_diversity_summary.df <- summarise_diversities_each_variable(immunocompetent_genus_rare_alpha.df, variables = discrete_variables)
 immunocompetent_genus_alpha_dunn_significances.df <- calculate_alpha_diversity_significance_multiple(immunocompetent_genus_rare_alpha.df,variable = "Sample_type")
+
+immunosuppressed_group_count.df <- immunosuppressed_genus_rare_alpha.df %>% 
+  filter(!is.na(Shannon)) %>%
+  group_by(Sample_type) %>% 
+  dplyr::summarise(N_Group_1 = n())
+immunosuppressed_group_count.l <- setNames(immunosuppressed_group_count.df$N_Group_1,immunosuppressed_group_count.df$Sample_type)
+
+immunocompetent_group_count.df <- immunocompetent_genus_rare_alpha.df %>% 
+  filter(!is.na(Shannon)) %>%
+  group_by(Sample_type) %>% 
+  dplyr::summarise(N_Group_1 = n())
+immunocompetent_group_count.l <- setNames(immunocompetent_group_count.df$N_Group_1,immunocompetent_group_count.df$Sample_type)
+
+# Add group sizes
+immunosuppressed_genus_alpha_dunn_significances.df$N_Group_1 <- 
+  unlist(lapply(immunosuppressed_genus_alpha_dunn_significances.df$Group_1, function(x)immunosuppressed_group_count.l[[x]]))
+immunosuppressed_genus_alpha_dunn_significances.df$N_Group_2 <- 
+  unlist(lapply(immunosuppressed_genus_alpha_dunn_significances.df$Group_2, function(x)immunosuppressed_group_count.l[[x]]))
+
+immunocompetent_genus_alpha_dunn_significances.df$N_Group_1 <- 
+  unlist(lapply(immunocompetent_genus_alpha_dunn_significances.df$Group_1, function(x)immunocompetent_group_count.l[[x]]))
+immunocompetent_genus_alpha_dunn_significances.df$N_Group_2 <- 
+  unlist(lapply(immunocompetent_genus_alpha_dunn_significances.df$Group_2, function(x)immunocompetent_group_count.l[[x]]))
+
+# Add rarefied depth
+immunosuppressed_genus_alpha_dunn_significances.df$Rarefied_depth <- rarefy_threshold
+immunocompetent_genus_alpha_dunn_significances.df$Rarefied_depth <- rarefy_threshold
+
 
 # 
 # 
@@ -256,7 +281,7 @@ immunocompetent_genus_alpha_dunn_significances.df <- generate_p_labels(immunocom
 immunosuppressed_genus_alpha_dunn_significances.df$Cohort  <- "organ transplant recipient"
 immunocompetent_genus_alpha_dunn_significances.df$Cohort  <- "immunocompetent"
 write.csv(x = rbind(immunosuppressed_genus_alpha_dunn_significances.df,immunocompetent_genus_alpha_dunn_significances.df),
-          file = "Result_tables/diversity_analysis/IS_IC_diversity_signficances.csv",
+          file = paste0("Result_tables/diversity_analysis/IS_IC_diversity_signficances_",rarefy_threshold,".csv"),
           row.names =F,
           quote = F)
 
@@ -268,8 +293,10 @@ immunosuppressed_genus_shannon_boxplot <-
   ggplot(immunosuppressed_genus_rare_alpha.df,aes(x = Sample_type, 
                                                   y = Shannon, 
                                                   fill = Sample_type, 
+                                                  # colour = Sample_type, 
                                                   shape = Sample_type)) +
-  geom_boxplot(position = position_dodge(width =.75), 
+  # geom_violin() +
+  geom_boxplot(position = position_dodge(width =.75),
                outlier.shape = NA, width=.5,lwd =.3) +
   geom_jitter(size = .6,stroke =.1,
               position = position_jitterdodge(jitter.width = .75,
@@ -278,6 +305,8 @@ immunosuppressed_genus_shannon_boxplot <-
                      name = "Sample type") +
   scale_fill_manual(values = sample_type_colours, 
                     name = "Sample type") +
+  # scale_colour_manual(values = sample_type_colours, 
+  #                   name = "Sample type") +
   stat_summary(fun = "mean", colour = "grey2", geom = "point",
                shape = 16,size = 1, position = position_dodge(width = .75),show.legend = F) +
   xlab("Sample type") +

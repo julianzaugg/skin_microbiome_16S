@@ -34,43 +34,63 @@ common_theme <- theme(
 # Load the processed metadata
 metadata.df <- read.csv("Result_tables/other/processed_metadata.csv", sep =",", header = T)
 
+# Load the abundance matrix
 genus_rel.df <- read.table("Result_tables/relative_abundance_tables/Genus_relative_abundances.csv", 
                           sep =",", header = T)
 
+# load the combined abundance and metadata tables
 genus_data.df <- read.csv("Result_tables/combined_counts_abundances_and_metadata_tables/Genus_counts_abundances_and_metadata.csv")
 
+# Calculate taxa summary
 temp <- generate_taxa_summary(genus_data.df, taxa_column = "taxonomy_genus",
                       group_by_columns = c("Cohort", "Sample_type"))
 
+# Filter to top # per sample
 top_genus <- filter_summary_to_top_n(temp,
                         grouping_variables = c("Cohort", "Sample_type"),
                         abundance_column = "Mean_relative_abundance",
-                        my_top_n = 20)
+                        my_top_n = 30)
 top_genus <- unique(top_genus$taxonomy_genus)
 
+# Filter abundance matrix to top taxa
 genus_rel.df <- genus_rel.df[genus_rel.df$taxonomy_genus %in% top_genus,]
 
-# Create cohort specific data sets
-immunosuppressed_metadata.df <- metadata.df[metadata.df$Cohort == "immunosuppressed",]
-immunocompetent_metadata.df <- metadata.df[metadata.df$Cohort == "immunocompetent",]
+# forearm_swab_ids_IS <- c("1382","1383","1384", "1385","1470","1471","1561","1562",
+#                          "1599","1600","1649", "1650")
+# 
+# temp <- metadata.df[with(metadata.df, which(Swab_ID %in% forearm_swab_ids_IS | all(!Sample_type %in% c("SCC", "SCC_PL") & Cohort != "immunosuppressed" ))),]
+# temp <- metadata.df[with(metadata.df, which(Cohort == "immunosuppressed" & !Sample_type %in% c("SCC", "SCC_PL") | Swab_ID %in% forearm_swab_ids_IS)),]
+# temp <- rbind(temp, subset(metadata.df, Cohort == "immunocompetent"))
+# genus_rel.df <- genus_rel.df[,c("taxonomy_genus", temp$Index)]
 
-immunosuppressed_genus_data.df <- subset(genus_data.df, Cohort == "immunosuppressed")
-immunocompetent_genus_data.df <- subset(genus_data.df, Cohort == "immunocompetent")
+# Create cohort specific data sets
+# immunosuppressed_metadata.df <- metadata.df[metadata.df$Cohort == "immunosuppressed",]
+# immunocompetent_metadata.df <- metadata.df[metadata.df$Cohort == "immunocompetent",]
+# immunosuppressed_genus_data.df <- subset(genus_data.df, Cohort == "immunosuppressed")
+# immunocompetent_genus_data.df <- subset(genus_data.df, Cohort == "immunocompetent")
+
 
 # genus_rel_specific.df <- genus_rel.df[grepl("g__Staphylococcus|g__Paracoccus|g__Cutibacterium|g__Malassezia|g__Micrococcus", genus_rel.df$taxonomy_genus),]
-genus_rel_specific.df <- genus_rel.df[grepl("g__Staphylococcus|g__Paracoccus|g__Cutibacterium|g__Malassezia|g__Micrococcus|g__Pseudomonas|g__Streptococcus|g__Corynebacterium", genus_rel.df$taxonomy_genus),]
+# genus_rel_specific.df <- genus_rel.df[grepl("g__Staphylococcus|g__Paracoccus|g__Cutibacterium|g__Malassezia|g__Micrococcus|g__Pseudomonas|g__Streptococcus|g__Corynebacterium", genus_rel.df$taxonomy_genus),]
+specific_taxa <- c("Staphylococcus","Paracoccus","Cutibacterium","Malassezia","Micrococcus","Pseudomonas","Streptococcus","Corynebacterium")
 # g__Pseudomonas|g__Streptococcus|g__Corynebacterium
-# genus_rel_specific.df <- genus_rel.df
+genus_rel_specific.df <- genus_rel.df
 
 genus_rel_specific.df <- melt(genus_rel_specific.df, variable.name = "Index", value.name = "Relative_abundance")
 genus_rel_specific.df <- left_join(genus_rel_specific.df, metadata.df, by = "Index")
 genus_rel_specific.df <- genus_rel_specific.df %>% select(Index, Sample_type, Sample_type_colour, Cohort, Relative_abundance,taxonomy_genus)
 genus_rel_specific.df$Genus <- gsub("g__", "", unlist(lapply(as.character(genus_rel_specific.df$taxonomy_genus), function(x) unlist(strsplit(x,";"))[6])))
+
+# genus_rel_specific.df$Genus <- unlist(lapply(as.character(genus_rel_specific.df$taxonomy_genus), function(x) paste0(unlist(strsplit(x,";"))[5:6], collapse = ";")))
+# genus_rel_specific.df$Genus <- gsub("f__", "", genus_rel_specific.df$Genus)
+# genus_rel_specific.df$Genus <- gsub("g__", "", genus_rel_specific.df$Genus)
 genus_rel_specific.df$Relative_abundance <- genus_rel_specific.df$Relative_abundance  *100
 
+# Order with Staphylococcus first
 genus_rel_specific.df$Genus <- factor(genus_rel_specific.df$Genus, levels = c("Staphylococcus", 
                                                                               sort(unique(genus_rel_specific.df$Genus)[unique(genus_rel_specific.df$Genus) != "Staphylococcus"])))
 
+# Cohort specific data
 IS_genus_rel_specific.df <- subset(genus_rel_specific.df, Cohort == "immunosuppressed")
 IC_genus_rel_specific.df <- subset(genus_rel_specific.df, Cohort == "immunocompetent")
 
@@ -96,6 +116,11 @@ calculate_taxa_significances_multiple <- function(mydata, variable_column, value
     if (any(is.na(taxa_data[,variable_column]))){
       return()
     }
+    if (all(taxa_data[,value_column] == 0)){
+      next()
+    }
+    # print(taxa)
+    # print(n_groups)
     if (n_groups > 2){
       kw <- kruskal.test(get(value_column)~get(variable_column), data = taxa_data)
       dunn <- dunnTest(x = get(value_column)~get(variable_column), data = taxa_data, method = "bh", alpha = 0.05)
@@ -110,6 +135,8 @@ calculate_taxa_significances_multiple <- function(mydata, variable_column, value
   results.df[,c("Taxonomy", "Variable", "Group_1","Group_2", "Dunn_pvalue", "Dunn_padj", "KrusW_pvalue")]
 }
 
+
+# Calculate significance values comparing sample types
 IS_genus_significances <- calculate_taxa_significances_multiple(mydata = IS_genus_rel_specific.df, 
                                       variable_column = "Sample_type",
                                       value_column = "Relative_abundance",
@@ -119,11 +146,81 @@ IC_genus_significances <- calculate_taxa_significances_multiple(mydata = IC_genu
                                                                 variable_column = "Sample_type",
                                                                 value_column = "Relative_abundance",
                                                                 taxonomy_column = "Genus")
+# ----------------------------------------------------------------
+# mean(with(IS_genus_rel_specific.df, IS_genus_rel_specific.df[Genus == "Brachybacterium" & Sample_type == "SCC_PL",])$Relative_abundance)
+# temp <- IS_genus_rel_specific.df %>% 
+  # group_by(Cohort, Sample_type,Genus) %>%
+  # dplyr::summarise(Mean_abundance = mean(Relative_abundance))
+# temp[temp$Genus == "Brachybacterium",]
+
+combined_abundances.df <- 
+  rbind(IS_genus_rel_specific.df, IC_genus_rel_specific.df) %>%
+  group_by(Cohort, Sample_type,Genus) %>%
+  dplyr::summarise(Mean_abundance = mean(Relative_abundance))
+
+combined_abundances.df$c_st_g <- with(combined_abundances.df, paste0(Cohort, Sample_type,Genus))
+
+# Add group sizes
+immunosuppressed_group_count.df <- 
+  IS_genus_rel_specific.df %>% select(Index, Sample_type) %>% 
+  group_by(Sample_type) %>%
+  distinct() %>%
+  tally()
+
+immunocompetent_group_count.df <- 
+  IC_genus_rel_specific.df %>% select(Index, Sample_type) %>% 
+  group_by(Sample_type) %>%
+  distinct() %>%
+  tally()
+
+immunosuppressed_group_count.l <- setNames(immunosuppressed_group_count.df$n,immunosuppressed_group_count.df$Sample_type)
+immunocompetent_group_count.l <- setNames(immunocompetent_group_count.df$n,immunocompetent_group_count.df$Sample_type)
+
+IS_genus_significances$N_Group_1 <- 
+  unlist(lapply(IS_genus_significances$Group_1, function(x)immunosuppressed_group_count.l[[x]]))
+IS_genus_significances$N_Group_2 <- 
+  unlist(lapply(IS_genus_significances$Group_2, function(x)immunosuppressed_group_count.l[[x]]))
+
+IC_genus_significances$N_Group_1 <- 
+  unlist(lapply(IC_genus_significances$Group_1, function(x)immunocompetent_group_count.l[[x]]))
+IC_genus_significances$N_Group_2 <- 
+  unlist(lapply(IC_genus_significances$Group_2, function(x)immunocompetent_group_count.l[[x]]))
+# ----------------------------------------------------------------
+
+# Add cohort
 IS_genus_significances$Cohort <- "immunosuppressed"
 IC_genus_significances$Cohort <- "immunocompetent"
+
+# Add mean abundances
+IS_genus_significances$Mean_abundance_Group_1 <- unlist(lapply(with(IS_genus_significances, paste0(Cohort, Group_1,Taxonomy)),
+                                                               function(x) combined_abundances.df[combined_abundances.df$c_st_g == x,"Mean_abundance"][[1]]))
+IS_genus_significances$Mean_abundance_Group_2 <- unlist(lapply(with(IS_genus_significances, paste0(Cohort, Group_2,Taxonomy)),
+                                                               function(x) combined_abundances.df[combined_abundances.df$c_st_g == x,"Mean_abundance"][[1]]))
+
+IC_genus_significances$Mean_abundance_Group_1 <- unlist(lapply(with(IC_genus_significances, paste0(Cohort, Group_1,Taxonomy)),
+                                                               function(x) combined_abundances.df[combined_abundances.df$c_st_g == x,"Mean_abundance"][[1]]))
+IC_genus_significances$Mean_abundance_Group_2 <- unlist(lapply(with(IC_genus_significances, paste0(Cohort, Group_2,Taxonomy)),
+                                                               function(x) combined_abundances.df[combined_abundances.df$c_st_g == x,"Mean_abundance"][[1]]))
+
+
+generate_p_labels <- function(sig_table){
+  for (sig_column in c("Dunn_padj")){
+    metric = strsplit(sig_column, "_")[[1]][1]
+    sig_table[,paste0(metric, "_p_label")] <-
+      as.character(lapply(sig_table[,sig_column], 
+                          function(x) ifelse(x <= 0.001, "***", 
+                                             ifelse(x <= 0.01, "**",
+                                                    ifelse(x <= 0.05, "*", "ns")))))
+  }
+  sig_table
+}
+# subset(IS_genus_significances, Taxonomy == "Staphylococcus")
 genus_significances_combined <- rbind(IS_genus_significances,IC_genus_significances)
 genus_significances_combined <- subset(genus_significances_combined, Dunn_padj <= 0.05)
 genus_significances_combined <- genus_significances_combined[order(genus_significances_combined$Taxonomy),]
+genus_significances_combined <- generate_p_labels(genus_significances_combined)
+# genus_significances_combined <- genus_significances_combined[genus_significances_combined$Taxonomy %in% specific_taxa,]
+
 
 write.csv(file = "Result_tables/abundance_analysis_tables/genus_significances_combined_publication.csv",
           x = genus_significances_combined, row.names = F,quote = F)
@@ -178,7 +275,7 @@ process_significances <- function(my_sig_data,my_abundance_data,variable_column,
   my_sig_data
 }
 
-
+# Add p-value annotations
 IS_genus_significances <- process_significances(my_sig_data = IS_genus_significances,
                    my_abundance_data = IS_genus_rel_specific.df,
                    variable_column = "Sample_type",
@@ -189,17 +286,23 @@ IC_genus_significances <- process_significances(my_sig_data = IC_genus_significa
                                              my_abundance_data = IC_genus_rel_specific.df,
                                              variable_column = "Sample_type",
                                              value_column = "Relative_abundance")
-temp <- rbind(IS_genus_significances,IC_genus_significances)
-temp <- temp[temp$Dunn_padj <= 0.05,]
-write.csv(x = rbind(IS_genus_significances,IC_genus_significances),
-          file = "Result_tables/abundance_analysis_tables/temp.csv", row.names = F,quote = F)
 
+# ------------------------------------------------------
+# For manual analysis, limit to taxa of interest and significant comparisons
+temp <- rbind(IS_genus_significances,IC_genus_significances)
+
+temp <- temp[temp$Dunn_padj <= 0.05,]
+temp <- subset(temp, Taxonomy %in% specific_taxa)
+write.csv(x = temp,
+          file = "Result_tables/abundance_analysis_tables/temp.csv", row.names = F, quote = F)
+# ------------------------------------------------------
 
 sample_type_colours <- unique(IS_genus_rel_specific.df[,c("Sample_type", "Sample_type_colour")])
 sample_type_colours <- setNames(as.character(sample_type_colours[,"Sample_type_colour"]), 
                                 sample_type_colours[,"Sample_type"])
-IS_genus_rel_specific.df <- subset(IS_genus_rel_specific.df, Genus %in% temp$Taxonomy)
-IC_genus_rel_specific.df <- subset(IC_genus_rel_specific.df, Genus %in% temp$Taxonomy)
+
+IS_genus_rel_specific.df <- subset(IS_genus_rel_specific.df, Genus %in% specific_taxa)
+IC_genus_rel_specific.df <- subset(IC_genus_rel_specific.df, Genus %in% specific_taxa)
 
 IS_genus_plot <- ggplot(IS_genus_rel_specific.df, aes(x = Genus, 
                                      y = Relative_abundance, 
@@ -257,7 +360,7 @@ IS_genus_plot <- ggplot(IS_genus_rel_specific.df, aes(x = Genus,
 
 ggsave(plot = IS_genus_plot, 
        filename = "Result_figures/abundance_analysis_plots/IS_abundance_boxplot_publication.pdf",
-       width = 15, height = 12, units = "cm"
+       width = 18, height = 12, units = "cm"
        )
 
 
@@ -290,7 +393,7 @@ IC_genus_plot
 
 ggsave(plot = IC_genus_plot, 
        filename = "Result_figures/abundance_analysis_plots/IC_abundance_boxplot_publication.pdf",
-       width = 15, height = 12, units = "cm"
+       width = 18, height = 12, units = "cm"
 )
 
 # Extract the legend
@@ -327,11 +430,11 @@ grid_plot <- plot_grid(plotlist = list(grid_plot, my_legend),
 
 ggsave(plot = grid_plot, 
        filename = "Result_figures/abundance_analysis_plots/IS_IC_abundance_boxplot_publication.pdf",
-       width = 25, height = 12, units = "cm"
+       width = 30, height = 12, units = "cm"
 )
 
 ggsave(plot = grid_plot, 
        filename = "Result_figures/abundance_analysis_plots/IS_IC_abundance_boxplot_publication.svg",
-       width = 25, height = 12, units = "cm",device = "svg"
+       width = 30, height = 12, units = "cm",device = "svg"
 )
 
