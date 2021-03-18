@@ -100,7 +100,7 @@ metadata.df$Sample_type_original <- factor(metadata.df$Sample_type_original)
 metadata.df$Sample_type <- factor(metadata.df$Sample_type, levels = c("NS","PDS", "AK", "SCC_PL", "SCC"))
 metadata.df$Cohort <- factor(metadata.df$Cohort)
 metadata.df$Gender <- factor(metadata.df$Gender)
-
+metadata.df$Sample_location_simple <- factor(metadata.df$Sample_location_simple)
 
 # Need to factorise the colour columns as well
 colour_columns <- names(metadata.df)[grepl("colour", names(metadata.df))]
@@ -308,6 +308,31 @@ generate_pca_plot(pca_object = genus_pca,
 # Sample_type
 source("Code/helper_functions.R")
 
+generate_pca_plot(pca_object = immunocompetent_genus_pca,
+                  my_metadata.df = subset(metadata.df, Cohort == "immunocompetent"),
+                  variable_to_plot = "Sample_location_simple",
+                  variable_colours_available = F,
+                  plot_ellipses = F,
+                  label_ellipse = F,
+                  plot_hulls = T,
+                  plot_spiders = F,
+                  # spider_alpha = .5,
+                  ellipse_label_size = .3,
+                  # ellipse_border_width = 1,
+                  # ellipse_alpha = 1,
+                  point_size = .8, point_line_thickness = 0.8,point_alpha =.9,
+                  use_shapes = T,
+                  axis_limits = c(-3,5,-4,5),
+                  component_choices = c(1,2),
+                  plot_height = 6, plot_width = 6,
+                  legend_title = "Sample type",
+                  legend_cex = .7,
+                  legend_columns = 1,
+                  legend_x = -3, legend_y = 5,
+                  include_legend = T,
+                  plot_arrows = F,
+                  filename = paste0("Result_figures/ordination_plots/genus/immunocompetent_sample_location.pdf"))
+
 # Sample type ***
 generate_pca_plot(pca_object = immunocompetent_genus_pca,
                   my_metadata.df = subset(metadata.df, Cohort == "immunocompetent"),
@@ -358,6 +383,32 @@ generate_pca_plot(pca_object = immunocompetent_genus_pca,
 
 # ---------------------------------------------------------------------------------------------------------
 # Immunosuppressed, all sample types
+
+
+generate_pca_plot(pca_object = immunosuppressed_genus_pca,
+                  my_metadata.df = subset(metadata.df, Cohort == "immunosuppressed"),
+                  variable_to_plot = "Sample_location_simple",
+                  variable_colours_available = F,
+                  plot_ellipses = F,
+                  label_ellipse = F,
+                  plot_spiders = F,
+                  plot_hulls = T,
+                  ellipse_label_size = .3,
+                  # ellipse_border_width = 1,
+                  # ellipse_alpha = 1,
+                  point_size = .8, point_line_thickness = 0.8,point_alpha =.9,
+                  use_shapes = T,
+                  axis_limits = c(-5,3.5,-4.5,6),
+                  component_choices = c(1,2),
+                  plot_height = 6, plot_width = 6,
+                  legend_title = "Sample type",
+                  legend_cex = .7,
+                  legend_columns = 1,
+                  legend_x = -5, legend_y = 6,
+                  include_legend = T,
+                  plot_arrows = F,
+                  filename = paste0("Result_figures/ordination_plots/genus/immunosuppressed_sample_location.pdf"))
+
 
 # Sample_type
 generate_pca_plot(pca_object = immunosuppressed_genus_pca,
@@ -474,10 +525,12 @@ make_publication_plot <- function(filetype = "pdf"){
   title(outer=T,adj=.77,ylab = "By sample type",font.lab=2, line = 2,cex.lab = 1)
 
   par(mar = c(1,4,3,1))
+  
   generate_pca_plot(pca_object = immunocompetent_genus_pca,
                     my_metadata.df = metadata.df[immunocompetent_samples,],
                     variable_to_plot = "Sample_type",
                     variable_colours_available = T,
+                    variable_shapes_available = T,
                     plot_ellipses = F,
                     label_ellipse = F,
                     plot_spiders = F,
@@ -500,12 +553,12 @@ make_publication_plot <- function(filetype = "pdf"){
 
   # title(outer=F,adj=.5,main="Immunocompetent",cex.main=4,col.main="black",font.main=2,line=1, cex.main =1.5, family = "serif")
   title(outer=F,adj=.5,main="Immunocompetent",cex.main=4,col.main="black",font.main=2,line=1, cex.main =1)
-  
   par(mar = c(4,4,0,1))
   generate_pca_plot(pca_object = immunosuppressed_genus_pca,
                     my_metadata.df = subset(metadata.df, Cohort == "immunosuppressed"),
                     variable_to_plot = "Patient",
                     variable_colours_available = T,
+                    variable_shapes_available = F,
                     plot_ellipses = T,
                     label_ellipse = F,
                     plot_spiders = F,
@@ -528,14 +581,15 @@ make_publication_plot <- function(filetype = "pdf"){
   # title(outer=F,ylab = "By patient",font.lab=2, line = 5,cex.lab = 2, family = "serif")
   # title(outer=T,adj = 0.26, ylab = "By patient",font.lab=2, line = 2,cex.lab = 1.5, family = "serif")
   # title(outer=T,adj = 0.26, ylab = "By patient",font.lab=2, line = 2,cex.lab = 1)
+  
   title(outer=T,adj = 0.26, ylab = "By subject",font.lab=2, line = 2,cex.lab = 1)
   
   par(mar = c(4,4,0,1))
-  
   generate_pca_plot(pca_object = immunocompetent_genus_pca,
                     my_metadata.df = subset(metadata.df, Cohort == "immunocompetent"),
                     variable_to_plot = "Patient",
                     variable_colours_available = T,
+                    variable_shapes_available = F,
                     plot_ellipses = T,
                     label_ellipse = F,
                     plot_spiders = F,

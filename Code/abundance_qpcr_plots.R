@@ -68,11 +68,30 @@ otu_taxonomy_map.df <- read.csv("Result_tables/other/otu_taxonomy_map.csv", head
 metadata.df <- read.csv("Result_tables/other/processed_metadata.csv", sep =",", header = T)
 metadata_consolidated.df <- read.csv("Result_tables/other/metadata_consolidated.csv", sep = ",", header = T)
 metadata_consolidated.df <- subset(metadata_consolidated.df, Cohort == "immunosuppressed" | Snapshot_sample_5 == "yes")
-metadata_consolidated.df <- metadata_consolidated.df[,c("Index","Sample_type","Swab_ID", "Cohort","Sample_type_colour","qPCR_16S")]
+metadata_consolidated.df <- metadata_consolidated.df[is.na(metadata_consolidated.df$qPCR_exclude),]
+metadata_consolidated.df %>% group_by(Cohort, Sample_type) %>% tally()
+
+# metadata_temp.df <- read.csv("data/metadata_immunosuppressed_competent.tsv", sep = "\t", header = T)
+# metadata_temp.df <- subset(metadata_temp.df, Cohort == "immunosuppressed" | Snapshot_sample_5 == "yes")
+# metadata_temp.df %>% group_by(Cohort, Sample_type) %>% tally()
+
+# metadata_consolidated.df <- metadata_consolidated.df[!grepl("Sequenced during immunosuppressed batch",metadata_consolidated.df$Sample_note),]
+# offenders <- c("R1391_J1425","R1392_J1425","R1412_J1425","SA6602_J1427","SA6603_J1427","SA6605_J1427","R1384_J1425","R1385_J1425","R1386_J1425","R1387_J1425","R1388_J1425","R1389_J1425","R1390_J1425","R1405_J1425","R1406_J1425","R1407_J1425","R1408_J1425","R1409_J1425","R1410_J1425","R1411_J1425","SA6597_J1427","SA6597b_J1476","SA6598_J1427","SA6598b_J1476","SA6599_J1427","SA6600_J1427","SA6601_J1427","SA6604_J1427","SA6605b_J1476")
+# check_against <- c("348","522","564","678","740","956","1050","1172","1177","1183","1185","1187","1189","1191","1193","1200","1230","1239","1240","1242","1258","1267","1311","1313","1322","1324","1326","1328","1337","1339","1341","1343","1345","1347","1358")
+# metadata_consolidated.df <- metadata_consolidated.df[!metadata_consolidated.df$Index %in% offenders,]
+# temp <- subset(metadata_consolidated.df, Sample_type == "SCC" & Cohort == "immunocompetent")
+# metadata_consolidated.df <- metadata_consolidated.df[!metadata_consolidated.df$Swab_ID %in% temp$Swab_ID[!temp$Swab_ID %in% check_against],]
+
+metadata_consolidated.df <- metadata_consolidated.df[,c("Index","Sample_type","Swab_ID", "Cohort","Sample_type_colour","S_aureus_qPCR","Staph_spp_qPCR", "qPCR_16S")]
+# length(metadata_consolidated.df$Swab_ID)
+# metadata_consolidated.df %>% group_by(Cohort, Sample_type) %>% tally()
+# metadata_consolidated.df[metadata_consolidated.df$Swab_ID %in% c(1472, 1470),]
+# table(metadata_consolidated.df$Swab_ID)
 
 # Set the Index to be the rowname
 rownames(metadata.df) <- metadata.df$Index
 rownames(metadata_consolidated.df) <- metadata_consolidated.df$Index
+metadata_consolidated.df %>% group_by(Cohort, Sample_type) %>% tally()
 
 # We are only interested in C,AK_PL,IEC_PL,SCC_PL,AK,IEC and SCC lesions. 
 metadata.df <- metadata.df[!metadata.df$Sample_type == "negative",]
@@ -159,6 +178,7 @@ immunosuppressed_top_forearm_genus_summary.df <- filter_summary_to_top_n(taxa_su
                                                                          grouping_variables = c("Sample_type"),
                                                                          abundance_column = "Mean_relative_abundance",
                                                                          my_top_n = 5)
+
 immunocompetent_top_forearm_genus_summary.df <- filter_summary_to_top_n(taxa_summary = immunocompetent_forearm_genus_summary.df, 
                                                                          grouping_variables = c("Sample_type"),
                                                                          abundance_column = "Mean_relative_abundance",
@@ -363,6 +383,9 @@ immunocompetent_genus_summary.df$Location <- "Forearm"
 immunocompetent_genus_summary.df[immunocompetent_genus_summary.df$Sample_type %in% c("SCC_PL", "SCC"),]$Location <- "All body sites"
 immunocompetent_genus_summary_combined_forearm.df <- rbind(immunocompetent_genus_summary.df, immunocompetent_forearm_genus_summary.df)
 
+
+metadata_consolidated_combined.df[!metadata_consolidated_combined.df$Index %in% genus_data.df$Sample,]
+genus_data.df[genus_data.df[!genus_data.df$Sample %in% metadata_consolidated_combined.df$Index,]$qPCR_16S > 0,]
 # Create sample_type_label
 immunosuppressed_genus_summary_combined_forearm.df$Sample_type_label <- 
   with(immunosuppressed_genus_summary_combined_forearm.df, paste0(Sample_type, "\n", Location, "\nn=", N_samples))
@@ -386,7 +409,11 @@ levels(immunocompetent_genus_summary_combined_forearm.df$Sample_type_label)
 
 # -----------------------------------------------------------------------------
 # -------- format metadata for scatter plots -------
-metadata_consolidated.df <- metadata_consolidated.df[metadata_consolidated.df$qPCR_16S != 0,]
+names(metadata_consolidated.df)
+# metadata_consolidated.df <- metadata_consolidated.df[metadata_consolidated_combined.df$Index,c("Index","Swab_ID", "Cohort", "Sample_type","Sample_type_colour", "S_aureus_qPCR", "Staph_spp_qPCR", "qPCR_16S")]
+# metadata_consolidated.df <- metadata_consolidated.df[metadata_consolidated.df$qPCR_16S != 0,]
+# write.csv(metadata_consolidated.df,file = "staph_16S_qPCR_data_for_plot.csv",quote = F,row.names = F)
+write.csv(unique(metadata_consolidated.df),file = "qPCR_data_samples_in_16S_qPCR_plot.csv",quote = F,row.names = F)
 
 metadata_consolidated_forearm.df <- metadata_consolidated.df %>% 
   filter(Swab_ID %in% c(forearm_swab_ids_IS,forearm_swab_ids_IC) | Sample_type %in% c("NS", "PDS","AK"))
@@ -433,10 +460,10 @@ metadata_consolidated_all_sites.df$Sample_type_label <-
 metadata_consolidated_combined.df <- rbind(metadata_consolidated_forearm.df, metadata_consolidated_all_sites.df)
 metadata_consolidated_combined.df$Sample_type <- factor(metadata_consolidated_combined.df$Sample_type, 
                                                        levels = c("NS", "PDS", "AK", "SCC_PL","SCC"))
-
 # c(25,24,23,22,21)
 
-variable_shapes <- setNames(c(25,24,23,22,21), as.character(unique(sort(metadata_consolidated_combined.df$Sample_type))))
+# variable_shapes <- setNames(c(25,24,23,22,21), as.character(unique(sort(metadata_consolidated_combined.df$Sample_type))))
+variable_shapes <- setNames(c(25,24,23,22,21), c("NS", "PDS", "AK", "SCC_PL", "SCC"))
 
 # metadata_consolidated_combined.df <- metadata_consolidated_combined.df[metadata_consolidated_combined.df$qPCR_16S != 0,]
 
@@ -460,6 +487,9 @@ dunn$P_value_label <- as.character(lapply(dunn[,"P.adj"], function(x) ifelse(x <
 dunn <- dunn[dunn$P_value_label != "ns",]
 write.csv(x = dunn, file = "Result_tables/stats_various/qPCR_sampletype_dunn.csv", quote = F, row.names = F)
 
+metadata_consolidated_combined.df %>% 
+  dplyr::group_by(Cohort, Sample_type,Sample_type_label) %>%
+  tally()
 metadata_consolidated_combined.df %>% 
   dplyr::group_by(Cohort, Sample_type,Sample_type_label) %>%
   tally()
@@ -720,6 +750,7 @@ ggsave(plot =my_legend_taxa,"Result_figures/abundance_analysis_plots/taxa.svg",
 # ------------------------------------------------------------------------------------------
 # ------------------------------------------------------------------------------------------
 # ------ Version using qPCR scatter plots
+
 
 immunosuppressed_qpcr_plot <- 
   ggplot(subset(metadata_consolidated_combined.df, Cohort == "immunosuppressed"), 

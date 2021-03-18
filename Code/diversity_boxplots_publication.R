@@ -170,7 +170,8 @@ genus.m <-  as.matrix(read.csv("Result_tables/count_tables/Genus_counts.csv", he
 genus.m <- genus.m[,rownames(metadata.df)]
 
 # Create the rarefied matrices
-rarefy_threshold <- 2000
+rarefy_threshold <- 5000
+# rarecurve(t(genus.m[,colSums(genus.m) > 1]),step = 500, label = F,xlim = c(0,10000),sample = 10000)
 genus_rare.m <- t(rrarefy(t(genus.m[,colSums(genus.m) >= rarefy_threshold]), rarefy_threshold))
 
 # Create phyloseq object
@@ -288,6 +289,7 @@ write.csv(x = rbind(immunosuppressed_genus_alpha_dunn_significances.df,immunocom
 sample_type_colours <- unique(metadata.df[,c("Sample_type", "Sample_type_colour")])
 sample_type_colours <- setNames(as.character(sample_type_colours[,"Sample_type_colour"]), 
                                 sample_type_colours[,"Sample_type"])
+variable_shapes <- setNames(c(25,24,23,22,21), c("NS", "PDS", "AK", "SCC_PL", "SCC"))
 
 immunosuppressed_genus_shannon_boxplot <- 
   ggplot(immunosuppressed_genus_rare_alpha.df,aes(x = Sample_type, 
@@ -301,7 +303,7 @@ immunosuppressed_genus_shannon_boxplot <-
   geom_jitter(size = .6,stroke =.1,
               position = position_jitterdodge(jitter.width = .75,
                                               dodge.width = .75))  +
-  scale_shape_manual(values = c(25,24,23,22,21),
+  scale_shape_manual(values = variable_shapes,
                      name = "Sample type") +
   scale_fill_manual(values = sample_type_colours, 
                     name = "Sample type") +
@@ -324,7 +326,7 @@ immunosuppressed_genus_chao1_boxplot <-
   geom_jitter(size = .6,stroke =.1,
               position = position_jitterdodge(jitter.width = .75,
                                               dodge.width = .75))  +
-  scale_shape_manual(values = c(25,24,23,22,21),
+  scale_shape_manual(values = variable_shapes,
                      name = "Sample type") +
   scale_fill_manual(values = sample_type_colours, 
                     name = "Sample type") +
@@ -346,7 +348,7 @@ immunosuppressed_genus_simpson_boxplot <-
   geom_jitter(size = .6,stroke =.1,
               position = position_jitterdodge(jitter.width = .75,
                                               dodge.width = .75))  +
-  scale_shape_manual(values = c(25,24,23,22,21),
+  scale_shape_manual(values = variable_shapes,
                      name = "Sample type") +
   scale_fill_manual(values = sample_type_colours, 
                     name = "Sample type") +
@@ -355,7 +357,7 @@ immunosuppressed_genus_simpson_boxplot <-
   xlab("Sample type") +
   ylab("Simpson") +
   common_theme +
-  scale_y_continuous(limits = c(0,1.0), breaks = seq(0,1, .1))
+  scale_y_continuous(limits = c(0,1.2), breaks = seq(0,1, .1))
 immunosuppressed_genus_simpson_boxplot
 
 
@@ -371,7 +373,7 @@ immunocompetent_genus_shannon_boxplot <-
   geom_jitter(size = .6,stroke =.1,
               position = position_jitterdodge(jitter.width = .75,
                                               dodge.width = .75))  +
-  scale_shape_manual(values = c(25,24,23,22,21),
+  scale_shape_manual(values = variable_shapes,
                      name = "Sample type") +
   scale_fill_manual(values = sample_type_colours, 
                     name = "Sample type") +
@@ -392,7 +394,7 @@ immunocompetent_genus_chao1_boxplot <-
   geom_jitter(size = .6,stroke =.1,
               position = position_jitterdodge(jitter.width = .75,
                                               dodge.width = .75))  +
-  scale_shape_manual(values = c(25,24,23,22,21),
+  scale_shape_manual(values = variable_shapes,
                      name = "Sample type") +
   scale_fill_manual(values = sample_type_colours, 
                     name = "Sample type") +
@@ -414,7 +416,7 @@ immunocompetent_genus_simpson_boxplot <-
   geom_jitter(size = .6,stroke =.1,
               position = position_jitterdodge(jitter.width = .75,
                                               dodge.width = .75))  +
-  scale_shape_manual(values = c(25,24,23,22,21),
+  scale_shape_manual(values = variable_shapes,
                      name = "Sample type") +
   scale_fill_manual(values = sample_type_colours, 
                     name = "Sample type") +
@@ -423,7 +425,7 @@ immunocompetent_genus_simpson_boxplot <-
   xlab("Sample type") +
   ylab("Simpson") +
   common_theme +
-  scale_y_continuous(limits = c(0,1.0), breaks = seq(0,1, .1))
+  scale_y_continuous(limits = c(0,1.2), breaks = seq(0,1, .1))
 immunocompetent_genus_simpson_boxplot
 
 # Extract the legend
@@ -442,14 +444,14 @@ my_legend <- cowplot::get_legend(immunosuppressed_genus_chao1_boxplot +
 
 library(cowplot)
 chao1 <- plot_grid(plotlist = list(immunosuppressed_genus_chao1_boxplot + 
-                                     labs(title = "Organ transplant recipient") + 
+                                     # labs(title = "Organ transplant recipient") + 
                                      theme(axis.title.x = element_blank(),
                                            axis.text.x = element_blank(),
                                            legend.position = "none",
                                            plot.title = element_text(face = "bold", hjust = 0.5,size = 10))
                                      , 
                                    immunocompetent_genus_chao1_boxplot + 
-                                     labs(title = "Immunocompetent") + 
+                                     # labs(title = "Immunocompetent") + 
                                      theme(axis.title.x = element_blank(),
                                            axis.title.y = element_blank(),
                                            axis.text.x = element_blank(),
@@ -457,31 +459,54 @@ chao1 <- plot_grid(plotlist = list(immunosuppressed_genus_chao1_boxplot +
                                            legend.position = "none",
                                            plot.title = element_text(face = "bold", hjust = 0.5,size = 10))
                                    ),
-                   rel_widths = c(1,.7))
+                   rel_widths = c(1,.8))
 
-shannon <- plot_grid(plotlist = list(immunosuppressed_genus_shannon_boxplot + theme(axis.title.x = element_blank(),
-                                                                                    axis.text.x = element_blank(),
-                                                                                    legend.position = "none",
-                                                                                    plot.margin = unit(c(5.5,5.5,5.5,6),"pt")), 
-                                     immunocompetent_genus_shannon_boxplot + theme(axis.title.x = element_blank(),
-                                                                                   axis.title.y = element_blank(),
-                                                                                   axis.text.x = element_blank(),
-                                                                                   axis.text.y = element_blank(),
-                                                                                   legend.position = "none")
+shannon <- plot_grid(plotlist = list(immunosuppressed_genus_shannon_boxplot + 
+                                       theme(
+                                         # axis.title.x = element_blank(),
+                                         # axis.title.y = element_blank(),
+                                         # axis.text.x = element_blank(),
+                                         # axis.text.y = element_blank(),
+                                         legend.position = "none",
+                                         plot.margin = unit(c(5.5,5.5,5.5,6),"pt")
+                                         ), 
+                                     immunocompetent_genus_shannon_boxplot + 
+                                       theme(
+                                         # axis.title.x = element_blank(),
+                                         axis.title.y = element_blank(),
+                                         # axis.text.x = element_blank(),
+                                         axis.text.y = element_blank(),
+                                         legend.position = "none")
                                      ),
-                     rel_widths = c(1,.7))
-simpson <- plot_grid(plotlist = list(immunosuppressed_genus_simpson_boxplot + theme(legend.position = "none"),
-                                     immunocompetent_genus_simpson_boxplot + theme(axis.title.y = element_blank(),
-                                                                                   axis.text.y = element_blank(),
-                                                                                   legend.position = "none") 
+                     rel_widths = c(1,.8))
+simpson <- plot_grid(plotlist = list(immunosuppressed_genus_simpson_boxplot + 
+                                       theme(legend.position = "none",
+                                             plot.title = element_text(face = "bold", hjust = 0.5,size = 10),
+                                             axis.title.x = element_blank(),
+                                             # axis.title.y = element_blank(),
+                                             axis.text.x = element_blank(),
+                                             # axis.text.y = element_blank(),
+                                             )+
+                                       labs(title = "Organ transplant recipient"),
+                                     immunocompetent_genus_simpson_boxplot + 
+                                       theme(
+                                         axis.title.x = element_blank(),
+                                         axis.title.y = element_blank(),
+                                         axis.text.x = element_blank(),
+                                         axis.text.y = element_blank(),
+                                         legend.position = "none",
+                                         plot.title = element_text(face = "bold", hjust = 0.5,size = 10)
+                                         ) +
+                                       labs(title = "Immunocompetent")
 
                                      
                                      ),
-                     rel_widths = c(1,.7))
+                     rel_widths = c(1,.8))
 
-grid_plot <- plot_grid(plotlist = list(chao1,shannon,simpson),
+grid_plot <- plot_grid(plotlist = list(simpson,chao1,shannon),
                        ncol = 1,nrow = 3,
-                       rel_heights = c(1,1,1), align = "hv")
+                       rel_heights = c(1,1,1), 
+                       align = "hv")
 
 # grid_plot <- plot_grid(plotlist = list(grid_plot, my_legend), 
                        # nrow = 2, rel_heights = c(1,.1))

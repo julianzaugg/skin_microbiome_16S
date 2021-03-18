@@ -562,7 +562,7 @@ project_otu_table_unfiltered.df <- project_otu_table.df
 # IC_sequenced_with_IS <- metadata.df[with(metadata.df, which(grepl("Sequenced during immunosuppressed batch",Sample_note) & Sample_type != "negative")),]$Index
 # MS_resequenced_samples <- metadata.df[grep("Sequenced during immunosuppressed batch", metadata.df$Sample_note),]$Index
 # MS_resequenced_samples[metadata.df[metadata.df$Index %in% MS_resequenced_samples,]$Sample_type == "negative"]
-
+# 
 # IC_sequenced_with_IS <- metadata.df[with(metadata.df, which(grepl("Sequenced during immunosuppressed batch",Sample_note))),]$Index
 # metadata.df <- metadata.df[!metadata.df$Index %in% IC_sequenced_with_IS,]
 # project_otu_table.df <- project_otu_table.df[,!names(project_otu_table.df) %in% IC_sequenced_with_IS]
@@ -637,6 +637,7 @@ metadata.df$Gender_colour <- all_gender_colours
 # Metadata and feature data after consolidating samples. This should be everything needed from this point on!
 # metadata.df$Repeat_sample <- "No"
 # metadata.df[metadata.df$Index %in% repeat_mapping.df$Sample,]$Repeat_sample <- "Yes"
+
 write.csv(metadata.df,file = "Result_tables/other/metadata_consolidated.csv", row.names = F, quote = F)
 write.csv(project_otu_table.df,file = "Result_tables/other/feature_data_consolidated.csv", row.names = F, quote = F)
 # colSums(project_otu_table.df[,sample_ids])

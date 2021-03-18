@@ -72,7 +72,8 @@ genus_rel.df <- genus_rel.df[genus_rel.df$taxonomy_genus %in% top_genus,]
 
 # genus_rel_specific.df <- genus_rel.df[grepl("g__Staphylococcus|g__Paracoccus|g__Cutibacterium|g__Malassezia|g__Micrococcus", genus_rel.df$taxonomy_genus),]
 # genus_rel_specific.df <- genus_rel.df[grepl("g__Staphylococcus|g__Paracoccus|g__Cutibacterium|g__Malassezia|g__Micrococcus|g__Pseudomonas|g__Streptococcus|g__Corynebacterium", genus_rel.df$taxonomy_genus),]
-specific_taxa <- c("Staphylococcus","Paracoccus","Cutibacterium","Malassezia","Micrococcus","Pseudomonas","Streptococcus","Corynebacterium")
+# specific_taxa <- c("Staphylococcus","Paracoccus","Cutibacterium","Malassezia","Micrococcus","Pseudomonas","Streptococcus","Corynebacterium")
+specific_taxa <- c("Staphylococcus","Paracoccus","Cutibacterium","Malassezia","Micrococcus","Pseudomonas")
 # g__Pseudomonas|g__Streptococcus|g__Corynebacterium
 genus_rel_specific.df <- genus_rel.df
 
@@ -301,6 +302,8 @@ sample_type_colours <- unique(IS_genus_rel_specific.df[,c("Sample_type", "Sample
 sample_type_colours <- setNames(as.character(sample_type_colours[,"Sample_type_colour"]), 
                                 sample_type_colours[,"Sample_type"])
 
+variable_shapes <- setNames(c(25,24,23,22,21), c("NS", "PDS", "AK", "SCC_PL", "SCC"))
+
 IS_genus_rel_specific.df <- subset(IS_genus_rel_specific.df, Genus %in% specific_taxa)
 IC_genus_rel_specific.df <- subset(IC_genus_rel_specific.df, Genus %in% specific_taxa)
 
@@ -313,7 +316,7 @@ IS_genus_plot <- ggplot(IS_genus_rel_specific.df, aes(x = Genus,
   geom_jitter(size = .6,stroke =.1,
               position = position_jitterdodge(jitter.width = .2,
                                               dodge.width = .75)) +
-  scale_shape_manual(values = c(25,24,23,22,21),name = "Sample type") +
+  scale_shape_manual(values = variable_shapes,name = "Sample type") +
   scale_fill_manual(values = sample_type_colours, name = "Sample type") +
   # stat_summary(fun = mean, geom = "errorbar", aes(ymax = ..y.., ymin = ..y..),
   #              width = 0.75, size = .2, linetype = "solid", colour = "red",
@@ -373,7 +376,7 @@ IC_genus_plot <- ggplot(IC_genus_rel_specific.df, aes(x = Genus,
   geom_jitter(size = .6,stroke =.1,
               position = position_jitterdodge(jitter.width = .2,
                                               dodge.width = .75)) +
-  scale_shape_manual(values = c(25,24,23,22,21),name = "Sample type") +
+  scale_shape_manual(values = variable_shapes,name = "Sample type") +
   scale_fill_manual(values = sample_type_colours, name = "Sample type") +
   # scale_colour_manual(values = sample_type_colours, name = "Sample type") +
   # stat_summary(fun = mean, geom = "errorbar", aes(ymax = ..y.., ymin = ..y..),
